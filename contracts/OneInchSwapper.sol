@@ -41,6 +41,16 @@ interface IOneSplit {
 }
 
 interface IOneInchSwapper is IStrategySwapper {
+  struct Swap {
+    uint256 id;
+    address from;
+    address tokenIn;
+    address tokenOut;
+    uint256 amountIn;
+    uint256 maxSlippage;
+    uint256 deadline;
+  }
+
   function FEE_PRECISION() external view returns (uint256);
 
   function ONE_INCH() external view returns (address);
@@ -49,6 +59,8 @@ interface IOneInchSwapper is IStrategySwapper {
 contract OneInchSwapper is IOneInchSwapper {
   using SafeERC20 for IERC20;
 
+  Swap[] pendingSwaps;
+  mapping(uint256 => Swap) swapById;
   uint256 public immutable override FEE_PRECISION;
   address public immutable override ONE_INCH;
 
@@ -71,23 +83,28 @@ contract OneInchSwapper is IOneInchSwapper {
     return (_minAmountOut, _distribution);
   }
 
-  function _decodeSwapData(bytes[] memory _swapData) internal pure returns (uint256 _parts, uint256 _flags) {
-    _parts = (_swapData[0].length > 0) ? abi.decode(_swapData[0], (uint256)) : 1;
-    _flags = (_swapData[1].length > 0) ? abi.decode(_swapData[1], (uint256)) : 0;
-  }
-
   function _swap(
     address _from,
     address _tokenIn,
     address _tokenOut,
     uint256 _amountIn,
     uint256 _maxSlippage,
-    bytes[] memory _swapData
-  ) internal returns (uint256 _receivedAmount) {
+    uint256 _deadline
+  ) internal {
     IERC20(_tokenIn).safeTransferFrom(_from, address(this), _amountIn);
-    (uint256 _parts, uint256 _flags) = _decodeSwapData(_swapData);
-    (uint256 _minAmountOut, uint256[] memory _distribution) = _getMinAmountOut(_tokenIn, _tokenOut, _amountIn, _parts, _flags, _maxSlippage);
-    _receivedAmount = IOneSplit(ONE_INCH).swap(IERC20(_tokenIn), IERC20(_tokenOut), _amountIn, _minAmountOut, _distribution, _flags);
+    uint256 _id = 0;
+    Swap memory _swapInformation =
+      Swap(
+        _id, // id
+        _from,
+        _tokenIn,
+        _tokenOut,
+        _amountIn,
+        _maxSlippage,
+        _deadline
+      );
+    pendingSwaps.push(_swapInformation);
+    swapById[_id] = _swapInformation;
   }
 
   function swap(
@@ -95,22 +112,37 @@ contract OneInchSwapper is IOneInchSwapper {
     address _tokenOut,
     uint256 _amountIn,
     uint256 _maxSlippage,
-    uint256, // deadline
-    bytes[] memory _swapData
-  ) external override returns (uint256 _receivedAmount) {
-    _receivedAmount = _swap(msg.sender, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _swapData);
+    uint256 _deadline
+  ) external override {
+    _swap(msg.sender, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _deadline);
   }
 
-  function claim() external override returns (uint256 _receivedAmount) {}
-
-  function swapAndClaim(
-    address _tokenIn,
-    address _tokenOut,
-    uint256 _amountIn,
-    uint256 _maxSlippage,
-    uint256, // deadline
-    bytes[] memory _swapData
-  ) external override returns (uint256 _receivedAmount) {
-    _receivedAmount = _swap(msg.sender, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _swapData);
+  function executeSwap(
+    uint256 _id,
+    uint256 _parts,
+    uint256 _flags
+  ) public returns (uint256 _receivedAmount) {
+    // requires
+    // check deadline
+    // only mechanics
+    Swap memory _swapInformation = swapById[_id];
+    (uint256 _minAmountOut, uint256[] memory _distribution) =
+      _getMinAmountOut(
+        _swapInformation.tokenIn,
+        _swapInformation.tokenOut,
+        _swapInformation.amountIn,
+        _parts,
+        _flags,
+        _swapInformation.maxSlippage
+      );
+    _receivedAmount = IOneSplit(ONE_INCH).swap(
+      IERC20(_swapInformation.tokenIn),
+      IERC20(_swapInformation.tokenOut),
+      _swapInformation.amountIn,
+      _minAmountOut,
+      _distribution,
+      _flags
+    );
+    IERC20(_swapInformation.tokenOut).safeTransfer(_swapInformation.from, _receivedAmount);
   }
 }

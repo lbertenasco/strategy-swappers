@@ -38,7 +38,7 @@ contract UniswapSwapper is IUniswapSwapper {
     uint256 _amountIn,
     uint256 _maxSlippage,
     uint256 _deadline
-  ) internal returns (uint256 _receivedAmount) {
+  ) internal {
     IERC20(_tokenIn).safeTransferFrom(_from, address(this), _amountIn);
 
     address[] memory _path = new address[](2);
@@ -48,13 +48,9 @@ contract UniswapSwapper is IUniswapSwapper {
     IERC20(_path[0]).safeApprove(UNISWAP, 0);
     IERC20(_path[0]).safeApprove(UNISWAP, _amountIn);
 
-    _receivedAmount = IUniswapV2Router02(UNISWAP).swapExactTokensForTokens(
-      _amountIn,
-      _getMinAmountOut(_path, _amountIn, _maxSlippage),
-      _path,
-      _from,
-      _deadline
-    )[0];
+    IUniswapV2Router02(UNISWAP).swapExactTokensForTokens(_amountIn, _getMinAmountOut(_path, _amountIn, _maxSlippage), _path, _from, _deadline)[
+      0
+    ];
   }
 
   function swap(
@@ -62,22 +58,8 @@ contract UniswapSwapper is IUniswapSwapper {
     address _tokenOut,
     uint256 _amountIn,
     uint256 _maxSlippage,
-    uint256 _deadline,
-    bytes[] memory
-  ) external override returns (uint256 _receivedAmount) {
-    _receivedAmount = _swap(msg.sender, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _deadline);
-  }
-
-  function claim() external override returns (uint256 _receivedAmount) {}
-
-  function swapAndClaim(
-    address _tokenIn,
-    address _tokenOut,
-    uint256 _amountIn,
-    uint256 _maxSlippage,
-    uint256 _deadline,
-    bytes[] memory
-  ) external override returns (uint256 _receivedAmount) {
-    _receivedAmount = _swap(msg.sender, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _deadline);
+    uint256 _deadline
+  ) external override {
+    _swap(msg.sender, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _deadline);
   }
 }

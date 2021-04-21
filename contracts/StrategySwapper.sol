@@ -9,7 +9,8 @@ interface IStrategySwapper {
     address _tokenOut,
     uint256 _amountIn,
     uint256 _maxSlippage,
-    uint256 _deadline
+    uint256 _deadline,
+    bytes[] memory _swapData
   ) external returns (uint256);
 
   function claim() external returns (uint256);
@@ -19,6 +20,7 @@ interface IStrategySwapper {
     address _tokenOut,
     uint256 _amountIn,
     uint256 _maxSlippage,
-    uint256 _deadline
+    uint256 _deadline,
+    bytes[] memory _swapData
   ) external returns (uint256);
 }

@@ -57,8 +57,9 @@ contract OneInchSwapper is IOneInchSwapper, StrategySwapper {
   constructor(
     address _oneInch,
     address _mechanicsRegistry,
+    address _weth,
     uint256 _slippagePrecision
-  ) StrategySwapper(_mechanicsRegistry, _slippagePrecision) {
+  ) StrategySwapper(_mechanicsRegistry, _weth, _slippagePrecision) {
     ONE_INCH = _oneInch;
   }
 

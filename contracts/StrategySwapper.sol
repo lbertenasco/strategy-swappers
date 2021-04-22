@@ -9,6 +9,8 @@ import './Machinery.sol';
 interface IStrategySwapper {
   event SwapCreated(Swap _swapInformation);
 
+  function WETH() external view returns (address);
+
   function SLIPPAGE_PRECISION() external view returns (uint256);
 
   // function pendingSwaps(uint256 _index) external returns (Swap memory);
@@ -21,7 +23,7 @@ interface IStrategySwapper {
     uint256 _amountIn,
     uint256 _maxSlippage,
     uint256 _deadline
-  ) external;
+  ) external payable;
 
   function expireSwap(uint256 _id) external returns (uint256 _returnedAmount);
 
@@ -39,19 +41,48 @@ interface IStrategySwapper {
 abstract contract StrategySwapper is IStrategySwapper, Machinery {
   using SafeERC20 for IERC20;
 
+  address public constant ETH = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
+  address public immutable override WETH;
   uint256 public immutable override SLIPPAGE_PRECISION;
+
   Swap[] public pendingSwaps;
   mapping(uint256 => uint256) public pendingSwapIndex;
   mapping(uint256 => Swap) public swapById;
   uint256 internal _swapsCounter = 0;
 
-  constructor(address _mechanicsRegistry, uint256 _slippagePrecision) Machinery(_mechanicsRegistry) {
+  constructor(
+    address _mechanicsRegistry,
+    address _weth,
+    uint256 _slippagePrecision
+  ) Machinery(_mechanicsRegistry) {
     SLIPPAGE_PRECISION = _slippagePrecision;
+    WETH = _weth;
   }
 
   function setMechanicsRegistry(address _mechanicsRegistry) external override {
     // TODO: only governance ?
     _setMechanicsRegistry(_mechanicsRegistry);
+  }
+
+  modifier isPendingSwap(uint256 _id) {
+    require(swapById[_id].id == _id, 'StrategySwapper: non existant swap');
+    _;
+  }
+
+  function swap(
+    address _tokenIn,
+    address _tokenOut,
+    uint256 _amountIn,
+    uint256 _maxSlippage,
+    uint256 _deadline
+  ) external payable virtual override {
+    require(_tokenIn != address(0) && _tokenOut != address(0), 'StrategySwapper: zero address');
+    require(_amountIn > 0, 'StrategySwapper: zero amount');
+    require(_maxSlippage > 0, 'StrategySwapper: zero slippage');
+    require(_deadline > block.timestamp, 'StrategySwapper: deadline too soon');
+    require(_tokenIn != ETH || _amountIn == msg.value, 'StrategySwapper: missing eth');
+    // only strategy
+    _swap(msg.sender, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _deadline);
   }
 
   function _swap(
@@ -62,7 +93,9 @@ abstract contract StrategySwapper is IStrategySwapper, Machinery {
     uint256 _maxSlippage,
     uint256 _deadline
   ) internal virtual {
-    IERC20(_tokenIn).safeTransferFrom(_from, address(this), _amountIn);
+    if (_tokenIn != ETH) {
+      IERC20(_tokenIn).safeTransferFrom(_from, address(this), _amountIn);
+    }
     uint256 _id = _swapsCounter;
     Swap memory _swapInformation = Swap(_id, _from, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _deadline);
     pendingSwapIndex[_id] = pendingSwaps.length;
@@ -72,30 +105,14 @@ abstract contract StrategySwapper is IStrategySwapper, Machinery {
     emit SwapCreated(_swapInformation);
   }
 
-  function swap(
-    address _tokenIn,
-    address _tokenOut,
-    uint256 _amountIn,
-    uint256 _maxSlippage,
-    uint256 _deadline
-  ) external virtual override {
-    require(_tokenIn != address(0) && _tokenOut != address(0), 'StrategySwapper: zero address');
-    require(_amountIn > 0, 'StrategySwapper: zero amount');
-    require(_maxSlippage > 0, 'StrategySwapper: zero slippage');
-    require(_deadline > block.timestamp, 'StrategySwapper: deadline too soon');
-    // only strategy
-    _swap(msg.sender, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _deadline);
-  }
-
-  modifier isPendingSwap(uint256 _id) {
-    require(swapById[_id].id == _id, 'StrategySwapper: non existant swap');
-    _;
-  }
-
   function expireSwap(uint256 _id) external virtual override isPendingSwap(_id) returns (uint256 _returnedAmount) {
     Swap storage _swapInformation = swapById[_id];
     require(_swapInformation.deadline <= block.timestamp, 'StrategySwapper: swap not expired');
-    IERC20(_swapInformation.tokenIn).safeTransfer(_swapInformation.from, _swapInformation.amountIn);
+    if (_swapInformation.tokenIn == ETH) {
+      payable(_swapInformation.from).transfer(_swapInformation.amountIn);
+    } else {
+      IERC20(_swapInformation.tokenIn).safeTransfer(_swapInformation.from, _swapInformation.amountIn);
+    }
     _returnedAmount = _swapInformation.amountIn;
     _deletePendingSwap(_swapInformation);
   }

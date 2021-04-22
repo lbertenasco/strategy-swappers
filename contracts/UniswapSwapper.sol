@@ -6,20 +6,20 @@ import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import './StrategySwapper.sol';
 
 interface IUniswapSwapper is IStrategySwapper {
-  function FEE_PRECISION() external view returns (uint256);
-
   function UNISWAP() external view returns (address);
 }
 
-contract UniswapSwapper is IUniswapSwapper {
+contract UniswapSwapper is IUniswapSwapper, StrategySwapper {
   using SafeERC20 for IERC20;
 
-  uint256 public immutable override FEE_PRECISION;
   address public immutable override UNISWAP;
 
-  constructor(address _uniswap, uint256 _feePrecision) {
+  constructor(
+    address _uniswap,
+    address _mechanicsRegistry,
+    uint256 _slippagePrecision
+  ) StrategySwapper(_mechanicsRegistry, _slippagePrecision) {
     UNISWAP = _uniswap;
-    FEE_PRECISION = _feePrecision;
   }
 
   function _getMinAmountOut(
@@ -28,38 +28,23 @@ contract UniswapSwapper is IUniswapSwapper {
     uint256 _maxSlippage
   ) internal view returns (uint256 _minAmountOut) {
     uint256 _amountOut = IUniswapV2Router02(UNISWAP).getAmountsOut(_amountIn, _path)[0];
-    _minAmountOut = _amountOut - ((_amountOut * _maxSlippage) / FEE_PRECISION / 100);
+    _minAmountOut = _amountOut - ((_amountOut * _maxSlippage) / SLIPPAGE_PRECISION / 100);
   }
 
-  function _swap(
-    address _from,
-    address _tokenIn,
-    address _tokenOut,
-    uint256 _amountIn,
-    uint256 _maxSlippage,
-    uint256 _deadline
-  ) internal {
-    IERC20(_tokenIn).safeTransferFrom(_from, address(this), _amountIn);
-
-    address[] memory _path = new address[](2);
-    _path[0] = _tokenIn;
-    _path[1] = _tokenOut;
+  function executeSwap(uint256 _id, address[] memory _path) external onlyMechanic isPendingSwap(_id) returns (uint256 _receivedAmount) {
+    Swap memory _swapInformation = swapById[_id];
+    Swap storage _swapInformation = _checkPreExecuteSwap(_id);
 
     IERC20(_path[0]).safeApprove(UNISWAP, 0);
-    IERC20(_path[0]).safeApprove(UNISWAP, _amountIn);
+    IERC20(_path[0]).safeApprove(UNISWAP, _swapInformation.amountIn);
 
-    IUniswapV2Router02(UNISWAP).swapExactTokensForTokens(_amountIn, _getMinAmountOut(_path, _amountIn, _maxSlippage), _path, _from, _deadline)[
-      0
-    ];
-  }
-
-  function swap(
-    address _tokenIn,
-    address _tokenOut,
-    uint256 _amountIn,
-    uint256 _maxSlippage,
-    uint256 _deadline
-  ) external override {
-    _swap(msg.sender, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _deadline);
+    _receivedAmount = IUniswapV2Router02(UNISWAP).swapExactTokensForTokens(
+      _swapInformation.amountIn,
+      _getMinAmountOut(_path, _swapInformation.amountIn, _swapInformation.maxSlippage),
+      _path,
+      _swapInformation.from,
+      _swapInformation.deadline
+    )[0];
+    _deletePendingSwap(_swapInformation);
   }
 }

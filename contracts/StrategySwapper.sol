@@ -25,6 +25,8 @@ interface IStrategySwapper {
     uint256 _deadline
   ) external payable;
 
+  function executeSwap(uint256 _id) external returns (uint256 _receivedAmount);
+
   function expireSwap(uint256 _id) external returns (uint256 _returnedAmount);
 
   struct Swap {
@@ -60,7 +62,7 @@ abstract contract StrategySwapper is IStrategySwapper, Machinery {
   }
 
   function setMechanicsRegistry(address _mechanicsRegistry) external override {
-    // TODO: only governance ?
+    // TODO: only governance
     _setMechanicsRegistry(_mechanicsRegistry);
   }
 
@@ -126,5 +128,27 @@ abstract contract StrategySwapper is IStrategySwapper, Machinery {
     // Delete from pending swaps, reuse space.
     delete pendingSwapIndex[_swapInformation.id];
     delete swapById[_swapInformation.id];
+  }
+
+  function _executeSwap(
+    address _receiver,
+    address _tokenIn,
+    address _tokenOut,
+    uint256 _amountIn,
+    uint256 _maxSlippage
+  ) internal virtual returns (uint256 _receivedAmount);
+
+  function executeSwap(uint256 _id) external override onlyMechanic isPendingSwap(_id) returns (uint256 _receivedAmount) {
+    Swap storage _swapInformation = _checkPreExecuteSwap(_id);
+
+    _receivedAmount = _executeSwap(
+      _swapInformation.from,
+      _swapInformation.tokenIn,
+      _swapInformation.tokenOut,
+      _swapInformation.amountIn,
+      _swapInformation.maxSlippage
+    );
+
+    _deletePendingSwap(_swapInformation);
   }
 }

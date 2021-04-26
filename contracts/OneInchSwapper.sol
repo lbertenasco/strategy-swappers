@@ -41,13 +41,9 @@ interface IOneSplit {
 
 interface IOneInchSwapper is IStrategySwapper {
   function ONE_INCH() external view returns (address);
-
-  function executeSwap(
-    uint256 _id,
-    uint256 _parts,
-    uint256 _flags
-  ) external returns (uint256 _receivedAmount);
 }
+
+// TODO: Adapt to eth trades
 
 contract OneInchSwapper is IOneInchSwapper, StrategySwapper {
   using SafeERC20 for IERC20;
@@ -77,30 +73,17 @@ contract OneInchSwapper is IOneInchSwapper, StrategySwapper {
     return (_minAmountOut, _distribution);
   }
 
-  function executeSwap(
-    uint256 _id,
-    uint256 _parts,
-    uint256 _flags
-  ) external override onlyMechanic isPendingSwap(_id) returns (uint256 _receivedAmount) {
-    Swap storage _swapInformation = _checkPreExecuteSwap(_id);
-    (uint256 _minAmountOut, uint256[] memory _distribution) =
-      _getMinAmountOut(
-        _swapInformation.tokenIn,
-        _swapInformation.tokenOut,
-        _swapInformation.amountIn,
-        _parts,
-        _flags,
-        _swapInformation.maxSlippage
-      );
-    _receivedAmount = IOneSplit(ONE_INCH).swap(
-      IERC20(_swapInformation.tokenIn),
-      IERC20(_swapInformation.tokenOut),
-      _swapInformation.amountIn,
-      _minAmountOut,
-      _distribution,
-      _flags
-    );
-    IERC20(_swapInformation.tokenOut).safeTransfer(_swapInformation.from, _receivedAmount);
-    _deletePendingSwap(_swapInformation);
+  function _executeSwap(
+    address _receiver,
+    address _tokenIn,
+    address _tokenOut,
+    uint256 _amountIn,
+    uint256 _maxSlippage
+  ) internal override returns (uint256 _receivedAmount) {
+    uint256 _parts = 1; // should be configurable
+    uint256 _flags = 0; // should be configurable
+    (uint256 _minAmountOut, uint256[] memory _distribution) = _getMinAmountOut(_tokenIn, _tokenOut, _amountIn, _parts, _flags, _maxSlippage);
+    _receivedAmount = IOneSplit(ONE_INCH).swap(IERC20(_tokenIn), IERC20(_tokenOut), _amountIn, _minAmountOut, _distribution, _flags);
+    IERC20(_tokenOut).safeTransfer(_receiver, _receivedAmount);
   }
 }

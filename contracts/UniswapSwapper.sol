@@ -23,27 +23,13 @@ contract UniswapSwapper is IUniswapSwapper, StrategySwapper {
     UNISWAP = _uniswap;
   }
 
-  function executeSwap(uint256 _id) external onlyMechanic isPendingSwap(_id) returns (uint256 _receivedAmount) {
-    Swap storage _swapInformation = _checkPreExecuteSwap(_id);
-
-    _receivedAmount = _executeUniswap(
-      _swapInformation.from,
-      _swapInformation.tokenIn,
-      _swapInformation.tokenOut,
-      _swapInformation.amountIn,
-      _swapInformation.maxSlippage
-    );
-
-    _deletePendingSwap(_swapInformation);
-  }
-
-  function _executeUniswap(
+  function _executeSwap(
     address _receiver,
     address _tokenIn,
     address _tokenOut,
     uint256 _amountIn,
     uint256 _maxSlippage
-  ) internal returns (uint256 _receivedAmount) {
+  ) internal override returns (uint256 _receivedAmount) {
     address[] memory _path = _getPath(_tokenIn, _tokenOut);
     uint256 _minAmountOut = _getMinAmountOut(_amountIn, _maxSlippage, _path);
 

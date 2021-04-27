@@ -18,23 +18,37 @@ contract SwapperRegistry is ISwapperRegistry {
   using SafeERC20 for IERC20;
   using EnumerableSet for EnumerableSet.AddressSet;
 
-  mapping(address => string) public nameBySwapper;
+  mapping(address => string) public nameByAddress;
   mapping(string => address) public swapperByName;
+  mapping(address => uint256) public initializationByAddress;
   EnumerableSet.AddressSet internal _swappers;
 
-  mapping(address => mapping(address => bool)) approvedTokensBySwappers;
+  mapping(address => EnumerableSet.AddressSet) internal _approvedTokensBySwappers;
 
   constructor() {
     // TODO: set governance
     // TODO: set collectable dust
   }
 
-  function swappers() external {
-    // expose address set
+  function swappers() external view returns (address[] memory _swappersAddresses) {
+    _swappersAddresses = new address[](_swappers.length());
+    for (uint256 i = 0; i < _swappers.length(); i++) {
+      _swappersAddresses[i] = _swappers.at(i);
+    }
   }
 
-  function swapperNames() external {
-    // exposes swapper names
+  function swapperNames() external view returns (string[] memory _swappersNames) {
+    _swappersNames = new string[](_swappers.length());
+    for (uint256 i = 0; i < _swappers.length(); i++) {
+      _swappersNames[i] = nameByAddress[_swappers.at(i)];
+    }
+  }
+
+  function approvedTokensBySwappers(address _swapper) external view returns (address[] memory _tokens) {
+    _tokens = new address[](_approvedTokensBySwappers[_swapper].length());
+    for (uint256 i = 0; i < _approvedTokensBySwappers[_swapper].length(); i++) {
+      _tokens[i] = _approvedTokensBySwappers[_swapper].at(i);
+    }
   }
 
   function addSwapper(string memory _name, address _swapper) external virtual {
@@ -46,18 +60,23 @@ contract SwapperRegistry is ISwapperRegistry {
     require(bytes(_name).length > 0, '');
     require(_swapper != address(0), '');
     require(!_swappers.contains(_swapper), '');
-    nameBySwapper[_swapper] = _name;
+    nameByAddress[_swapper] = _name;
     swapperByName[_name] = _swapper;
+    initializationByAddress[_swapper] = block.timestamp;
     _swappers.add(_swapper);
     emit SwapperAdded();
   }
 
   function _removeSwapper(address _swapper) internal {
     require(_swappers.contains(_swapper), '');
-    // should we take ALL aproves from that swapper ? (thats gonna be a pin in the ass, but its safer)
-    delete swapperByName[nameBySwapper[_swapper]];
-    delete nameBySwapper[_swapper];
-    _swapers.remove(_swapper);
+    for (uint256 i = 0; i < _approvedTokensBySwappers[_swapper].length(); i++) {
+      IERC20(_approvedTokensBySwappers[_swapper].at(i)).safeApprove(_swapper, 0);
+    }
+    delete _approvedTokensBySwappers[_swapper];
+    delete swapperByName[nameByAddress[_swapper]];
+    delete nameByAddress[_swapper];
+    delete initializationByAddress[_swapper];
+    _swappers.remove(_swapper);
     emit SwapperRemoved();
   }
 
@@ -70,9 +89,10 @@ contract SwapperRegistry is ISwapperRegistry {
     address _swapper = swapperByName[_name];
     require(_swappers.contains(_swapper), '');
     require(_token != address(0), '');
-    if (!approvedTokensBySwappers[_swapper][_token]) {
+    // TODO: maybe check if allowed and re-max it ?
+    if (!_approvedTokensBySwappers[_swapper].contains(_token)) {
       IERC20(_token).safeApprove(_swapper, type(uint256).max);
-      approvedTokensBySwappers[_swapper][_token] = true;
+      _approvedTokensBySwappers[_swapper].add(_token);
       emit SwapperAndTokenEnabled();
     }
   }

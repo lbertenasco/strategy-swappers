@@ -52,36 +52,6 @@ contract SwapperRegistry is ISwapperRegistry {
     emit SwapperAdded();
   }
 
-  function updateSwapperName(string memory _name, string memory _newName) external virtual {
-    // TODO: only governance
-    _updateSwapperName(_name, _newName);
-  }
-
-  function _updateSwapperName(string memory _name, string memory _newName) internal {
-    require(bytes(_name).length > 0, '');
-    require(_swappers.contains(swapperByName[_name]), '');
-    swapperByName[_newName] = swapperByName[_name];
-    nameBySwapper[swapperByName[_name]] = _newName;
-    delete swapperByName[_name];
-    emit SwapperNameUpdated();
-  }
-
-  function updateSwapperAddress(address _swapper, address _newSwapper) external virtual {
-    // TODO: only governance
-    _updateSwapperAddress(_swapper, _newSwapper);
-  }
-
-  function _updateSwapperAddress(address _swapper, address _newSwapper) internal {
-    require(_newSwapper != address(0), '');
-    require(_swappers.contains(_swapper), '');
-    nameBySwapper[_newSwapper] = nameBySwapper[_swapper];
-    swapperByName[nameBySwapper[_swapper]] = _newSwapper;
-    _swappers.remove(_swapper);
-    _swappers.add(_newSwapper);
-    delete nameBySwapper[_swapper];
-    emit SwapperAddressUpdated();
-  }
-
   function _removeSwapper(address _swapper) internal {
     require(_swappers.contains(_swapper), '');
     // should we take ALL aproves from that swapper ? (thats gonna be a pin in the ass, but its safer)

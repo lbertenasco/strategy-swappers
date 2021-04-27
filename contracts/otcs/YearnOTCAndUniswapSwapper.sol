@@ -18,9 +18,9 @@ contract YearnOTCAndUniswapSwapper is IYearnOTCAndUniswapSwapper, YearnOTCSwappe
   ) UniswapSwapper(_uniswap, _mechanicsRegistry, _weth, _slippagePrecision) {}
 
   function _getTotalAmountOut(
-    uint256 _amountIn,
     address _tokenIn,
-    address _tokenOut
+    address _tokenOut,
+    uint256 _amountIn
   ) internal view override returns (uint256 _amountOut) {
     _amountOut = IUniswapV2Router02(UNISWAP).getAmountsOut(_amountIn, _getPath(_tokenIn, _tokenOut))[0];
   }

@@ -39,7 +39,7 @@ abstract contract Machinery is IMachinery {
   }
 
   modifier onlyMechanic {
-    require(IMechanicsRegistry(mechanicsRegistry).isMechanic(msg.sender));
+    require(IMechanicsRegistry(mechanicsRegistry).isMechanic(msg.sender), 'Machinery: not mechanic');
     _;
   }
 }

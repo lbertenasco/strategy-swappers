@@ -18,9 +18,9 @@ contract YearnOTCAndOneInchSwapper is IYearnOTCAndOneInchSwapper, YearnOTCSwappe
   ) OneInchSwapper(_oneInch, _mechanicsRegistry, _weth, _slippagePrecision) {}
 
   function _getTotalAmountOut(
-    uint256 _amountIn,
     address _tokenIn,
-    address _tokenOut
+    address _tokenOut,
+    uint256 _amountIn
   ) internal view override returns (uint256 _amountOut) {
     uint256 _parts = 1; // should inherit from one inch swapper
     uint256 _flags = 0; // should inherit from one inch swapper

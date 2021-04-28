@@ -57,9 +57,10 @@ contract SwapperRegistry is ISwapperRegistry {
   }
 
   function _addSwapper(string memory _name, address _swapper) internal {
-    require(bytes(_name).length > 0, '');
-    require(_swapper != address(0), '');
-    require(!_swappers.contains(_swapper), '');
+    require(bytes(_name).length > 0, 'SwapperRegistry: empty name');
+    require(_swapper != address(0), 'SwapperRegistry: zero address');
+    require(!_swappers.contains(_swapper), 'SwapperRegistry: swapper already added');
+    require(swapperByName[_name] == address(0), 'SwapperRegistry: name taken');
     nameByAddress[_swapper] = _name;
     swapperByName[_name] = _swapper;
     initializationByAddress[_swapper] = block.timestamp;
@@ -68,7 +69,7 @@ contract SwapperRegistry is ISwapperRegistry {
   }
 
   function _removeSwapper(address _swapper) internal {
-    require(_swappers.contains(_swapper), '');
+    require(_swappers.contains(_swapper), 'SwapperRegistry: swapper not added');
     for (uint256 i = 0; i < _approvedTokensBySwappers[_swapper].length(); i++) {
       IERC20(_approvedTokensBySwappers[_swapper].at(i)).safeApprove(_swapper, 0);
     }
@@ -80,16 +81,15 @@ contract SwapperRegistry is ISwapperRegistry {
     emit SwapperRemoved();
   }
 
-  function enableSwapper(string memory _name, address _token) external virtual {
+  function enableSwapperToken(string memory _name, address _token) external virtual {
     // TODO: only governance or strategy
-    _enableSwapper(_name, _token);
+    _enableSwapperToken(_name, _token);
   }
 
   function _enableSwapperToken(string memory _name, address _token) internal {
     address _swapper = swapperByName[_name];
-    require(_swappers.contains(_swapper), '');
-    require(_token != address(0), '');
-    // TODO: maybe check if allowed and re-max it ?
+    require(_swappers.contains(_swapper), 'SwapperRegistry: swapper not added');
+    require(_token != address(0), 'SwapperRegistry: zero address');
     if (!_approvedTokensBySwappers[_swapper].contains(_token)) {
       IERC20(_token).safeApprove(_swapper, type(uint256).max);
       _approvedTokensBySwappers[_swapper].add(_token);

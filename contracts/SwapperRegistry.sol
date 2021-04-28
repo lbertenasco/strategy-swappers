@@ -85,7 +85,7 @@ contract SwapperRegistry is ISwapperRegistry {
     _enableSwapper(_name, _token);
   }
 
-  function _enableSwapper(string memory _name, address _token) internal {
+  function _enableSwapperToken(string memory _name, address _token) internal {
     address _swapper = swapperByName[_name];
     require(_swappers.contains(_swapper), '');
     require(_token != address(0), '');

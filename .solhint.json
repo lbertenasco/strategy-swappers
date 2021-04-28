@@ -8,6 +8,7 @@
     "quotes": ["error", "single"],
     "func-visibility": ["warn", { "ignoreConstructors": true }],
     "not-rely-on-time": "off",
+    "no-empty-blocks": "off",
     "private-vars-leading-underscore": ["warn", { "strict": false }]
   }
 }

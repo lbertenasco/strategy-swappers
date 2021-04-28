@@ -9,6 +9,16 @@ interface ISwapperRegistry {
   event SwapperAdded(address indexed _swapper, string _name);
   event SwapperRemoved(address indexed _swapper);
   event SwapperAndTokenEnabled(address indexed _swapper, address _token);
+
+  function swappers() external view returns (address[] memory _swappersAddresses);
+
+  function swapperNames() external view returns (string[] memory _swappersNames);
+
+  function approvedTokensBySwappers(address _swapper) external view returns (address[] memory _tokens);
+
+  function isSwapper(address _swapper) external view returns (bool);
+
+  function addSwapper(string memory _name, address _swapper) external;
 }
 
 contract SwapperRegistry is ISwapperRegistry {
@@ -28,28 +38,32 @@ contract SwapperRegistry is ISwapperRegistry {
     // TODO: set collectable dust
   }
 
-  function swappers() external view returns (address[] memory _swappersAddresses) {
+  function swappers() external view override returns (address[] memory _swappersAddresses) {
     _swappersAddresses = new address[](_swappers.length());
     for (uint256 i = 0; i < _swappers.length(); i++) {
       _swappersAddresses[i] = _swappers.at(i);
     }
   }
 
-  function swapperNames() external view returns (string[] memory _swappersNames) {
+  function swapperNames() external view override returns (string[] memory _swappersNames) {
     _swappersNames = new string[](_swappers.length());
     for (uint256 i = 0; i < _swappers.length(); i++) {
       _swappersNames[i] = nameByAddress[_swappers.at(i)];
     }
   }
 
-  function approvedTokensBySwappers(address _swapper) external view returns (address[] memory _tokens) {
+  function approvedTokensBySwappers(address _swapper) external view override returns (address[] memory _tokens) {
     _tokens = new address[](_approvedTokensBySwappers[_swapper].length());
     for (uint256 i = 0; i < _approvedTokensBySwappers[_swapper].length(); i++) {
       _tokens[i] = _approvedTokensBySwappers[_swapper].at(i);
     }
   }
 
-  function addSwapper(string memory _name, address _swapper) external virtual {
+  function isSwapper(address _swapper) external view override returns (bool) {
+    return _swappers.contains(_swapper);
+  }
+
+  function addSwapper(string memory _name, address _swapper) external virtual override {
     // TODO: only governance
     _addSwapper(_name, _swapper);
   }

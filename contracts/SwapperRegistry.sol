@@ -6,11 +6,9 @@ import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 
 interface ISwapperRegistry {
-  event SwapperAdded();
-  event SwapperNameUpdated();
-  event SwapperAddressUpdated();
-  event SwapperRemoved();
-  event SwapperAndTokenEnabled();
+  event SwapperAdded(address indexed _swapper, string _name);
+  event SwapperRemoved(address indexed _swapper);
+  event SwapperAndTokenEnabled(address indexed _swapper, address _token);
 }
 
 contract SwapperRegistry is ISwapperRegistry {
@@ -65,7 +63,7 @@ contract SwapperRegistry is ISwapperRegistry {
     swapperByName[_name] = _swapper;
     initializationByAddress[_swapper] = block.timestamp;
     _swappers.add(_swapper);
-    emit SwapperAdded();
+    emit SwapperAdded(_swapper, _name);
   }
 
   function _removeSwapper(address _swapper) internal {
@@ -78,7 +76,7 @@ contract SwapperRegistry is ISwapperRegistry {
     delete nameByAddress[_swapper];
     delete initializationByAddress[_swapper];
     _swappers.remove(_swapper);
-    emit SwapperRemoved();
+    emit SwapperRemoved(_swapper);
   }
 
   function enableSwapperToken(string memory _name, address _token) external virtual {
@@ -93,7 +91,7 @@ contract SwapperRegistry is ISwapperRegistry {
     if (!_approvedTokensBySwappers[_swapper].contains(_token)) {
       IERC20(_token).safeApprove(_swapper, type(uint256).max);
       _approvedTokensBySwappers[_swapper].add(_token);
-      emit SwapperAndTokenEnabled();
+      emit SwapperAndTokenEnabled(_swapper, _token);
     }
   }
 }

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.3;
 
-import './StrategySwapper.sol';
+import './Swapper.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 
-interface IYearnOTCSwapper is IStrategySwapper {
+interface IYearnOTCSwapper is ISwapper {
   function getTotalAmountOut(
     address _tokenIn,
     address _tokenOut,
@@ -16,7 +16,7 @@ interface IYearnOTCSwapper is IStrategySwapper {
 
 // TODO: Adapt for ETH (in-out trades the OTC part)
 
-abstract contract YearnOTCSwapper is IYearnOTCSwapper, StrategySwapper {
+abstract contract YearnOTCSwapper is IYearnOTCSwapper, Swapper {
   using SafeERC20 for IERC20;
 
   function getTotalAmountOut(

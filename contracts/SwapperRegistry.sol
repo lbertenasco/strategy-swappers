@@ -12,6 +12,18 @@ interface ISwapperRegistry {
   event SwapperAdded(address indexed _swapper, string _name);
   event SwapperRemoved(address indexed _swapper);
   event SwapperAndTokenEnabled(address indexed _swapper, address _token);
+
+  function swappers() external view returns (address[] memory _swappersAddresses);
+
+  function swapperNames() external view returns (string[] memory _swappersNames);
+
+  function approvedTokensBySwappers(address _swapper) external view returns (address[] memory _tokens);
+
+  function addSwapper(string memory _name, address _swapper) external;
+
+  function removeSwapper(address _swapper) external;
+
+  function enableSwapperToken(string memory _name, address _token) external;
 }
 
 contract SwapperRegistry is ISwapperRegistry, CollectableDust, Governable {
@@ -28,28 +40,28 @@ contract SwapperRegistry is ISwapperRegistry, CollectableDust, Governable {
 
   constructor(address _governance) Governable(_governance) {}
 
-  function swappers() external view returns (address[] memory _swappersAddresses) {
+  function swappers() external view override returns (address[] memory _swappersAddresses) {
     _swappersAddresses = new address[](_swappers.length());
     for (uint256 i = 0; i < _swappers.length(); i++) {
       _swappersAddresses[i] = _swappers.at(i);
     }
   }
 
-  function swapperNames() external view returns (string[] memory _swappersNames) {
+  function swapperNames() external view override returns (string[] memory _swappersNames) {
     _swappersNames = new string[](_swappers.length());
     for (uint256 i = 0; i < _swappers.length(); i++) {
       _swappersNames[i] = nameByAddress[_swappers.at(i)];
     }
   }
 
-  function approvedTokensBySwappers(address _swapper) external view returns (address[] memory _tokens) {
+  function approvedTokensBySwappers(address _swapper) external view override returns (address[] memory _tokens) {
     _tokens = new address[](_approvedTokensBySwappers[_swapper].length());
     for (uint256 i = 0; i < _approvedTokensBySwappers[_swapper].length(); i++) {
       _tokens[i] = _approvedTokensBySwappers[_swapper].at(i);
     }
   }
 
-  function addSwapper(string memory _name, address _swapper) external virtual onlyGovernor {
+  function addSwapper(string memory _name, address _swapper) external virtual override onlyGovernor {
     _addSwapper(_name, _swapper);
   }
 
@@ -65,7 +77,7 @@ contract SwapperRegistry is ISwapperRegistry, CollectableDust, Governable {
     emit SwapperAdded(_swapper, _name);
   }
 
-  function removeSwapper(address _swapper) external virtual onlyGovernor {
+  function removeSwapper(address _swapper) external virtual override onlyGovernor {
     _removeSwapper(_swapper);
   }
 
@@ -82,7 +94,7 @@ contract SwapperRegistry is ISwapperRegistry, CollectableDust, Governable {
     emit SwapperRemoved(_swapper);
   }
 
-  function enableSwapperToken(string memory _name, address _token) external virtual {
+  function enableSwapperToken(string memory _name, address _token) external virtual override {
     // TODO: only governance or strategy
     _enableSwapperToken(_name, _token);
   }

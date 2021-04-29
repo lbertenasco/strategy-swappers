@@ -6,7 +6,7 @@ import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 
 import './Machinery.sol';
 
-interface IStrategySwapper {
+interface ISwapper {
   event SwapCreated(Swap _swapInformation);
 
   function WETH() external view returns (address);
@@ -40,7 +40,7 @@ interface IStrategySwapper {
   }
 }
 
-abstract contract StrategySwapper is IStrategySwapper, Machinery {
+abstract contract Swapper is ISwapper, Machinery {
   using SafeERC20 for IERC20;
 
   address public constant ETH = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
@@ -67,7 +67,7 @@ abstract contract StrategySwapper is IStrategySwapper, Machinery {
   }
 
   modifier isPendingSwap(uint256 _id) {
-    require(swapById[_id].id == _id, 'StrategySwapper: non existant swap');
+    require(swapById[_id].id == _id, 'Swapper: non existant swap');
     _;
   }
 
@@ -78,11 +78,11 @@ abstract contract StrategySwapper is IStrategySwapper, Machinery {
     uint256 _maxSlippage,
     uint256 _deadline
   ) external payable virtual override {
-    require(_tokenIn != address(0) && _tokenOut != address(0), 'StrategySwapper: zero address');
-    require(_amountIn > 0, 'StrategySwapper: zero amount');
-    require(_maxSlippage > 0, 'StrategySwapper: zero slippage');
-    require(_deadline > block.timestamp, 'StrategySwapper: deadline too soon');
-    require(_tokenIn != ETH || _amountIn == msg.value, 'StrategySwapper: missing eth');
+    require(_tokenIn != address(0) && _tokenOut != address(0), 'Swapper: zero address');
+    require(_amountIn > 0, 'Swapper: zero amount');
+    require(_maxSlippage > 0, 'Swapper: zero slippage');
+    require(_deadline > block.timestamp, 'Swapper: deadline too soon');
+    require(_tokenIn != ETH || _amountIn == msg.value, 'Swapper: missing eth');
     // only strategy
     _swap(msg.sender, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _deadline);
   }
@@ -109,7 +109,7 @@ abstract contract StrategySwapper is IStrategySwapper, Machinery {
 
   function expireSwap(uint256 _id) external virtual override isPendingSwap(_id) returns (uint256 _returnedAmount) {
     Swap storage _swapInformation = swapById[_id];
-    require(_swapInformation.deadline <= block.timestamp, 'StrategySwapper: swap not expired');
+    require(_swapInformation.deadline <= block.timestamp, 'Swapper: swap not expired');
     if (_swapInformation.tokenIn == ETH) {
       payable(_swapInformation.from).transfer(_swapInformation.amountIn);
     } else {
@@ -121,7 +121,7 @@ abstract contract StrategySwapper is IStrategySwapper, Machinery {
 
   function _checkPreExecuteSwap(uint256 _id) internal view returns (Swap storage _swapInformation) {
     _swapInformation = swapById[_id];
-    require(_swapInformation.deadline >= block.timestamp, 'StrategySwapper: swap has expired');
+    require(_swapInformation.deadline >= block.timestamp, 'Swapper: swap has expired');
   }
 
   function _deletePendingSwap(Swap storage _swapInformation) internal {

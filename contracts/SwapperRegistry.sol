@@ -27,7 +27,6 @@ interface ISwapperRegistry {
 }
 
 contract SwapperRegistry is ISwapperRegistry, CollectableDust, Governable {
-  // Add the library methods
   using SafeERC20 for IERC20;
   using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -39,6 +38,11 @@ contract SwapperRegistry is ISwapperRegistry, CollectableDust, Governable {
   mapping(address => EnumerableSet.AddressSet) internal _approvedTokensBySwappers;
 
   constructor(address _governance) Governable(_governance) {}
+
+  modifier onlySwapper {
+    require(_swappers.contains(msg.sender), 'SwapperRegistry: swapper not registered');
+    _;
+  }
 
   function swappers() external view override returns (address[] memory _swappersAddresses) {
     _swappersAddresses = new address[](_swappers.length());
@@ -94,8 +98,7 @@ contract SwapperRegistry is ISwapperRegistry, CollectableDust, Governable {
     emit SwapperRemoved(_swapper);
   }
 
-  function enableSwapperToken(string memory _name, address _token) external virtual override {
-    // TODO: only governance or strategy
+  function enableSwapperToken(string memory _name, address _token) external virtual override onlySwapper {
     _enableSwapperToken(_name, _token);
   }
 

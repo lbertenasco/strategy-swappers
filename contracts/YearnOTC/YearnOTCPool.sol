@@ -42,8 +42,7 @@ contract YearnOTCPoolis is IYearnOTCPool, YearnOTCPoolDesk, YearnOTCPoolTradeabl
     address _offeredTokenToPool,
     address _wantedTokenFromPool,
     uint256 _maxOfferedAmount
-  ) public override returns (uint256 _tookFromPool, uint256 _tookFromSwapper) {
-    require(SwapperRegistry(swapperRegistry).isSwapper(msg.sender));
+  ) external override onlyRegisteredSwapper returns (uint256 _tookFromPool, uint256 _tookFromSwapper) {
     (_tookFromPool, _tookFromSwapper) = _performTradeOnSwapper(msg.sender, _offeredTokenToPool, _wantedTokenFromPool, _maxOfferedAmount);
   }
 }

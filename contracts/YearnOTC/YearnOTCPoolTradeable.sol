@@ -9,7 +9,14 @@ import '../YearnOTCSwapper.sol';
 import './YearnOTCPoolDesk.sol';
 
 interface IYearnOTCPoolTradeable {
-  event Claimed();
+  event Claimed(address indexed _receiver, address _claimedToken, uint256 _amountClaimed);
+  event TradePerformed(
+    address indexed _swapper,
+    address _offeredTokenToPool,
+    address _wantedTokenFromPool,
+    uint256 _tookFromPool,
+    uint256 _tookFromSwapper
+  );
 
   function swappedAvailable(address _swappedToken) external view returns (uint256 _swappedAmount);
 
@@ -32,6 +39,11 @@ abstract contract YearnOTCPoolTradeable is IYearnOTCPoolTradeable, YearnOTCPoolD
     swapperRegistry = _swapperRegistry;
   }
 
+  modifier onlyRegisteredSwapper {
+    require(SwapperRegistry(swapperRegistry).isSwapper(msg.sender), 'YearnOTCPool: not a registered swapper');
+    _;
+  }
+
   function _claim(
     address _receiver,
     address _token,
@@ -42,7 +54,7 @@ abstract contract YearnOTCPoolTradeable is IYearnOTCPoolTradeable, YearnOTCPoolD
     require(_amountToClaim > 0, 'YearnOTCPool: should provide more than zero');
     _reduceSwappedAvailable(_token, _amountToClaim);
     IERC20(_token).safeTransfer(_receiver, _amountToClaim);
-    emit Claimed();
+    emit Claimed(_receiver, _token, _amountToClaim);
   }
 
   function _reduceSwappedAvailable(address _token, uint256 _amountToClaim) internal {
@@ -57,16 +69,17 @@ abstract contract YearnOTCPoolTradeable is IYearnOTCPoolTradeable, YearnOTCPoolD
     address _offeredTokenToPool,
     address _wantedTokenFromPool,
     uint256 _maxOfferedAmount
-  ) public returns (uint256 _tookFromPool, uint256 _tookFromSwapper) {
+  ) internal returns (uint256 _tookFromPool, uint256 _tookFromSwapper) {
+    if (availableFor[_wantedTokenFromPool][_offeredTokenToPool] == 0) return (0, 0);
     uint256 _maxWantedFromOffered = IYearnOTCSwapper(_swapper).getTotalAmountOut(_offeredTokenToPool, _wantedTokenFromPool, _maxOfferedAmount);
     _tookFromPool = Math.min(availableFor[_wantedTokenFromPool][_offeredTokenToPool], _maxWantedFromOffered);
     _tookFromSwapper = IYearnOTCSwapper(_swapper).getTotalAmountOut(_wantedTokenFromPool, _offeredTokenToPool, _tookFromPool);
     IERC20(_offeredTokenToPool).safeTransferFrom(_swapper, address(this), _tookFromSwapper);
-    _performTradeOnSwapper(_offeredTokenToPool, _wantedTokenFromPool, _tookFromPool, _tookFromSwapper);
-    // emit event();
+    _performTrade(_offeredTokenToPool, _wantedTokenFromPool, _tookFromPool, _tookFromSwapper);
+    emit TradePerformed(_swapper, _offeredTokenToPool, _wantedTokenFromPool, _tookFromPool, _tookFromSwapper);
   }
 
-  function _performTradeOnSwapper(
+  function _performTrade(
     address _offeredTokenToPool,
     address _wantedTokenFromPool,
     uint256 _takenFromPool,

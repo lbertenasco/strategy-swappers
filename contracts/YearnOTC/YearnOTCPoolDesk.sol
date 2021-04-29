@@ -5,8 +5,9 @@ import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 
 interface IYearnOTCPoolDesk {
-  event OTCProviderSet(address _OTCProvider);
-  event Deposited();
+  event OTCProviderSet(address indexed _OTCProvider);
+  event Deposited(address indexed _depositor, address _offeredTokenToPool, address _wantedTokenFromPool, uint256 _amountToOffer);
+  event Withdrew(address indexed _receiver, address _offeredTokenToPool, address _wantedTokenFromPool, uint256 _amountToWithdraw);
 
   function OTCProvider() external view returns (address);
 
@@ -49,17 +50,17 @@ abstract contract YearnOTCPoolDesk is IYearnOTCPoolDesk {
   }
 
   function _deposit(
-    address _from,
+    address _depositor,
     address _offeredTokenToPool,
     address _wantedTokenFromPool,
     uint256 _amountToOffer
   ) internal {
-    require(_from != address(0), 'YearnOTCPool: provider should not be zero');
+    require(_depositor != address(0), 'YearnOTCPool: provider should not be zero');
     require(_offeredTokenToPool != address(0) && _wantedTokenFromPool != address(0), 'YearnOTCPool: tokens should not be zero');
     require(_amountToOffer > 0, 'YearnOTCPool: should provide more than zero');
-    IERC20(_offeredTokenToPool).safeTransferFrom(msg.sender, address(this), _amountToOffer);
+    IERC20(_offeredTokenToPool).safeTransferFrom(_depositor, address(this), _amountToOffer);
     _addAvailableFor(_offeredTokenToPool, _wantedTokenFromPool, _amountToOffer);
-    emit Deposited();
+    emit Deposited(_depositor, _offeredTokenToPool, _wantedTokenFromPool, _amountToOffer);
   }
 
   function _addAvailableFor(
@@ -81,6 +82,7 @@ abstract contract YearnOTCPoolDesk is IYearnOTCPoolDesk {
     require(_amountToWithdraw > 0, 'YearnOTCPool: should provide more than zero');
     _reduceAvailableFor(_offeredTokenToPool, _wantedTokenFromPool, _amountToWithdraw);
     IERC20(_offeredTokenToPool).safeTransfer(_receiver, _amountToWithdraw);
+    emit Withdrew(_receiver, _offeredTokenToPool, _wantedTokenFromPool, _amountToWithdraw);
   }
 
   function _reduceAvailableFor(

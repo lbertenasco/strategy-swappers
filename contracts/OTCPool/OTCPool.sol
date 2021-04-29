@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.3;
 
-import './YearnOTCPoolDesk.sol';
-import './YearnOTCPoolTradeable.sol';
+import './OTCPoolDesk.sol';
+import './OTCPoolTradeable.sol';
 
-interface IYearnOTCPool is IYearnOTCPoolTradeable {}
+interface IOTCPool is IOTCPoolTradeable {}
 
-contract YearnOTCPoolis is IYearnOTCPool, YearnOTCPoolDesk, YearnOTCPoolTradeable {
-  constructor(address _OTCProvider, address _swapperRegistry) YearnOTCPoolDesk(_OTCProvider) YearnOTCPoolTradeable(_swapperRegistry) {}
+contract OTCPoolis is IOTCPool, OTCPoolDesk, OTCPoolTradeable {
+  constructor(address _OTCProvider, address _swapperRegistry) OTCPoolDesk(_OTCProvider) OTCPoolTradeable(_swapperRegistry) {}
 
   // TODO: Only governance
   function setOTCProvider(address _OTCProvider) external override {

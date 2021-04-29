@@ -6,9 +6,9 @@ import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '../SwapperRegistry.sol';
 import '../YearnOTCSwapper.sol';
-import './YearnOTCPoolDesk.sol';
+import './OTCPoolDesk.sol';
 
-interface IYearnOTCPoolTradeable {
+interface IOTCPoolTradeable {
   event SwapperRegistrySet(address indexed _swapperRegistry);
   event Claimed(address indexed _receiver, address _claimedToken, uint256 _amountClaimed);
   event TradePerformed(
@@ -34,7 +34,7 @@ interface IYearnOTCPoolTradeable {
   ) external returns (uint256 _tookFromPool, uint256 _tookFromSwapper);
 }
 
-abstract contract YearnOTCPoolTradeable is IYearnOTCPoolTradeable, YearnOTCPoolDesk {
+abstract contract OTCPoolTradeable is IOTCPoolTradeable, OTCPoolDesk {
   using SafeERC20 for IERC20;
 
   address public override swapperRegistry;
@@ -45,13 +45,13 @@ abstract contract YearnOTCPoolTradeable is IYearnOTCPoolTradeable, YearnOTCPoolD
   }
 
   function _setSwapperRegistry(address _swapperRegistry) internal {
-    require(_swapperRegistry != address(0), 'YearnOTCPool: zero address');
+    require(_swapperRegistry != address(0), 'OTCPool: zero address');
     swapperRegistry = _swapperRegistry;
     emit SwapperRegistrySet(_swapperRegistry);
   }
 
   modifier onlyRegisteredSwapper {
-    require(SwapperRegistry(swapperRegistry).isSwapper(msg.sender), 'YearnOTCPool: not a registered swapper');
+    require(SwapperRegistry(swapperRegistry).isSwapper(msg.sender), 'OTCPool: not a registered swapper');
     _;
   }
 
@@ -60,16 +60,16 @@ abstract contract YearnOTCPoolTradeable is IYearnOTCPoolTradeable, YearnOTCPoolD
     address _token,
     uint256 _amountToClaim
   ) internal {
-    require(_receiver != address(0), 'YearnOTCPool: receiver should not be zero');
-    require(_token != address(0), 'YearnOTCPool: token should not be zero');
-    require(_amountToClaim > 0, 'YearnOTCPool: should provide more than zero');
+    require(_receiver != address(0), 'OTCPool: receiver should not be zero');
+    require(_token != address(0), 'OTCPool: token should not be zero');
+    require(_amountToClaim > 0, 'OTCPool: should provide more than zero');
     _reduceSwappedAvailable(_token, _amountToClaim);
     IERC20(_token).safeTransfer(_receiver, _amountToClaim);
     emit Claimed(_receiver, _token, _amountToClaim);
   }
 
   function _reduceSwappedAvailable(address _token, uint256 _amountToClaim) internal {
-    require(_amountToClaim >= swappedAvailable[_token], 'YearnOTCPool: swapped not available');
+    require(_amountToClaim >= swappedAvailable[_token], 'OTCPool: swapped not available');
     swappedAvailable[_token] -= _amountToClaim;
   }
 
@@ -96,7 +96,7 @@ abstract contract YearnOTCPoolTradeable is IYearnOTCPoolTradeable, YearnOTCPoolD
     uint256 _takenFromPool,
     uint256 _providedFromSwapper
   ) internal {
-    require(_takenFromPool <= availableFor[_wantedTokenFromPool][_offeredTokenToPool], 'YearnOTCPool: amount not available');
+    require(_takenFromPool <= availableFor[_wantedTokenFromPool][_offeredTokenToPool], 'OTCPool: amount not available');
     availableFor[_wantedTokenFromPool][_offeredTokenToPool] -= _takenFromPool;
     swappedAvailable[_offeredTokenToPool] += _providedFromSwapper;
   }

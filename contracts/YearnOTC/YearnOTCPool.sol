@@ -9,11 +9,14 @@ interface IYearnOTCPool is IYearnOTCPoolTradeable {}
 contract YearnOTCPoolis is IYearnOTCPool, YearnOTCPoolDesk, YearnOTCPoolTradeable {
   constructor(address _OTCProvider, address _swapperRegistry) YearnOTCPoolDesk(_OTCProvider) YearnOTCPoolTradeable(_swapperRegistry) {}
 
-  // OTC Pool Desk
-
   // TODO: Only governance
   function setOTCProvider(address _OTCProvider) external override {
     _setOTCProvider(_OTCProvider);
+  }
+
+  // TODO: Only governance
+  function setSwapperRegistry(address _swapperRegistry) external override {
+    _setSwapperRegistry(_swapperRegistry);
   }
 
   function deposit(

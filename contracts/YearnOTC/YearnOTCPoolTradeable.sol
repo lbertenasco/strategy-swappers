@@ -9,6 +9,7 @@ import '../YearnOTCSwapper.sol';
 import './YearnOTCPoolDesk.sol';
 
 interface IYearnOTCPoolTradeable {
+  event SwapperRegistrySet(address indexed _swapperRegistry);
   event Claimed(address indexed _receiver, address _claimedToken, uint256 _amountClaimed);
   event TradePerformed(
     address indexed _swapper,
@@ -18,7 +19,11 @@ interface IYearnOTCPoolTradeable {
     uint256 _tookFromSwapper
   );
 
+  function swapperRegistry() external view returns (address);
+
   function swappedAvailable(address _swappedToken) external view returns (uint256 _swappedAmount);
+
+  function setSwapperRegistry(address _swapperRegistry) external;
 
   function claim(address _token, uint256 _amount) external;
 
@@ -32,11 +37,17 @@ interface IYearnOTCPoolTradeable {
 abstract contract YearnOTCPoolTradeable is IYearnOTCPoolTradeable, YearnOTCPoolDesk {
   using SafeERC20 for IERC20;
 
-  address public swapperRegistry;
+  address public override swapperRegistry;
   mapping(address => uint256) public override swappedAvailable;
 
   constructor(address _swapperRegistry) {
     swapperRegistry = _swapperRegistry;
+  }
+
+  function _setSwapperRegistry(address _swapperRegistry) internal {
+    require(_swapperRegistry != address(0), 'YearnOTCPool: zero address');
+    swapperRegistry = _swapperRegistry;
+    emit SwapperRegistrySet(_swapperRegistry);
   }
 
   modifier onlyRegisteredSwapper {

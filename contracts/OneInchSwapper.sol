@@ -2,7 +2,7 @@
 pragma solidity 0.8.4;
 
 import '@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol';
-import './StrategySwapper.sol';
+import './Swapper.sol';
 
 interface IOneSplit {
   function getExpectedReturn(
@@ -39,13 +39,13 @@ interface IOneSplit {
   ) external payable returns (uint256 returnAmount);
 }
 
-interface IOneInchSwapper is IStrategySwapper {
+interface IOneInchSwapper is ISwapper {
   function ONE_INCH() external view returns (address);
 }
 
 // TODO: Adapt to eth trades
 
-contract OneInchSwapper is IOneInchSwapper, StrategySwapper {
+contract OneInchSwapper is IOneInchSwapper, Swapper {
   using SafeERC20 for IERC20;
 
   address public immutable override ONE_INCH;
@@ -55,7 +55,7 @@ contract OneInchSwapper is IOneInchSwapper, StrategySwapper {
     address _mechanicsRegistry,
     address _weth,
     uint256 _slippagePrecision
-  ) StrategySwapper(_mechanicsRegistry, _weth, _slippagePrecision) {
+  ) Swapper(_mechanicsRegistry, _weth, _slippagePrecision) {
     ONE_INCH = _oneInch;
   }
 

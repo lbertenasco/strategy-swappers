@@ -2,19 +2,19 @@
 pragma solidity 0.8.4;
 
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
-import './StrategySwapper.sol';
+import './Swapper.sol';
 
-interface IBaseSwapper is IStrategySwapper {
+interface IBaseSwapper is ISwapper {
 }
 
-contract BaseSwapper is IBaseSwapper, StrategySwapper {
+contract BaseSwapper is IBaseSwapper, Swapper {
   using SafeERC20 for IERC20;
 
   constructor(
     address _mechanicsRegistry,
     address _weth,
     uint256 _slippagePrecision
-  ) StrategySwapper(_mechanicsRegistry, _weth, _slippagePrecision) {
+  ) Swapper(_mechanicsRegistry, _weth, _slippagePrecision) {
   }
 
   function executeSwap(uint256 _id) external onlyMechanic isPendingSwap(_id) returns (uint256 _receivedAmount) {

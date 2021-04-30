@@ -3,13 +3,13 @@ pragma solidity 0.8.4;
 
 import '@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
-import './StrategySwapper.sol';
+import './Swapper.sol';
 
-interface IUniswapSwapper is IStrategySwapper {
+interface IUniswapSwapper is ISwapper {
   function UNISWAP() external view returns (address);
 }
 
-contract UniswapSwapper is IUniswapSwapper, StrategySwapper {
+contract UniswapSwapper is IUniswapSwapper, Swapper {
   using SafeERC20 for IERC20;
 
   address public immutable override UNISWAP;
@@ -19,7 +19,7 @@ contract UniswapSwapper is IUniswapSwapper, StrategySwapper {
     address _weth,
     address _mechanicsRegistry,
     uint256 _slippagePrecision
-  ) StrategySwapper(_mechanicsRegistry, _weth, _slippagePrecision) {
+  ) Swapper(_mechanicsRegistry, _weth, _slippagePrecision) {
     UNISWAP = _uniswap;
   }
 

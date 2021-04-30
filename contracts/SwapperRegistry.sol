@@ -19,6 +19,8 @@ interface ISwapperRegistry {
 
   function approvedTokensBySwappers(address _swapper) external view returns (address[] memory _tokens);
 
+  function isSwapper(address _swapper) external view returns (bool);
+
   function addSwapper(string memory _name, address _swapper) external;
 
   function removeSwapper(address _swapper) external;
@@ -63,6 +65,10 @@ contract SwapperRegistry is ISwapperRegistry, CollectableDust, Governable {
     for (uint256 i = 0; i < _approvedTokensBySwappers[_swapper].length(); i++) {
       _tokens[i] = _approvedTokensBySwappers[_swapper].at(i);
     }
+  }
+
+  function isSwapper(address _swapper) external view override returns (bool) {
+    return _swappers.contains(_swapper);
   }
 
   function addSwapper(string memory _name, address _swapper) external virtual override onlyGovernor {

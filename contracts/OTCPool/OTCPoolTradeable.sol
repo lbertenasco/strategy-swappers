@@ -5,7 +5,7 @@ import '@openzeppelin/contracts/utils/math/Math.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '../SwapperRegistry.sol';
-import '../YearnOTCSwapper.sol';
+import '../OTCSwapper.sol';
 import './OTCPoolDesk.sol';
 
 interface IOTCPoolTradeable {
@@ -82,9 +82,9 @@ abstract contract OTCPoolTradeable is IOTCPoolTradeable, OTCPoolDesk {
     uint256 _maxOfferedAmount
   ) internal returns (uint256 _tookFromPool, uint256 _tookFromSwapper) {
     if (availableFor[_wantedTokenFromPool][_offeredTokenToPool] == 0) return (0, 0);
-    uint256 _maxWantedFromOffered = IYearnOTCSwapper(_swapper).getTotalAmountOut(_offeredTokenToPool, _wantedTokenFromPool, _maxOfferedAmount);
+    uint256 _maxWantedFromOffered = IOTCSwapper(_swapper).getTotalAmountOut(_offeredTokenToPool, _wantedTokenFromPool, _maxOfferedAmount);
     _tookFromPool = Math.min(availableFor[_wantedTokenFromPool][_offeredTokenToPool], _maxWantedFromOffered);
-    _tookFromSwapper = IYearnOTCSwapper(_swapper).getTotalAmountOut(_wantedTokenFromPool, _offeredTokenToPool, _tookFromPool);
+    _tookFromSwapper = IOTCSwapper(_swapper).getTotalAmountOut(_wantedTokenFromPool, _offeredTokenToPool, _tookFromPool);
     IERC20(_offeredTokenToPool).safeTransferFrom(_swapper, address(this), _tookFromSwapper);
     _performTrade(_offeredTokenToPool, _wantedTokenFromPool, _tookFromPool, _tookFromSwapper);
     emit TradePerformed(_swapper, _offeredTokenToPool, _wantedTokenFromPool, _tookFromPool, _tookFromSwapper);

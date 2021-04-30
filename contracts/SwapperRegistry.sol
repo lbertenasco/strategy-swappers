@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.3;
+pragma solidity 0.8.4;
 
 import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
-import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
+import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+
+import '@lbertenasco/contract-utils/contracts/utils/Governable.sol';
+import '@lbertenasco/contract-utils/contracts/utils/CollectableDust.sol';
 
 interface ISwapperRegistry {
   event SwapperAdded(address indexed _swapper, string _name);
@@ -19,10 +22,13 @@ interface ISwapperRegistry {
   function isSwapper(address _swapper) external view returns (bool);
 
   function addSwapper(string memory _name, address _swapper) external;
+
+  function removeSwapper(address _swapper) external;
+
+  function enableSwapperToken(string memory _name, address _token) external;
 }
 
-contract SwapperRegistry is ISwapperRegistry {
-  // Add the library methods
+contract SwapperRegistry is ISwapperRegistry, CollectableDust, Governable {
   using SafeERC20 for IERC20;
   using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -33,9 +39,11 @@ contract SwapperRegistry is ISwapperRegistry {
 
   mapping(address => EnumerableSet.AddressSet) internal _approvedTokensBySwappers;
 
-  constructor() {
-    // TODO: set governance
-    // TODO: set collectable dust
+  constructor(address _governance) Governable(_governance) {}
+
+  modifier onlySwapper {
+    require(_swappers.contains(msg.sender), 'SwapperRegistry: swapper not registered');
+    _;
   }
 
   function swappers() external view override returns (address[] memory _swappersAddresses) {
@@ -63,8 +71,7 @@ contract SwapperRegistry is ISwapperRegistry {
     return _swappers.contains(_swapper);
   }
 
-  function addSwapper(string memory _name, address _swapper) external virtual override {
-    // TODO: only governance
+  function addSwapper(string memory _name, address _swapper) external virtual override onlyGovernor {
     _addSwapper(_name, _swapper);
   }
 
@@ -80,6 +87,10 @@ contract SwapperRegistry is ISwapperRegistry {
     emit SwapperAdded(_swapper, _name);
   }
 
+  function removeSwapper(address _swapper) external virtual override onlyGovernor {
+    _removeSwapper(_swapper);
+  }
+
   function _removeSwapper(address _swapper) internal {
     require(_swappers.contains(_swapper), 'SwapperRegistry: swapper not added');
     for (uint256 i = 0; i < _approvedTokensBySwappers[_swapper].length(); i++) {
@@ -93,8 +104,7 @@ contract SwapperRegistry is ISwapperRegistry {
     emit SwapperRemoved(_swapper);
   }
 
-  function enableSwapperToken(string memory _name, address _token) external virtual {
-    // TODO: only governance or strategy
+  function enableSwapperToken(string memory _name, address _token) external virtual override onlySwapper {
     _enableSwapperToken(_name, _token);
   }
 
@@ -107,5 +117,21 @@ contract SwapperRegistry is ISwapperRegistry {
       _approvedTokensBySwappers[_swapper].add(_token);
       emit SwapperAndTokenEnabled(_swapper, _token);
     }
+  }
+
+  function setPendingGovernor(address _pendingGovernor) external override onlyGovernor {
+    _setPendingGovernor(_pendingGovernor);
+  }
+
+  function acceptGovernor() external override onlyPendingGovernor {
+    _acceptGovernor();
+  }
+
+  function sendDust(
+    address _to,
+    address _token,
+    uint256 _amount
+  ) external virtual override onlyGovernor {
+    _sendDust(_to, _token, _amount);
   }
 }

@@ -1,23 +1,30 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.4;
 
-import './Swapper.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
+import './OTCPool/OTCPool.sol';
+import './Swapper.sol';
 
-interface IYearnOTCSwapper is ISwapper {
+interface IOTCSwapper is ISwapper {
   function getTotalAmountOut(
     address _tokenIn,
     address _tokenOut,
     uint256 _amountIn
   ) external view returns (uint256 _amountOut);
 
-  function executeOTCSwap(uint256 _id, uint256 _providedAmount) external returns (uint256 _receivedAmount);
+  function executeOTCSwap(uint256 _id) external returns (uint256 _receivedAmount);
 }
 
 // TODO: Adapt for ETH (in-out trades the OTC part)
 
-abstract contract YearnOTCSwapper is IYearnOTCSwapper, Swapper {
+abstract contract OTCSwapper is IOTCSwapper, Swapper {
   using SafeERC20 for IERC20;
+
+  address immutable otcPool;
+
+  constructor(address _otcPool) {
+    otcPool = _otcPool;
+  }
 
   function getTotalAmountOut(
     address _tokenIn,
@@ -33,28 +40,22 @@ abstract contract YearnOTCSwapper is IYearnOTCSwapper, Swapper {
     uint256 _amountIn
   ) internal view virtual returns (uint256 _amountOut);
 
-  function executeOTCSwap(uint256 _id, uint256 _providedAmount)
-    external
-    override
-    onlyMechanic
-    isPendingSwap(_id)
-    returns (uint256 _receivedAmount)
-  {
+  function executeOTCSwap(uint256 _id) external override onlyMechanic isPendingSwap(_id) returns (uint256 _receivedAmount) {
     Swap storage _swapInformation = _checkPreExecuteSwap(_id);
 
-    // Take in from swapper
-    uint256 _totalOutNeeded = _getTotalAmountOut(_swapInformation.tokenIn, _swapInformation.tokenOut, _swapInformation.amountIn);
-    IERC20(_swapInformation.tokenOut).safeTransferFrom(msg.sender, address(this), _providedAmount);
+    uint256 _usedBySwapper;
 
-    // Send what should be sent to swapper
-    uint256 _rewardedIn = _getTotalAmountOut(_swapInformation.tokenOut, _swapInformation.tokenIn, _providedAmount);
-    IERC20(_swapInformation.tokenIn).safeTransfer(msg.sender, _rewardedIn);
+    (_receivedAmount, _usedBySwapper) = IOTCPool(otcPool).takeOffer(
+      _swapInformation.tokenIn,
+      _swapInformation.tokenOut,
+      _swapInformation.amountIn
+    );
 
     // Buy what's missing from uniswap
-    if (_providedAmount < _totalOutNeeded) {
-      uint256 _toBuyFromFallbackSwapper = _swapInformation.amountIn - _rewardedIn;
+    if (_usedBySwapper < _swapInformation.amountIn) {
+      uint256 _toBuyFromFallbackSwapper = _swapInformation.amountIn - _usedBySwapper;
 
-      _receivedAmount = _executeSwap(
+      _receivedAmount += _executeSwap(
         _swapInformation.from,
         _swapInformation.tokenIn,
         _swapInformation.tokenOut,

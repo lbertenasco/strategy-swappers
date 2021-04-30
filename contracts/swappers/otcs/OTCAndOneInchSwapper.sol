@@ -2,20 +2,21 @@
 pragma solidity 0.8.4;
 
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
-import '../YearnOTCSwapper.sol';
+import '../../OTCSwapper.sol';
 import '../OneInchSwapper.sol';
 
-interface IYearnOTCAndOneInchSwapper is IYearnOTCSwapper, IOneInchSwapper {}
+interface IOTCAndOneInchSwapper is IOTCSwapper, IOneInchSwapper {}
 
-contract YearnOTCAndOneInchSwapper is IYearnOTCAndOneInchSwapper, YearnOTCSwapper, OneInchSwapper {
+contract OTCAndOneInchSwapper is IOTCAndOneInchSwapper, OTCSwapper, OneInchSwapper {
   using SafeERC20 for IERC20;
 
   constructor(
+    address _otcPool,
     address _oneInch,
     address _mechanicsRegistry,
     address _weth,
     uint256 _slippagePrecision
-  ) OneInchSwapper(_oneInch, _mechanicsRegistry, _weth, _slippagePrecision) {}
+  ) OTCSwapper(_otcPool) OneInchSwapper(_oneInch, _mechanicsRegistry, _weth, _slippagePrecision) {}
 
   function _getTotalAmountOut(
     address _tokenIn,

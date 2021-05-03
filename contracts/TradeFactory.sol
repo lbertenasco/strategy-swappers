@@ -20,6 +20,8 @@ interface ITradeFactory {
     uint256 _deadline;
   }
 
+  event TradeCanceled(uint256 _id);
+
   function pendingTradesById(uint256)
     external
     view
@@ -106,7 +108,7 @@ abstract contract TradeFactory is ITradeFactory {
   function _cancelPending(uint256 _id) internal {
     require(_pendingTradesIds.contains(_id), 'TradeFactory: trade not pending');
     Trade memory _trade = pendingTradesById[_id];
-    _removePendingSwap(_trade._owner, _id);
+    _removePendingTrade(_trade._owner, _id);
     // emit event
   }
 
@@ -117,12 +119,12 @@ abstract contract TradeFactory is ITradeFactory {
       _pendingOwnerIds[i] = _pendingTradesByOwner[_owner].at(i);
     }
     for (uint256 i = 0; i < _pendingOwnerIds.length; i++) {
-      _removePendingSwap(_owner, _pendingOwnerIds[i]);
+      _removePendingTrade(_owner, _pendingOwnerIds[i]);
     }
     // emit event
   }
 
-  function _removePendingSwap(address _owner, uint256 _id) internal {
+  function _removePendingTrade(address _owner, uint256 _id) internal {
     _pendingTradesByOwner[_owner].remove(_id);
     _pendingTradesIds.remove(_id);
     delete pendingTradesById[_id];
@@ -146,7 +148,7 @@ abstract contract TradeFactory is ITradeFactory {
       _enableSwapperToken(_trade._swapper, _trade._tokenIn);
     }
     _receivedAmount = ISwapper(_trade._swapper).swap(_trade._owner, _trade._tokenIn, _trade._tokenOut, _trade._amountIn, _trade._maxSlippage);
-    _removePendingSwap(_trade._owner, _id);
+    _removePendingTrade(_trade._owner, _id);
     // emit event
   }
 
@@ -156,7 +158,7 @@ abstract contract TradeFactory is ITradeFactory {
     require(_trade._deadline <= block.timestamp, 'TradeFactory: swap not expired');
     IERC20(_trade._tokenIn).safeTransfer(_trade._owner, _trade._amountIn);
     _returnedAmount = _trade._amountIn;
-    _removePendingSwap(_trade._owner, _id);
+    _removePendingTrade(_trade._owner, _id);
     // emit event
   }
 

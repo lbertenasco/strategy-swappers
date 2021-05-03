@@ -4,9 +4,9 @@ pragma solidity 0.8.4;
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 
-import './utils/Machinery.sol';
-
 interface ISwapper {
+  event Swapped(address _receiver, address _tokenIn, address _tokenOut, uint256 _amountIn, uint256 _maxSlippage, uint256 _receivedAmount);
+
   function SLIPPAGE_PRECISION() external view returns (uint256);
 
   function swap(
@@ -50,8 +50,8 @@ abstract contract Swapper is ISwapper {
   ) external payable virtual override returns (uint256 _receivedAmount) {
     _assertPreSwap(_receiver, _tokenIn, _tokenOut, _amountIn, _maxSlippage);
     IERC20(_tokenIn).safeTransferFrom(msg.sender, address(this), _amountIn);
-    return _executeSwap(_receiver, _tokenIn, _tokenOut, _amountIn, _maxSlippage);
-    // emit event ?
+    _receivedAmount = _executeSwap(_receiver, _tokenIn, _tokenOut, _amountIn, _maxSlippage);
+    emit Swapped(_receiver, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _receivedAmount);
   }
 
   function _executeSwap(

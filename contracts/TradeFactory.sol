@@ -99,12 +99,26 @@ abstract contract TradeFactory is ITradeFactory {
   function _execute(uint256 _id) internal virtual returns (uint256 _receivedAmount) {
     require(_pendingTradesIds.contains(_id), 'TradeFactory: trade not pending');
     Trade memory _trade = pendingTradeById[_id];
+    require(_trade._deadline >= block.timestamp, 'TradeFactory: trade has expired');
     if (!_approvedTokensBySwappers[_trade._swapper].contains(_trade._tokenIn)) {
       _enableSwapperToken(_trade._swapper, _trade._tokenIn);
     }
-    ISwapper(_trade._swapper).executeSwap(_id);
+    ISwapper(_trade._swapper).swap(_trade._owner, _trade._tokenIn, _trade._tokenOut, _trade._amountIn, _trade._maxSlippage);
+    // delete pending swap
     // emit event
   }
+
+  // function expireSwap(uint256 _id) external virtual override isPendingSwap(_id) returns (uint256 _returnedAmount) {
+  //   Swap storage _swapInformation = swapById[_id];
+  //   require(_swapInformation.deadline <= block.timestamp, 'Swapper: swap not expired');
+  //   if (_swapInformation.tokenIn == ETH) {
+  //     payable(_swapInformation.from).transfer(_swapInformation.amountIn);
+  //   } else {
+  //     IERC20(_swapInformation.tokenIn).safeTransfer(_swapInformation.from, _swapInformation.amountIn);
+  //   }
+  //   _returnedAmount = _swapInformation.amountIn;
+  //   _deletePendingSwap(_swapInformation);
+  // }
 
   function _enableSwapperToken(address _swapper, address _token) internal {
     IERC20(_token).safeApprove(_swapper, type(uint256).max);

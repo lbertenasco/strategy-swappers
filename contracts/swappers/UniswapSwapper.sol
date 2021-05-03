@@ -17,9 +17,8 @@ contract UniswapSwapper is IUniswapSwapper, Swapper {
   constructor(
     address _uniswap,
     address _weth,
-    address _mechanicsRegistry,
     uint256 _slippagePrecision
-  ) Swapper(_mechanicsRegistry, _weth, _slippagePrecision) {
+  ) Swapper(_weth, _slippagePrecision) {
     UNISWAP = _uniswap;
   }
 

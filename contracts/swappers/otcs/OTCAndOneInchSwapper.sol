@@ -13,10 +13,9 @@ contract OTCAndOneInchSwapper is IOTCAndOneInchSwapper, OTCSwapper, OneInchSwapp
   constructor(
     address _otcPool,
     address _oneInch,
-    address _mechanicsRegistry,
     address _weth,
     uint256 _slippagePrecision
-  ) OTCSwapper(_otcPool) OneInchSwapper(_oneInch, _mechanicsRegistry, _weth, _slippagePrecision) {}
+  ) OTCSwapper(_otcPool) OneInchSwapper(_oneInch, _weth, _slippagePrecision) {}
 
   function _getTotalAmountOut(
     address _tokenIn,

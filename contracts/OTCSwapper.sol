@@ -11,8 +11,6 @@ interface IOTCSwapper is ISwapper {
     address _tokenOut,
     uint256 _amountIn
   ) external view returns (uint256 _amountOut);
-
-  function executeOTCSwap(uint256 _id) external returns (uint256 _receivedAmount);
 }
 
 // TODO: Adapt for ETH (in-out trades the OTC part)
@@ -40,30 +38,43 @@ abstract contract OTCSwapper is IOTCSwapper, Swapper {
     uint256 _amountIn
   ) internal view virtual returns (uint256 _amountOut);
 
-  function executeOTCSwap(uint256 _id) external override onlyMechanic isPendingSwap(_id) returns (uint256 _receivedAmount) {
-    Swap storage _swapInformation = _checkPreExecuteSwap(_id);
+  // only trade factory ?
+  function swap(
+    address _receiver,
+    address _tokenIn,
+    address _tokenOut,
+    uint256 _amountIn,
+    uint256 _maxSlippage
+  ) external payable override(ISwapper, Swapper) returns (uint256 _receivedAmount) {
+    require(_tokenIn != address(0) && _tokenOut != address(0), 'Swapper: zero address');
+    require(_amountIn > 0, 'Swapper: zero amount');
+    require(_maxSlippage > 0, 'Swapper: zero slippage');
+    if (_tokenIn == ETH) {
+      require(_amountIn == msg.value, 'Swapper: missing eth');
+    } else {
+      IERC20(_tokenIn).safeTransferFrom(msg.sender, address(this), _amountIn);
+    }
+    return _executeOTCSwap(_receiver, _tokenIn, _tokenOut, _amountIn, _maxSlippage);
+    // emit event ?
+  }
 
+  // todo: only trade factory ?
+  function _executeOTCSwap(
+    address _receiver,
+    address _tokenIn,
+    address _tokenOut,
+    uint256 _amountIn,
+    uint256 _maxSlippage
+  ) internal returns (uint256 _receivedAmount) {
     uint256 _usedBySwapper;
 
-    (_receivedAmount, _usedBySwapper) = IOTCPool(otcPool).takeOffer(
-      _swapInformation.tokenIn,
-      _swapInformation.tokenOut,
-      _swapInformation.amountIn
-    );
+    (_receivedAmount, _usedBySwapper) = IOTCPool(otcPool).takeOffer(_tokenIn, _tokenOut, _amountIn);
 
     // Buy what's missing from uniswap
-    if (_usedBySwapper < _swapInformation.amountIn) {
-      uint256 _toBuyFromFallbackSwapper = _swapInformation.amountIn - _usedBySwapper;
+    if (_usedBySwapper < _amountIn) {
+      uint256 _toBuyFromFallbackSwapper = _amountIn - _usedBySwapper;
 
-      _receivedAmount += _executeSwap(
-        _swapInformation.from,
-        _swapInformation.tokenIn,
-        _swapInformation.tokenOut,
-        _toBuyFromFallbackSwapper,
-        _swapInformation.maxSlippage
-      );
+      _receivedAmount += _executeSwap(_receiver, _tokenIn, _tokenOut, _toBuyFromFallbackSwapper, _maxSlippage);
     }
-
-    _deletePendingSwap(_swapInformation);
   }
 }

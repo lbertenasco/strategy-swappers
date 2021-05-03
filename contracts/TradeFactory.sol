@@ -50,6 +50,7 @@ abstract contract TradeFactory is ITradeFactory {
   ) internal virtual returns (uint256 _id) {
     (bool _existsSwapper, address _swapperAddress) = SwapperRegistry(swapperRegistry).isSwapper(_swapper);
     require(!_existsSwapper, 'TradeFactory: invalid swapper');
+    require(_owner != address(0), 'TradeFactory: zero address'); // check that is a strategy ?
     require(_tokenIn != address(0) && _tokenOut != address(0), 'TradeFactory: zero address');
     require(_amountIn > 0, 'TradeFactory: zero amount');
     require(_maxSlippage > 0, 'TradeFactory: zero slippage');
@@ -66,9 +67,7 @@ abstract contract TradeFactory is ITradeFactory {
   function _cancelPending(uint256 _id) internal virtual {
     require(_pendingTradesIds.contains(_id), 'TradeFactory: trade not pending');
     Trade memory _trade = pendingTradeById[_id];
-    pendingTradesByOwner[_trade._owner].remove(_id);
-    _pendingTradesIds.remove(_id);
-    delete pendingTradeById[_id];
+    _removePendingSwap(_trade._owner, _id);
     // emit event
   }
 
@@ -79,11 +78,15 @@ abstract contract TradeFactory is ITradeFactory {
       _pendingOwnerIds[i] = pendingTradesByOwner[_owner].at(i);
     }
     for (uint256 i = 0; i < _pendingOwnerIds.length; i++) {
-      pendingTradesByOwner[_owner].remove(_pendingOwnerIds[i]);
-      _pendingTradesIds.remove(_pendingOwnerIds[i]);
-      delete pendingTradeById[_pendingOwnerIds[i]];
+      _removePendingSwap(_owner, _pendingOwnerIds[i]);
     }
     // emit event
+  }
+
+  function _removePendingSwap(address _owner, uint256 _id) internal {
+    pendingTradesByOwner[_owner].remove(_id);
+    _pendingTradesIds.remove(_id);
+    delete pendingTradeById[_id];
   }
 
   function _changePendingSwapsSwapperOfOwner(address _owner, string memory _swapper) internal virtual {
@@ -104,7 +107,7 @@ abstract contract TradeFactory is ITradeFactory {
       _enableSwapperToken(_trade._swapper, _trade._tokenIn);
     }
     ISwapper(_trade._swapper).swap(_trade._owner, _trade._tokenIn, _trade._tokenOut, _trade._amountIn, _trade._maxSlippage);
-    // delete pending swap
+    _removePendingSwap(_trade._owner, _id);
     // emit event
   }
 

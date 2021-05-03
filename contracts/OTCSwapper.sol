@@ -13,8 +13,6 @@ interface IOTCSwapper is ISwapper {
   ) external view returns (uint256 _amountOut);
 }
 
-// TODO: Adapt for ETH (in-out trades the OTC part)
-
 abstract contract OTCSwapper is IOTCSwapper, Swapper {
   using SafeERC20 for IERC20;
 
@@ -46,14 +44,8 @@ abstract contract OTCSwapper is IOTCSwapper, Swapper {
     uint256 _amountIn,
     uint256 _maxSlippage
   ) external payable override(ISwapper, Swapper) returns (uint256 _receivedAmount) {
-    require(_tokenIn != address(0) && _tokenOut != address(0), 'Swapper: zero address');
-    require(_amountIn > 0, 'Swapper: zero amount');
-    require(_maxSlippage > 0, 'Swapper: zero slippage');
-    if (_tokenIn == ETH) {
-      require(_amountIn == msg.value, 'Swapper: missing eth');
-    } else {
-      IERC20(_tokenIn).safeTransferFrom(msg.sender, address(this), _amountIn);
-    }
+    _assertPreSwap(_receiver, _tokenIn, _tokenOut, _amountIn, _maxSlippage);
+    IERC20(_tokenIn).safeTransferFrom(msg.sender, address(this), _amountIn);
     return _executeOTCSwap(_receiver, _tokenIn, _tokenOut, _amountIn, _maxSlippage);
     // emit event ?
   }
@@ -70,7 +62,7 @@ abstract contract OTCSwapper is IOTCSwapper, Swapper {
 
     (_receivedAmount, _usedBySwapper) = IOTCPool(otcPool).takeOffer(_tokenIn, _tokenOut, _amountIn);
 
-    // Buy what's missing from uniswap
+    // Buy what's missing from fallback swapper
     if (_usedBySwapper < _amountIn) {
       uint256 _toBuyFromFallbackSwapper = _amountIn - _usedBySwapper;
 

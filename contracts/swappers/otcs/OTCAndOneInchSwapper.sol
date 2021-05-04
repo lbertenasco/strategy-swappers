@@ -10,13 +10,7 @@ interface IOTCAndOneInchSwapper is IOTCSwapper, IOneInchSwapper {}
 contract OTCAndOneInchSwapper is IOTCAndOneInchSwapper, OTCSwapper, OneInchSwapper {
   using SafeERC20 for IERC20;
 
-  constructor(
-    address _otcPool,
-    address _oneInch,
-    address _mechanicsRegistry,
-    address _weth,
-    uint256 _slippagePrecision
-  ) OTCSwapper(_otcPool) OneInchSwapper(_oneInch, _mechanicsRegistry, _weth, _slippagePrecision) {}
+  constructor(address _otcPool, address _oneInch) OTCSwapper(_otcPool) OneInchSwapper(_oneInch) {}
 
   function _getTotalAmountOut(
     address _tokenIn,

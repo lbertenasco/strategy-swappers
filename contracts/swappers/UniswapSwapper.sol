@@ -6,20 +6,19 @@ import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '../Swapper.sol';
 
 interface IUniswapSwapper is ISwapper {
+  function WETH() external view returns (address);
+
   function UNISWAP() external view returns (address);
 }
 
 contract UniswapSwapper is IUniswapSwapper, Swapper {
   using SafeERC20 for IERC20;
 
+  address public immutable override WETH;
   address public immutable override UNISWAP;
 
-  constructor(
-    address _uniswap,
-    address _weth,
-    address _mechanicsRegistry,
-    uint256 _slippagePrecision
-  ) Swapper(_mechanicsRegistry, _weth, _slippagePrecision) {
+  constructor(address _weth, address _uniswap) Swapper() {
+    WETH = _weth;
     UNISWAP = _uniswap;
   }
 
@@ -32,32 +31,11 @@ contract UniswapSwapper is IUniswapSwapper, Swapper {
   ) internal override returns (uint256 _receivedAmount) {
     address[] memory _path = _getPath(_tokenIn, _tokenOut);
     uint256 _minAmountOut = _getMinAmountOut(_amountIn, _maxSlippage, _path);
-
-    if (_tokenIn == ETH) {
-      _receivedAmount = IUniswapV2Router02(UNISWAP).swapExactETHForTokens{value: _amountIn}(
-        _minAmountOut,
-        _path,
-        _receiver,
-        block.timestamp + 1800
-      )[0];
-    } else {
-      IERC20(_path[0]).safeApprove(UNISWAP, 0);
-      IERC20(_path[0]).safeApprove(UNISWAP, _amountIn);
-
-      if (_tokenOut == ETH) {
-        _receivedAmount = IUniswapV2Router02(UNISWAP).swapExactTokensForETH(_amountIn, _minAmountOut, _path, _receiver, block.timestamp + 1800)[
-          0
-        ];
-      } else {
-        _receivedAmount = IUniswapV2Router02(UNISWAP).swapExactTokensForTokens(
-          _amountIn,
-          _minAmountOut,
-          _path,
-          _receiver,
-          block.timestamp + 1800
-        )[0];
-      }
-    }
+    IERC20(_path[0]).safeApprove(UNISWAP, 0);
+    IERC20(_path[0]).safeApprove(UNISWAP, _amountIn);
+    _receivedAmount = IUniswapV2Router02(UNISWAP).swapExactTokensForTokens(_amountIn, _minAmountOut, _path, _receiver, block.timestamp + 1800)[
+      0
+    ];
   }
 
   function _getMinAmountOut(
@@ -70,9 +48,7 @@ contract UniswapSwapper is IUniswapSwapper, Swapper {
   }
 
   function _getPath(address _tokenIn, address _tokenOut) internal view returns (address[] memory _path) {
-    _tokenIn = (_tokenIn == ETH) ? WETH : _tokenIn;
-    _tokenIn = (_tokenOut == ETH) ? WETH : _tokenOut;
-
+    // todo: token in weth
     if (_tokenOut == WETH) {
       _path = new address[](2);
       _path[0] = _tokenIn;

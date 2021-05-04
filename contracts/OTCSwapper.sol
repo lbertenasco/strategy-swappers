@@ -11,11 +11,7 @@ interface IOTCSwapper is ISwapper {
     address _tokenOut,
     uint256 _amountIn
   ) external view returns (uint256 _amountOut);
-
-  function executeOTCSwap(uint256 _id) external returns (uint256 _receivedAmount);
 }
-
-// TODO: Adapt for ETH (in-out trades the OTC part)
 
 abstract contract OTCSwapper is IOTCSwapper, Swapper {
   using SafeERC20 for IERC20;
@@ -40,30 +36,37 @@ abstract contract OTCSwapper is IOTCSwapper, Swapper {
     uint256 _amountIn
   ) internal view virtual returns (uint256 _amountOut);
 
-  function executeOTCSwap(uint256 _id) external override onlyMechanic isPendingSwap(_id) returns (uint256 _receivedAmount) {
-    Swap storage _swapInformation = _checkPreExecuteSwap(_id);
+  // only trade factory ?
+  function swap(
+    address _receiver,
+    address _tokenIn,
+    address _tokenOut,
+    uint256 _amountIn,
+    uint256 _maxSlippage
+  ) external override(ISwapper, Swapper) returns (uint256 _receivedAmount) {
+    _assertPreSwap(_receiver, _tokenIn, _tokenOut, _amountIn, _maxSlippage);
+    IERC20(_tokenIn).safeTransferFrom(msg.sender, address(this), _amountIn);
+    _receivedAmount = _executeOTCSwap(_receiver, _tokenIn, _tokenOut, _amountIn, _maxSlippage);
+    emit Swapped(_receiver, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _receivedAmount);
+  }
 
+  // todo: only trade factory ?
+  function _executeOTCSwap(
+    address _receiver,
+    address _tokenIn,
+    address _tokenOut,
+    uint256 _amountIn,
+    uint256 _maxSlippage
+  ) internal returns (uint256 _receivedAmount) {
     uint256 _usedBySwapper;
 
-    (_receivedAmount, _usedBySwapper) = IOTCPool(otcPool).takeOffer(
-      _swapInformation.tokenIn,
-      _swapInformation.tokenOut,
-      _swapInformation.amountIn
-    );
+    (_receivedAmount, _usedBySwapper) = IOTCPool(otcPool).takeOffer(_tokenIn, _tokenOut, _amountIn);
 
-    // Buy what's missing from uniswap
-    if (_usedBySwapper < _swapInformation.amountIn) {
-      uint256 _toBuyFromFallbackSwapper = _swapInformation.amountIn - _usedBySwapper;
+    // Buy what's missing from fallback swapper
+    if (_usedBySwapper < _amountIn) {
+      uint256 _toBuyFromFallbackSwapper = _amountIn - _usedBySwapper;
 
-      _receivedAmount += _executeSwap(
-        _swapInformation.from,
-        _swapInformation.tokenIn,
-        _swapInformation.tokenOut,
-        _toBuyFromFallbackSwapper,
-        _swapInformation.maxSlippage
-      );
+      _receivedAmount += _executeSwap(_receiver, _tokenIn, _tokenOut, _toBuyFromFallbackSwapper, _maxSlippage);
     }
-
-    _deletePendingSwap(_swapInformation);
   }
 }

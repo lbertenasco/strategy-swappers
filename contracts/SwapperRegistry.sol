@@ -11,7 +11,6 @@ import '@lbertenasco/contract-utils/contracts/utils/Governable.sol';
 interface ISwapperRegistry {
   event SwapperAdded(address indexed _swapper, string _name);
   event SwapperRemoved(address indexed _swapper);
-  event SwapperAndTokenEnabled(address indexed _swapper, address _token);
 
   function swappers() external view returns (address[] memory _swappersAddresses);
 
@@ -21,11 +20,11 @@ interface ISwapperRegistry {
 
   function isSwapper(address _swapper) external view returns (bool);
 
+  function isSwapper(string memory _swapper) external view returns (bool _isSwapper, address _swapperAddress);
+
   function addSwapper(string memory _name, address _swapper) external;
 
   function removeSwapper(address _swapper) external;
-
-  function enableSwapperToken(string memory _name, address _token) external;
 }
 
 contract SwapperRegistry is ISwapperRegistry, CollectableDust, Governable {
@@ -40,11 +39,6 @@ contract SwapperRegistry is ISwapperRegistry, CollectableDust, Governable {
   mapping(address => EnumerableSet.AddressSet) internal _approvedTokensBySwappers;
 
   constructor(address _governance) Governable(_governance) {}
-
-  modifier onlySwapper {
-    require(_swappers.contains(msg.sender), 'SwapperRegistry: swapper not registered');
-    _;
-  }
 
   function swappers() external view override returns (address[] memory _swappersAddresses) {
     _swappersAddresses = new address[](_swappers.length());
@@ -69,6 +63,11 @@ contract SwapperRegistry is ISwapperRegistry, CollectableDust, Governable {
 
   function isSwapper(address _swapper) external view override returns (bool) {
     return _swappers.contains(_swapper);
+  }
+
+  function isSwapper(string memory _swapper) external view override returns (bool _isSwapper, address _swapperAddress) {
+    _swapperAddress = swapperByName[_swapper];
+    _isSwapper = _swapperAddress != address(0);
   }
 
   function addSwapper(string memory _name, address _swapper) external virtual override onlyGovernor {
@@ -102,21 +101,6 @@ contract SwapperRegistry is ISwapperRegistry, CollectableDust, Governable {
     delete initializationByAddress[_swapper];
     _swappers.remove(_swapper);
     emit SwapperRemoved(_swapper);
-  }
-
-  function enableSwapperToken(string memory _name, address _token) external virtual override onlySwapper {
-    _enableSwapperToken(_name, _token);
-  }
-
-  function _enableSwapperToken(string memory _name, address _token) internal {
-    address _swapper = swapperByName[_name];
-    require(_swappers.contains(_swapper), 'SwapperRegistry: swapper not added');
-    require(_token != address(0), 'SwapperRegistry: zero address');
-    if (!_approvedTokensBySwappers[_swapper].contains(_token)) {
-      IERC20(_token).safeApprove(_swapper, type(uint256).max);
-      _approvedTokensBySwappers[_swapper].add(_token);
-      emit SwapperAndTokenEnabled(_swapper, _token);
-    }
   }
 
   function setPendingGovernor(address _pendingGovernor) external override onlyGovernor {

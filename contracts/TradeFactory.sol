@@ -251,8 +251,11 @@ abstract contract TradeFactory is ITradeFactory {
     Trade memory _trade = pendingTradesById[_id];
     require(_trade._deadline <= block.timestamp, 'TradeFactory: swap not expired');
     _freedAmount = _trade._amountIn;
-    // bring tokens from strategy (this will reduce strategy => trade factory allowance)
-    // send tokens to strategy
+    // We have to take tokens from strategy, to decrease the allowance
+    IERC20(_trade.tokenIn).safeTransferFrom(_trade._owner, address(this), _trade._amountIn);
+    // Send tokens back to strategy
+    IERC20(_trade.tokenIn).safeTransfer(_trade._owner, _trade._amountIn);
+    // Remove trade
     _removePendingTrade(_trade._owner, _id);
     emit TradeExpired(_id);
   }

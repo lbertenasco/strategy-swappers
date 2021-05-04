@@ -57,11 +57,11 @@ interface ITradeFactory {
       uint256 _deadline
     );
 
-  function pendingTradesIds() external returns (uint256[] memory _pendingIds);
+  function pendingTradesIds() external view returns (uint256[] memory _pendingIds);
 
-  function pendingTradesIds(address _owner) external returns (uint256[] memory _pendingIds);
+  function pendingTradesIds(address _owner) external view returns (uint256[] memory _pendingIds);
 
-  function approvedTokensBySwappers(address _swapper) external returns (address[] memory _tokens);
+  function approvedTokensBySwappers(address _swapper) external view returns (address[] memory _tokens);
 
   function swapperRegistry() external view returns (address);
 
@@ -106,11 +106,26 @@ abstract contract TradeFactory is ITradeFactory {
     swapperRegistry = _swapperRegistry;
   }
 
-  function pendingTradesIds() external override returns (uint256[] memory _pendingIds) {}
+  function pendingTradesIds() external view override returns (uint256[] memory _pendingIds) {
+    _pendingIds = new uint256[](_pendingTradesIds.length());
+    for (uint256 i = 0; i < _pendingTradesIds.length(); i++) {
+      _pendingIds[i] = _pendingTradesIds.at(i);
+    }
+  }
 
-  function pendingTradesIds(address _owner) external override returns (uint256[] memory _pendingIds) {}
+  function pendingTradesIds(address _owner) external view override returns (uint256[] memory _pendingIds) {
+    _pendingIds = new uint256[](_pendingTradesByOwner[_owner].length());
+    for (uint256 i = 0; i < _pendingTradesByOwner[_owner].length(); i++) {
+      _pendingIds[i] = _pendingTradesByOwner[_owner].at(i);
+    }
+  }
 
-  function approvedTokensBySwappers(address _swapper) external override returns (address[] memory _tokens) {}
+  function approvedTokensBySwappers(address _swapper) external view override returns (address[] memory _tokens) {
+    _tokens = new address[](_approvedTokensBySwappers[_swapper].length());
+    for (uint256 i = 0; i < _approvedTokensBySwappers[_swapper].length(); i++) {
+      _tokens[i] = _approvedTokensBySwappers[_swapper].at(i);
+    }
+  }
 
   // only strategy ?
   function create(

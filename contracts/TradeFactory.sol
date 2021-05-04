@@ -20,7 +20,28 @@ interface ITradeFactory {
     uint256 _deadline;
   }
 
-  event TradeCanceled(uint256 _id);
+  event TradeCreated(
+    uint256 indexed _id,
+    address _owner,
+    address _swapper,
+    address _tokenIn,
+    address _tokenOut,
+    uint256 _amountIn,
+    uint256 _maxSlippage,
+    uint256 _deadline
+  );
+
+  event TradeCanceled(uint256 indexed _id);
+
+  event TradesOfOwnerCanceled(address indexed _owner, uint256[] _ids);
+
+  event TradesOfOwnerChangedSwapper(address indexed _owner, uint256[] _ids, string _newSwapper);
+
+  event TradeExpired(uint256 indexed _id);
+
+  event TradeExecuted(uint256 indexed _id, uint256 _receivedAmount);
+
+  event SwapperAndTokenEnabled(address indexed _swapper, address _token);
 
   function pendingTradesById(uint256)
     external
@@ -101,7 +122,16 @@ abstract contract TradeFactory is ITradeFactory {
     pendingTradesById[_trade._id] = _trade;
     _pendingTradesByOwner[_owner].add(_trade._id);
     _pendingTradesIds.add(_trade._id);
-    // emit event
+    emit TradeCreated(
+      _trade._id,
+      _trade._owner,
+      _trade._swapper,
+      _trade._tokenIn,
+      _trade._tokenOut,
+      _trade._amountIn,
+      _trade._maxSlippage,
+      _trade._deadline
+    );
   }
 
   // only owner of trade
@@ -109,7 +139,7 @@ abstract contract TradeFactory is ITradeFactory {
     require(_pendingTradesIds.contains(_id), 'TradeFactory: trade not pending');
     Trade memory _trade = pendingTradesById[_id];
     _removePendingTrade(_trade._owner, _id);
-    // emit event
+    emit TradeCanceled(_id);
   }
 
   function _cancelAllPendingOfOwner(address _owner) internal {
@@ -121,7 +151,7 @@ abstract contract TradeFactory is ITradeFactory {
     for (uint256 i = 0; i < _pendingOwnerIds.length; i++) {
       _removePendingTrade(_owner, _pendingOwnerIds[i]);
     }
-    // emit event
+    emit TradesOfOwnerCanceled(_owner, _pendingOwnerIds);
   }
 
   function _removePendingTrade(address _owner, uint256 _id) internal {
@@ -133,10 +163,12 @@ abstract contract TradeFactory is ITradeFactory {
   function _changePendingSwapsSwapperOfOwner(address _owner, string memory _swapper) internal {
     (bool _existsSwapper, address _swapperAddress) = SwapperRegistry(swapperRegistry).isSwapper(_swapper);
     require(!_existsSwapper, 'TradeFactory: invalid swapper');
+    uint256[] memory _ids = new uint256[](_pendingTradesByOwner[_owner].length());
     for (uint256 i = 0; i < _pendingTradesByOwner[_owner].length(); i++) {
       pendingTradesById[_pendingTradesByOwner[_owner].at(i)]._swapper = _swapperAddress;
+      _ids[i] = _pendingTradesByOwner[_owner].at(i);
     }
-    // emit event
+    emit TradesOfOwnerChangedSwapper(_owner, _ids, _swapper);
   }
 
   // only mechanics
@@ -149,7 +181,7 @@ abstract contract TradeFactory is ITradeFactory {
     }
     _receivedAmount = ISwapper(_trade._swapper).swap(_trade._owner, _trade._tokenIn, _trade._tokenOut, _trade._amountIn, _trade._maxSlippage);
     _removePendingTrade(_trade._owner, _id);
-    // emit event
+    emit TradeExecuted(_id, _receivedAmount);
   }
 
   function _expire(uint256 _id) internal returns (uint256 _returnedAmount) {
@@ -159,12 +191,12 @@ abstract contract TradeFactory is ITradeFactory {
     IERC20(_trade._tokenIn).safeTransfer(_trade._owner, _trade._amountIn);
     _returnedAmount = _trade._amountIn;
     _removePendingTrade(_trade._owner, _id);
-    // emit event
+    emit TradeExpired(_id);
   }
 
   function _enableSwapperToken(address _swapper, address _token) internal {
     IERC20(_token).safeApprove(_swapper, type(uint256).max);
     _approvedTokensBySwappers[_swapper].add(_token);
-    // emit SwapperAndTokenEnabled(_swapper, _token);
+    emit SwapperAndTokenEnabled(_swapper, _token);
   }
 }

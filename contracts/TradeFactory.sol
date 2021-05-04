@@ -57,6 +57,12 @@ interface ITradeFactory {
       uint256 _deadline
     );
 
+  function pendingTradesIds() external returns (uint256[] memory _pendingIds);
+
+  function pendingTradesIds(address _owner) external returns (uint256[] memory _pendingIds);
+
+  function approvedTokensBySwappers(address _swapper) external returns (address[] memory _tokens);
+
   function swapperRegistry() external view returns (address);
 
   function create(
@@ -99,6 +105,12 @@ abstract contract TradeFactory is ITradeFactory {
   constructor(address _swapperRegistry) {
     swapperRegistry = _swapperRegistry;
   }
+
+  function pendingTradesIds() external override returns (uint256[] memory _pendingIds) {}
+
+  function pendingTradesIds(address _owner) external override returns (uint256[] memory _pendingIds) {}
+
+  function approvedTokensBySwappers(address _swapper) external override returns (address[] memory _tokens) {}
 
   // only strategy ?
   function create(
@@ -151,7 +163,6 @@ abstract contract TradeFactory is ITradeFactory {
     _cancelPending(_id);
   }
 
-  // only owner of trade
   function _cancelPending(uint256 _id) internal {
     require(_pendingTradesIds.contains(_id), 'TradeFactory: trade not pending');
     Trade memory _trade = pendingTradesById[_id];

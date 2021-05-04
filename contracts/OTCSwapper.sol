@@ -43,7 +43,7 @@ abstract contract OTCSwapper is IOTCSwapper, Swapper {
     address _tokenOut,
     uint256 _amountIn,
     uint256 _maxSlippage
-  ) external payable override(ISwapper, Swapper) returns (uint256 _receivedAmount) {
+  ) external override(ISwapper, Swapper) returns (uint256 _receivedAmount) {
     _assertPreSwap(_receiver, _tokenIn, _tokenOut, _amountIn, _maxSlippage);
     IERC20(_tokenIn).safeTransferFrom(msg.sender, address(this), _amountIn);
     _receivedAmount = _executeOTCSwap(_receiver, _tokenIn, _tokenOut, _amountIn, _maxSlippage);

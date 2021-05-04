@@ -15,17 +15,15 @@ interface ISwapper {
     address _tokenOut,
     uint256 _amountIn,
     uint256 _maxSlippage
-  ) external payable returns (uint256 _receivedAmount);
+  ) external returns (uint256 _receivedAmount);
 }
 
 abstract contract Swapper is ISwapper {
   using SafeERC20 for IERC20;
 
-  uint256 public immutable override SLIPPAGE_PRECISION;
+  uint256 public immutable override SLIPPAGE_PRECISION = 10000;
 
-  constructor(uint256 _slippagePrecision) {
-    SLIPPAGE_PRECISION = _slippagePrecision;
-  }
+  constructor() {}
 
   function _assertPreSwap(
     address _receiver,
@@ -47,7 +45,7 @@ abstract contract Swapper is ISwapper {
     address _tokenOut,
     uint256 _amountIn,
     uint256 _maxSlippage
-  ) external payable virtual override returns (uint256 _receivedAmount) {
+  ) external virtual override returns (uint256 _receivedAmount) {
     _assertPreSwap(_receiver, _tokenIn, _tokenOut, _amountIn, _maxSlippage);
     IERC20(_tokenIn).safeTransferFrom(msg.sender, address(this), _amountIn);
     _receivedAmount = _executeSwap(_receiver, _tokenIn, _tokenOut, _amountIn, _maxSlippage);

@@ -50,7 +50,7 @@ contract OneInchSwapper is IOneInchSwapper, Swapper {
 
   address public immutable override ONE_INCH;
 
-  constructor(address _oneInch, uint256 _slippagePrecision) Swapper(_slippagePrecision) {
+  constructor(address _oneInch) Swapper() {
     ONE_INCH = _oneInch;
   }
 

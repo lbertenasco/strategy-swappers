@@ -13,9 +13,8 @@ contract OTCAndUniswapSwapper is IOTCAndUniswapSwapper, OTCSwapper, UniswapSwapp
   constructor(
     address _otcPool,
     address _weth,
-    address _uniswap,
-    uint256 _slippagePrecision
-  ) OTCSwapper(_otcPool) UniswapSwapper(_weth, _uniswap, _slippagePrecision) {}
+    address _uniswap
+  ) OTCSwapper(_otcPool) UniswapSwapper(_weth, _uniswap) {}
 
   function _getTotalAmountOut(
     address _tokenIn,

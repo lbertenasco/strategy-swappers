@@ -40,11 +40,6 @@ contract SwapperRegistry is ISwapperRegistry, CollectableDust, Governable {
 
   constructor(address _governance) Governable(_governance) {}
 
-  modifier onlySwapper {
-    require(_swappers.contains(msg.sender), 'SwapperRegistry: swapper not registered');
-    _;
-  }
-
   function swappers() external view override returns (address[] memory _swappersAddresses) {
     _swappersAddresses = new address[](_swappers.length());
     for (uint256 i = 0; i < _swappers.length(); i++) {

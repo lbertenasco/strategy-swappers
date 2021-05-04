@@ -100,7 +100,7 @@ abstract contract TradeFactory is ITradeFactory {
 
   mapping(address => EnumerableSet.AddressSet) internal _approvedTokensBySwappers;
 
-  address public override swapperRegistry; // immutable ?
+  address public override swapperRegistry; // TODO: immutable !
 
   constructor(address _swapperRegistry) {
     swapperRegistry = _swapperRegistry;
@@ -251,6 +251,8 @@ abstract contract TradeFactory is ITradeFactory {
     Trade memory _trade = pendingTradesById[_id];
     require(_trade._deadline <= block.timestamp, 'TradeFactory: swap not expired');
     _freedAmount = _trade._amountIn;
+    // bring tokens from strategy (this will reduce strategy => trade factory allowance)
+    // send tokens to strategy
     _removePendingTrade(_trade._owner, _id);
     emit TradeExpired(_id);
   }

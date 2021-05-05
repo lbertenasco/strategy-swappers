@@ -47,7 +47,7 @@ abstract contract Swapper is ISwapper {
     uint256 _maxSlippage
   ) external virtual override returns (uint256 _receivedAmount) {
     _assertPreSwap(_receiver, _tokenIn, _tokenOut, _amountIn, _maxSlippage);
-    IERC20(_tokenIn).safeTransferFrom(msg.sender, address(this), _amountIn);
+    IERC20(_tokenIn).safeTransferFrom(msg.sender, address(this), _amountIn); // safe transfer from factory ?
     _receivedAmount = _executeSwap(_receiver, _tokenIn, _tokenOut, _amountIn, _maxSlippage);
     emit Swapped(_receiver, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _receivedAmount);
   }

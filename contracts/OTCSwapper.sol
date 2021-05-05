@@ -11,15 +11,17 @@ interface IOTCSwapper is ISwapper {
     address _tokenOut,
     uint256 _amountIn
   ) external view returns (uint256 _amountOut);
+
+  function OTC_POOL() external view returns (address);
 }
 
 abstract contract OTCSwapper is IOTCSwapper, Swapper {
   using SafeERC20 for IERC20;
 
-  address immutable otcPool;
+  address public immutable override OTC_POOL;
 
   constructor(address _otcPool) {
-    otcPool = _otcPool;
+    OTC_POOL = _otcPool;
   }
 
   function getTotalAmountOut(
@@ -58,7 +60,7 @@ abstract contract OTCSwapper is IOTCSwapper, Swapper {
   ) internal returns (uint256 _receivedAmount) {
     uint256 _usedBySwapper;
 
-    (_receivedAmount, _usedBySwapper) = IOTCPool(otcPool).takeOffer(_tokenIn, _tokenOut, _amountIn);
+    (_receivedAmount, _usedBySwapper) = IOTCPool(OTC_POOL).takeOffer(_tokenIn, _tokenOut, _amountIn);
 
     // Buy what's missing from fallback swapper
     if (_usedBySwapper < _amountIn) {

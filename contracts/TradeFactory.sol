@@ -100,7 +100,7 @@ abstract contract TradeFactory is ITradeFactory {
 
   mapping(address => EnumerableSet.AddressSet) internal _approvedTokensBySwappers;
 
-  address public override swapperRegistry; // TODO: immutable !
+  address public immutable override swapperRegistry;
 
   constructor(address _swapperRegistry) {
     swapperRegistry = _swapperRegistry;

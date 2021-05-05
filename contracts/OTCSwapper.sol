@@ -36,21 +36,19 @@ abstract contract OTCSwapper is IOTCSwapper, Swapper {
     uint256 _amountIn
   ) internal view virtual returns (uint256 _amountOut);
 
-  // only trade factory ?
   function swap(
     address _receiver,
     address _tokenIn,
     address _tokenOut,
     uint256 _amountIn,
     uint256 _maxSlippage
-  ) external override(ISwapper, Swapper) returns (uint256 _receivedAmount) {
+  ) external override(ISwapper, Swapper) onlyTradeFactory returns (uint256 _receivedAmount) {
     _assertPreSwap(_receiver, _tokenIn, _tokenOut, _amountIn, _maxSlippage);
-    IERC20(_tokenIn).safeTransferFrom(msg.sender, address(this), _amountIn);
+    IERC20(_tokenIn).safeTransferFrom(TRADE_FACTORY, address(this), _amountIn);
     _receivedAmount = _executeOTCSwap(_receiver, _tokenIn, _tokenOut, _amountIn, _maxSlippage);
     emit Swapped(_receiver, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _receivedAmount);
   }
 
-  // todo: only trade factory ?
   function _executeOTCSwap(
     address _receiver,
     address _tokenIn,

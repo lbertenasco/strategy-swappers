@@ -2,6 +2,8 @@
 
 pragma solidity 0.8.4;
 
+import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
+
 import '../TradeFactory.sol';
 
 interface ISwapperEnabled {
@@ -12,19 +14,29 @@ interface ISwapperEnabled {
 
   function swapper() external returns (string memory _swapper);
 
-  function addMechanic(address _mechanic) external;
+  function setSwapper(string calldata _swapper, bool _migrateSwaps) external;
 
-  function removeMechanic(address _mechanic) external;
+  function setTradeFactory(address _tradeFactory) external;
 
-  function mechanics() external view returns (address[] memory _mechanicsList);
+  function setSwapperCheckpoint(uint256 _checkpoint) external;
 
-  function isMechanic(address mechanic) external view returns (bool _isMechanic);
+  function createTrade(
+    address _tokenIn,
+    address _tokenOut,
+    uint256 _amountIn,
+    uint256 _maxSlippage,
+    uint256 _deadline
+  ) external returns (uint256 _id);
+
+  function cancelPendingTrades(uint256[] calldata _pendingTrades) external;
 }
 
 /*
  * SwapperEnabled Abstract
  */
 abstract contract SwapperEnabled is ISwapperEnabled {
+  using SafeERC20 for IERC20;
+
   address public override tradeFactory;
   string public override swapper;
 
@@ -66,6 +78,7 @@ abstract contract SwapperEnabled is ISwapperEnabled {
     uint256 _maxSlippage,
     uint256 _deadline
   ) internal returns (uint256 _id) {
+    IERC20(_tokenIn).safeIncreaseAllowance(tradeFactory, _amountIn);
     return ITradeFactory(tradeFactory).create(_swapper, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _deadline);
   }
 
@@ -76,14 +89,19 @@ abstract contract SwapperEnabled is ISwapperEnabled {
   }
 
   // onlyStrategist or multisig:
-  // tradeFactory. cancel pending trade (batch and single)
   function _cancelPendingTrades(uint256[] calldata _pendingTrades) internal {
     for (uint256 i; i < _pendingTrades.length; i++) {
       _cancelPendingTrade(_pendingTrades[i]);
     }
   }
 
-  function _cancelPendingTrade(uint256 _pendingTrade) internal {
-    ITradeFactory(tradeFactory).cancelPending(_pendingTrade);
+  function _cancelPendingTrade(uint256 _pendingTradeId) internal {
+    (, , , address _tokenIn, , uint256 _amountIn, , ) = ITradeFactory(tradeFactory).pendingTradesById(_pendingTradeId);
+    IERC20(_tokenIn).safeDecreaseAllowance(tradeFactory, _amountIn);
+    ITradeFactory(tradeFactory).cancelPending(_pendingTradeId);
+  }
+
+  function _tradeFactoryAllowance(address _token) internal view returns (uint256 _allowance) {
+    return IERC20(_token).allowance(address(this), tradeFactory);
   }
 }

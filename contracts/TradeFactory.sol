@@ -5,6 +5,9 @@ import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 
+import '@lbertenasco/contract-utils/contracts/utils/CollectableDust.sol';
+import '@lbertenasco/contract-utils/contracts/utils/Governable.sol';
+
 import './utils/Machinery.sol';
 import './SwapperRegistry.sol';
 import './Swapper.sol';
@@ -86,7 +89,7 @@ interface ITradeFactory {
   function expire(uint256 _id) external returns (uint256 _freedAmount);
 }
 
-contract TradeFactory is ITradeFactory, Machinery {
+contract TradeFactory is ITradeFactory, Governable, Machinery, CollectableDust {
   using SafeERC20 for IERC20;
   using EnumerableSet for EnumerableSet.UintSet;
   using EnumerableSet for EnumerableSet.AddressSet;
@@ -103,7 +106,11 @@ contract TradeFactory is ITradeFactory, Machinery {
 
   address public immutable override swapperRegistry;
 
-  constructor(address _mechanicsRegistry, address _swapperRegistry) Machinery(_mechanicsRegistry) {
+  constructor(
+    address _governor,
+    address _mechanicsRegistry,
+    address _swapperRegistry
+  ) Governable(_governor) Machinery(_mechanicsRegistry) {
     swapperRegistry = _swapperRegistry;
   }
 
@@ -131,11 +138,6 @@ contract TradeFactory is ITradeFactory, Machinery {
     for (uint256 i = 0; i < _approvedTokensBySwappers[_swapper].length(); i++) {
       _tokens[i] = _approvedTokensBySwappers[_swapper].at(i);
     }
-  }
-
-  // TODO: only governance
-  function setMechanicsRegistry(address _mechanicsRegistry) external override {
-    _setMechanicsRegistry(_mechanicsRegistry);
   }
 
   function create(
@@ -270,5 +272,25 @@ contract TradeFactory is ITradeFactory, Machinery {
     IERC20(_token).safeApprove(_swapper, type(uint256).max);
     _approvedTokensBySwappers[_swapper].add(_token);
     emit SwapperAndTokenEnabled(_swapper, _token);
+  }
+
+  function setMechanicsRegistry(address _mechanicsRegistry) external override onlyGovernor {
+    _setMechanicsRegistry(_mechanicsRegistry);
+  }
+
+  function setPendingGovernor(address _pendingGovernor) external override onlyGovernor {
+    _setPendingGovernor(_pendingGovernor);
+  }
+
+  function acceptGovernor() external override onlyPendingGovernor {
+    _acceptGovernor();
+  }
+
+  function sendDust(
+    address _to,
+    address _token,
+    uint256 _amount
+  ) external virtual override onlyGovernor {
+    _sendDust(_to, _token, _amount);
   }
 }

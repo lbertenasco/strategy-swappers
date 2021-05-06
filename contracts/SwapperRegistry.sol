@@ -12,9 +12,13 @@ interface ISwapperRegistry {
   event SwapperAdded(address indexed _swapper, string _name);
   event SwapperDeprecated(address indexed _swapper);
 
+  function deprecatedByAddress(address) external view returns (bool);
+
   function swappers() external view returns (address[] memory _swappersAddresses);
 
   function swapperNames() external view returns (string[] memory _swappersNames);
+
+  function activeSwappers() external view returns (address[] memory _activeSwappers);
 
   function deprecatedSwappers() external view returns (address[] memory _deprecatedSwappers);
 
@@ -34,7 +38,7 @@ contract SwapperRegistry is ISwapperRegistry, CollectableDust, Governable {
   mapping(address => string) public nameByAddress;
   mapping(string => address) public swapperByName;
   mapping(address => uint256) public initializationByAddress;
-  mapping(address => bool) public deprecatedByAddress;
+  mapping(address => bool) public override deprecatedByAddress;
   EnumerableSet.AddressSet internal _swappers;
 
   constructor(address _governance) Governable(_governance) {}
@@ -50,6 +54,17 @@ contract SwapperRegistry is ISwapperRegistry, CollectableDust, Governable {
     _swappersNames = new string[](_swappers.length());
     for (uint256 i = 0; i < _swappers.length(); i++) {
       _swappersNames[i] = nameByAddress[_swappers.at(i)];
+    }
+  }
+
+  function activeSwappers() external view override returns (address[] memory _activeSwappers) {
+    _activeSwappers = new address[](_swappers.length());
+    uint256 _totalActive = 0;
+    for (uint256 i = 0; i < _swappers.length(); i++) {
+      if (!deprecatedByAddress[_swappers.at(i)]) {
+        _activeSwappers[_totalActive] = _swappers.at(i);
+        _totalActive += 1;
+      }
     }
   }
 

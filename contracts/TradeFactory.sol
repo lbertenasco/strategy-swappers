@@ -5,6 +5,10 @@ import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 
+import '@lbertenasco/contract-utils/contracts/utils/CollectableDust.sol';
+import '@lbertenasco/contract-utils/contracts/utils/Governable.sol';
+
+import './utils/Machinery.sol';
 import './SwapperRegistry.sol';
 import './Swapper.sol';
 
@@ -85,7 +89,7 @@ interface ITradeFactory {
   function expire(uint256 _id) external returns (uint256 _freedAmount);
 }
 
-abstract contract TradeFactory is ITradeFactory {
+contract TradeFactory is ITradeFactory, Governable, Machinery, CollectableDust {
   using SafeERC20 for IERC20;
   using EnumerableSet for EnumerableSet.UintSet;
   using EnumerableSet for EnumerableSet.AddressSet;
@@ -100,10 +104,19 @@ abstract contract TradeFactory is ITradeFactory {
 
   mapping(address => EnumerableSet.AddressSet) internal _approvedTokensBySwappers;
 
-  address public override swapperRegistry; // TODO: immutable !
+  address public immutable override swapperRegistry;
 
-  constructor(address _swapperRegistry) {
+  constructor(
+    address _governor,
+    address _mechanicsRegistry,
+    address _swapperRegistry
+  ) Governable(_governor) Machinery(_mechanicsRegistry) {
     swapperRegistry = _swapperRegistry;
+  }
+
+  modifier onlyStrategy {
+    require(msg.sender == msg.sender, 'TradeFactory: not a strategy'); // TODO:
+    _;
   }
 
   function pendingTradesIds() external view override returns (uint256[] memory _pendingIds) {
@@ -127,7 +140,6 @@ abstract contract TradeFactory is ITradeFactory {
     }
   }
 
-  // only strategy ?
   function create(
     string memory _swapper,
     address _tokenIn,
@@ -135,7 +147,7 @@ abstract contract TradeFactory is ITradeFactory {
     uint256 _amountIn,
     uint256 _maxSlippage,
     uint256 _deadline
-  ) external override returns (uint256 _id) {
+  ) external override onlyStrategy returns (uint256 _id) {
     _id = _create(_swapper, msg.sender, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _deadline);
   }
 
@@ -160,6 +172,7 @@ abstract contract TradeFactory is ITradeFactory {
     pendingTradesById[_trade._id] = _trade;
     _pendingTradesByOwner[_owner].add(_trade._id);
     _pendingTradesIds.add(_trade._id);
+    _tradeCounter += 1;
     emit TradeCreated(
       _trade._id,
       _trade._owner,
@@ -172,9 +185,8 @@ abstract contract TradeFactory is ITradeFactory {
     );
   }
 
-  // only mechanic or strategy ?
-  // only owner of trade ?
-  function cancelPending(uint256 _id) external override {
+  function cancelPending(uint256 _id) external override onlyStrategy {
+    require(pendingTradesById[_id]._owner == msg.sender, 'TradeFactory: does not own trade');
     _cancelPending(_id);
   }
 
@@ -185,8 +197,7 @@ abstract contract TradeFactory is ITradeFactory {
     emit TradeCanceled(_id);
   }
 
-  // only strategy ?
-  function cancelAllPending() external override returns (uint256[] memory _canceledTradesIds) {
+  function cancelAllPending() external override onlyStrategy returns (uint256[] memory _canceledTradesIds) {
     _canceledTradesIds = _cancelAllPendingOfOwner(msg.sender);
   }
 
@@ -208,8 +219,7 @@ abstract contract TradeFactory is ITradeFactory {
     delete pendingTradesById[_id];
   }
 
-  // only strategy ?
-  function changePendingTradesSwapper(string memory _swapper) external override returns (uint256[] memory _changedSwapperIds) {
+  function changePendingTradesSwapper(string memory _swapper) external override onlyStrategy returns (uint256[] memory _changedSwapperIds) {
     _changedSwapperIds = _changePendingTradesSwapperOfOwner(msg.sender, _swapper);
   }
 
@@ -224,8 +234,7 @@ abstract contract TradeFactory is ITradeFactory {
     emit TradesOfOwnerChangedSwapper(_owner, _changedSwapperIds, _swapper);
   }
 
-  // only mechanics
-  function execute(uint256 _id) external override returns (uint256 _receivedAmount) {
+  function execute(uint256 _id) external override onlyMechanic returns (uint256 _receivedAmount) {
     _receivedAmount = _execute(_id);
   }
 
@@ -236,13 +245,13 @@ abstract contract TradeFactory is ITradeFactory {
     if (!_approvedTokensBySwappers[_trade._swapper].contains(_trade._tokenIn)) {
       _enableSwapperToken(_trade._swapper, _trade._tokenIn);
     }
+    IERC20(_trade._tokenIn).safeTransferFrom(_trade._owner, address(this), _trade._amountIn);
     _receivedAmount = ISwapper(_trade._swapper).swap(_trade._owner, _trade._tokenIn, _trade._tokenOut, _trade._amountIn, _trade._maxSlippage);
     _removePendingTrade(_trade._owner, _id);
     emit TradeExecuted(_id, _receivedAmount);
   }
 
-  // only mechanics
-  function expire(uint256 _id) external override returns (uint256 _freedAmount) {
+  function expire(uint256 _id) external override onlyMechanic returns (uint256 _freedAmount) {
     _freedAmount = _expire(_id);
   }
 
@@ -251,8 +260,11 @@ abstract contract TradeFactory is ITradeFactory {
     Trade memory _trade = pendingTradesById[_id];
     require(_trade._deadline <= block.timestamp, 'TradeFactory: swap not expired');
     _freedAmount = _trade._amountIn;
-    // bring tokens from strategy (this will reduce strategy => trade factory allowance)
-    // send tokens to strategy
+    // We have to take tokens from strategy, to decrease the allowance
+    IERC20(_trade._tokenIn).safeTransferFrom(_trade._owner, address(this), _trade._amountIn);
+    // Send tokens back to strategy
+    IERC20(_trade._tokenIn).safeTransfer(_trade._owner, _trade._amountIn);
+    // Remove trade
     _removePendingTrade(_trade._owner, _id);
     emit TradeExpired(_id);
   }
@@ -261,5 +273,25 @@ abstract contract TradeFactory is ITradeFactory {
     IERC20(_token).safeApprove(_swapper, type(uint256).max);
     _approvedTokensBySwappers[_swapper].add(_token);
     emit SwapperAndTokenEnabled(_swapper, _token);
+  }
+
+  function setMechanicsRegistry(address _mechanicsRegistry) external override onlyGovernor {
+    _setMechanicsRegistry(_mechanicsRegistry);
+  }
+
+  function setPendingGovernor(address _pendingGovernor) external override onlyGovernor {
+    _setPendingGovernor(_pendingGovernor);
+  }
+
+  function acceptGovernor() external override onlyPendingGovernor {
+    _acceptGovernor();
+  }
+
+  function sendDust(
+    address _to,
+    address _token,
+    uint256 _amount
+  ) external virtual override onlyGovernor {
+    _sendDust(_to, _token, _amount);
   }
 }

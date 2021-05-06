@@ -172,6 +172,7 @@ contract TradeFactory is ITradeFactory, Governable, Machinery, CollectableDust {
     pendingTradesById[_trade._id] = _trade;
     _pendingTradesByOwner[_owner].add(_trade._id);
     _pendingTradesIds.add(_trade._id);
+    _tradeCounter += 1;
     emit TradeCreated(
       _trade._id,
       _trade._owner,

@@ -10,13 +10,13 @@ import '@lbertenasco/contract-utils/contracts/utils/Governable.sol';
 
 interface ISwapperRegistry {
   event SwapperAdded(address indexed _swapper, string _name);
-  event SwapperRemoved(address indexed _swapper);
+  event SwapperDeprecated(address indexed _swapper);
 
   function swappers() external view returns (address[] memory _swappersAddresses);
 
   function swapperNames() external view returns (string[] memory _swappersNames);
 
-  function approvedTokensBySwappers(address _swapper) external view returns (address[] memory _tokens);
+  function deprecatedSwappers() external view returns (address[] memory _deprecatedSwappers);
 
   function isSwapper(address _swapper) external view returns (bool);
 
@@ -24,7 +24,7 @@ interface ISwapperRegistry {
 
   function addSwapper(string memory _name, address _swapper) external;
 
-  function removeSwapper(address _swapper) external;
+  function deprecateSwapper(address _swapper) external;
 }
 
 contract SwapperRegistry is ISwapperRegistry, CollectableDust, Governable {
@@ -34,9 +34,8 @@ contract SwapperRegistry is ISwapperRegistry, CollectableDust, Governable {
   mapping(address => string) public nameByAddress;
   mapping(string => address) public swapperByName;
   mapping(address => uint256) public initializationByAddress;
+  mapping(address => bool) public deprecatedByAddress;
   EnumerableSet.AddressSet internal _swappers;
-
-  mapping(address => EnumerableSet.AddressSet) internal _approvedTokensBySwappers;
 
   constructor(address _governance) Governable(_governance) {}
 
@@ -54,10 +53,14 @@ contract SwapperRegistry is ISwapperRegistry, CollectableDust, Governable {
     }
   }
 
-  function approvedTokensBySwappers(address _swapper) external view override returns (address[] memory _tokens) {
-    _tokens = new address[](_approvedTokensBySwappers[_swapper].length());
-    for (uint256 i = 0; i < _approvedTokensBySwappers[_swapper].length(); i++) {
-      _tokens[i] = _approvedTokensBySwappers[_swapper].at(i);
+  function deprecatedSwappers() external view override returns (address[] memory _deprecatedSwappers) {
+    _deprecatedSwappers = new address[](_swappers.length());
+    uint256 _totalDeprecated = 0;
+    for (uint256 i = 0; i < _swappers.length(); i++) {
+      if (deprecatedByAddress[_swappers.at(i)]) {
+        _deprecatedSwappers[_totalDeprecated] = _swappers.at(i);
+        _totalDeprecated += 1;
+      }
     }
   }
 
@@ -86,21 +89,14 @@ contract SwapperRegistry is ISwapperRegistry, CollectableDust, Governable {
     emit SwapperAdded(_swapper, _name);
   }
 
-  function removeSwapper(address _swapper) external virtual override onlyGovernor {
-    _removeSwapper(_swapper);
+  function deprecateSwapper(address _swapper) external virtual override onlyGovernor {
+    _deprecateSwapper(_swapper);
   }
 
-  function _removeSwapper(address _swapper) internal {
+  function _deprecateSwapper(address _swapper) internal {
     require(_swappers.contains(_swapper), 'SwapperRegistry: swapper not added');
-    for (uint256 i = 0; i < _approvedTokensBySwappers[_swapper].length(); i++) {
-      IERC20(_approvedTokensBySwappers[_swapper].at(i)).safeApprove(_swapper, 0);
-    }
-    delete _approvedTokensBySwappers[_swapper];
-    delete swapperByName[nameByAddress[_swapper]];
-    delete nameByAddress[_swapper];
-    delete initializationByAddress[_swapper];
-    _swappers.remove(_swapper);
-    emit SwapperRemoved(_swapper);
+    deprecatedByAddress[_swapper] = true;
+    emit SwapperDeprecated(_swapper);
   }
 
   function setPendingGovernor(address _pendingGovernor) external override onlyGovernor {

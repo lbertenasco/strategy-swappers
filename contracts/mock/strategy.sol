@@ -1113,7 +1113,7 @@ abstract contract CurveVoterProxy is BaseStrategy, SwapperEnabled {
       uint256 _maxSlippage,
       uint256 _deadline
     ) external override onlyGovernance returns (uint256 _id) {
-      return _createTrade(swapper, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _deadline);
+      return _createTrade(_tokenIn, _tokenOut, _amountIn, _maxSlippage, _deadline);
     }
 
     function setSwapperCheckpoint(uint256 _checkpoint) external override onlyGovernance {
@@ -1210,6 +1210,11 @@ contract Strategy is CurveVoterProxy {
     address[] public path;
     address[] public pathReward;
 
+    uint public slippage;
+    uint public rewardSlippage;
+    uint public expiration;
+    uint public rewardExpiration;
+
     constructor(address _vault, address _tradeFactory) CurveVoterProxy(_vault, _tradeFactory) {
         dex = sushiswap;
         curve = address(0xA79828DF1850E8a3A3064576f380D90aECDD3359);
@@ -1245,6 +1250,15 @@ contract Strategy is CurveVoterProxy {
         _setPath(_id, _isReward);
     }
 
+    function setSlippages(uint _slippage, uint _rewardSlippage) external onlyAuthorized {
+        slippage = _slippage;
+        rewardSlippage = _rewardSlippage;
+    }
+    function setExpirations(uint _expiration, uint _rewardExpiration) external onlyAuthorized {
+        expiration = _expiration;
+        rewardExpiration = _rewardExpiration;
+    }
+
     function prepareReturn(uint256 _debtOutstanding)
         internal
         override
@@ -1260,18 +1274,24 @@ contract Strategy is CurveVoterProxy {
         if (_crv > 0) {
             _crv = _adjustCRV(_crv);
 
+            /*
             IERC20(crv).safeApprove(dex, 0);
             IERC20(crv).safeApprove(dex, _crv);
 
             Uni(dex).swapExactTokensForTokens(_crv, uint256(0), path, address(this), block.timestamp);
+            */
+            _createTrade(path[0], path[2], _crv, slippage /*0.1%*/, block.timestamp + expiration);
         }
         IVoterProxy(proxy).claimRewards(gauge, lqty);
         uint256 _lqty = IERC20(lqty).balanceOf(address(this));
         if (_lqty > 0) {
+            /*
             IERC20(lqty).safeApprove(uniswap, 0);
             IERC20(lqty).safeApprove(uniswap, _lqty);
 
             Uni(uniswap).swapExactTokensForTokens(_lqty, uint256(0), pathReward, address(this), block.timestamp);
+            */
+            _createTrade(pathReward[0], pathReward[2], _lqty, rewardSlippage /*0.1%*/, block.timestamp + rewardExpiration);
         }
         uint256 _dai = IERC20(dai).balanceOf(address(this));
         uint256 _usdc = IERC20(usdc).balanceOf(address(this));

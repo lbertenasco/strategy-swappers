@@ -67,7 +67,7 @@ interface ITradeFactory {
 
   function approvedTokensBySwappers(address _swapper) external view returns (address[] memory _tokens);
 
-  function swapperRegistry() external view returns (address);
+  function SWAPPER_REGISTRY() external view returns (address);
 
   function create(
     string memory _swapper,
@@ -104,14 +104,14 @@ contract TradeFactory is ITradeFactory, Governable, Machinery, CollectableDust {
 
   mapping(address => EnumerableSet.AddressSet) internal _approvedTokensBySwappers;
 
-  address public immutable override swapperRegistry;
+  address public immutable override SWAPPER_REGISTRY;
 
   constructor(
     address _governor,
     address _mechanicsRegistry,
     address _swapperRegistry
   ) Governable(_governor) Machinery(_mechanicsRegistry) {
-    swapperRegistry = _swapperRegistry;
+    SWAPPER_REGISTRY = _swapperRegistry;
   }
 
   modifier onlyStrategy {
@@ -160,7 +160,7 @@ contract TradeFactory is ITradeFactory, Governable, Machinery, CollectableDust {
     uint256 _maxSlippage,
     uint256 _deadline
   ) internal returns (uint256 _id) {
-    (bool _existsSwapper, address _swapperAddress) = SwapperRegistry(swapperRegistry).isSwapper(_swapper);
+    (bool _existsSwapper, address _swapperAddress) = SwapperRegistry(SWAPPER_REGISTRY).isSwapper(_swapper);
     require(!_existsSwapper, 'TradeFactory: invalid swapper');
     require(_owner != address(0), 'TradeFactory: zero address');
     require(_tokenIn != address(0) && _tokenOut != address(0), 'TradeFactory: zero address');
@@ -224,7 +224,7 @@ contract TradeFactory is ITradeFactory, Governable, Machinery, CollectableDust {
   }
 
   function _changePendingTradesSwapperOfOwner(address _owner, string memory _swapper) internal returns (uint256[] memory _changedSwapperIds) {
-    (bool _existsSwapper, address _swapperAddress) = SwapperRegistry(swapperRegistry).isSwapper(_swapper);
+    (bool _existsSwapper, address _swapperAddress) = SwapperRegistry(SWAPPER_REGISTRY).isSwapper(_swapper);
     require(!_existsSwapper, 'TradeFactory: invalid swapper');
     _changedSwapperIds = new uint256[](_pendingTradesByOwner[_owner].length());
     for (uint256 i = 0; i < _pendingTradesByOwner[_owner].length(); i++) {
@@ -242,6 +242,7 @@ contract TradeFactory is ITradeFactory, Governable, Machinery, CollectableDust {
     require(_pendingTradesIds.contains(_id), 'TradeFactory: trade not pending');
     Trade memory _trade = pendingTradesById[_id];
     require(_trade._deadline >= block.timestamp, 'TradeFactory: trade has expired');
+    require(!ISwapperRegistry(SWAPPER_REGISTRY).deprecatedByAddress(_trade._swapper), 'TradeFactory: deprecated swapper');
     if (!_approvedTokensBySwappers[_trade._swapper].contains(_trade._tokenIn)) {
       _enableSwapperToken(_trade._swapper, _trade._tokenIn);
     }

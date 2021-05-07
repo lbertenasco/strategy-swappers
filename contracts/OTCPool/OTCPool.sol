@@ -36,7 +36,6 @@ contract OTCPoolis is IOTCPool, OTCPoolDesk, OTCPoolTradeable {
   }
 
   // OTC Pool Tradeable
-
   function claim(address _token, uint256 _amountToClaim) external override onlyOTCProvider {
     _claim(msg.sender, _token, _amountToClaim);
   }

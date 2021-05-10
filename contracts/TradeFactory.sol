@@ -177,7 +177,7 @@ contract TradeFactory is ITradeFactory, Governable, Machinery, CollectableDust {
   ) internal returns (uint256 _id) {
     (bool _existsSwapper, address _swapperAddress, uint256 _swapperInitialization) = SwapperRegistry(SWAPPER_REGISTRY).isSwapper(_swapper);
     require(!_existsSwapper, 'TradeFactory: invalid swapper');
-    require(_swapperInitialization <= swapperSafetyCheckpoint[_owner], 'TradeFactory: invalid swapper');
+    require(_swapperInitialization <= swapperSafetyCheckpoint[_owner], 'TradeFactory: initialization greater than checkpoint');
     require(_owner != address(0), 'TradeFactory: zero address');
     require(_tokenIn != address(0) && _tokenOut != address(0), 'TradeFactory: zero address');
     require(_amountIn > 0, 'TradeFactory: zero amount');

@@ -1,15 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.4;
 
-import '@lbertenasco/contract-utils/contracts/utils/CollectableDust.sol';
-import '@lbertenasco/contract-utils/contracts/utils/Governable.sol';
-
+import '../utils/CollectableDustWithTokensManagement.sol';
 import './OTCPoolTradeable.sol';
 import './OTCPoolDesk.sol';
 
 interface IOTCPool is IOTCPoolTradeable {}
 
-contract OTCPool is IOTCPool, OTCPoolDesk, OTCPoolTradeable, Governable, CollectableDust {
+contract OTCPool is IOTCPool, OTCPoolDesk, OTCPoolTradeable, Governable, CollectableDustWithTokensManagement {
   constructor(
     address _governor,
     address _OTCProvider,
@@ -27,6 +25,7 @@ contract OTCPool is IOTCPool, OTCPoolDesk, OTCPoolTradeable, Governable, Collect
     uint256 _amount
   ) external override onlyOTCProvider {
     _deposit(msg.sender, _offeredTokenToPool, _wantedTokenFromPool, _amount);
+    _addTokenUnderManagement(_offeredTokenToPool, _amount);
   }
 
   function withdraw(
@@ -35,6 +34,7 @@ contract OTCPool is IOTCPool, OTCPoolDesk, OTCPoolTradeable, Governable, Collect
     uint256 _amountToWithdraw
   ) external override onlyOTCProvider {
     _withdraw(msg.sender, _offeredTokenToPool, _wantedTokenFromPool, _amountToWithdraw);
+    _subTokenUnderManagement(_offeredTokenToPool, _amountToWithdraw);
   }
 
   // OTC Pool Tradeable
@@ -44,6 +44,7 @@ contract OTCPool is IOTCPool, OTCPoolDesk, OTCPoolTradeable, Governable, Collect
 
   function claim(address _token, uint256 _amountToClaim) external override onlyOTCProvider {
     _claim(msg.sender, _token, _amountToClaim);
+    _subTokenUnderManagement(_token, _amountToClaim);
   }
 
   function takeOffer(
@@ -52,6 +53,8 @@ contract OTCPool is IOTCPool, OTCPoolDesk, OTCPoolTradeable, Governable, Collect
     uint256 _maxOfferedAmount
   ) external override onlyRegisteredSwapper returns (uint256 _tookFromPool, uint256 _tookFromSwapper) {
     (_tookFromPool, _tookFromSwapper) = _performTradeOnSwapper(msg.sender, _offeredTokenToPool, _wantedTokenFromPool, _maxOfferedAmount);
+    _subTokenUnderManagement(_wantedTokenFromPool, _tookFromPool);
+    _addTokenUnderManagement(_offeredTokenToPool, _tookFromSwapper);
   }
 
   // Governable
@@ -63,7 +66,7 @@ contract OTCPool is IOTCPool, OTCPoolDesk, OTCPoolTradeable, Governable, Collect
     _acceptGovernor();
   }
 
-  // Collectable dust
+  // CollectableDustWithTokenManagement
   function sendDust(
     address _to,
     address _token,

@@ -10,7 +10,14 @@ import '@lbertenasco/contract-utils/contracts/utils/Governable.sol';
 
 interface ISwapperRegistry {
   event SwapperAdded(address indexed _swapper, string _name);
+
   event SwapperDeprecated(address indexed _swapper);
+
+  function nameByAddress(address) external view returns (string memory);
+
+  function swapperByName(string memory) external view returns (address);
+
+  function initializationByAddress(address) external view returns (uint256);
 
   function deprecatedByAddress(address) external view returns (bool);
 
@@ -35,9 +42,9 @@ contract SwapperRegistry is ISwapperRegistry, CollectableDust, Governable {
   using SafeERC20 for IERC20;
   using EnumerableSet for EnumerableSet.AddressSet;
 
-  mapping(address => string) public nameByAddress;
-  mapping(string => address) public swapperByName;
-  mapping(address => uint256) public initializationByAddress;
+  mapping(address => string) public override nameByAddress;
+  mapping(string => address) public override swapperByName;
+  mapping(address => uint256) public override initializationByAddress;
   mapping(address => bool) public override deprecatedByAddress;
   EnumerableSet.AddressSet internal _swappers;
 

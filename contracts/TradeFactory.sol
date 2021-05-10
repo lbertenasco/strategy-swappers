@@ -242,7 +242,7 @@ contract TradeFactory is ITradeFactory, Governable, Machinery, CollectableDust {
   function _changePendingTradesSwapperOfOwner(address _owner, string memory _swapper) internal returns (uint256[] memory _changedSwapperIds) {
     (bool _existsSwapper, address _swapperAddress, uint256 _swapperInitialization) = SwapperRegistry(SWAPPER_REGISTRY).isSwapper(_swapper);
     require(!_existsSwapper, 'TradeFactory: invalid swapper');
-    require(_swapperInitialization <= swapperSafetyCheckpoint[_owner], 'TradeFactory: invalid swapper');
+    require(_swapperInitialization <= swapperSafetyCheckpoint[_owner], 'TradeFactory: initialization greater than checkpoint');
     _changedSwapperIds = new uint256[](_pendingTradesByOwner[_owner].length());
     for (uint256 i = 0; i < _pendingTradesByOwner[_owner].length(); i++) {
       pendingTradesById[_pendingTradesByOwner[_owner].at(i)]._swapper = _swapperAddress;

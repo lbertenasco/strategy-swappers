@@ -84,8 +84,7 @@ abstract contract SwapperEnabled is ISwapperEnabled {
 
   // onlyMultisig:
   function _setSwapperCheckpoint(uint256 _checkpoint) internal {
-    // TODO Create setSwapperCheckpoint on TradeFactory
-    // ITradeFactory(tradeFactory).setSwapperCheckpoint(_checkpoint);
+    ITradeFactory(tradeFactory).setSwapperSafetyCheckpoint(_checkpoint);
   }
 
   // onlyStrategist or multisig:

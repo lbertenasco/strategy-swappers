@@ -43,14 +43,16 @@ interface IOneInchSwapper is ISwapper {
   function ONE_INCH() external view returns (address);
 }
 
-// TODO: Adapt to eth trades
-
 contract OneInchSwapper is IOneInchSwapper, Swapper {
   using SafeERC20 for IERC20;
 
   address public immutable override ONE_INCH;
 
-  constructor(address _tradeFactory, address _oneInch) Swapper(_tradeFactory) {
+  constructor(
+    address _governor,
+    address _tradeFactory,
+    address _oneInch
+  ) Swapper(_governor, _tradeFactory) {
     ONE_INCH = _oneInch;
   }
 

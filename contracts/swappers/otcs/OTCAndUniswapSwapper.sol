@@ -12,10 +12,11 @@ contract OTCAndUniswapSwapper is IOTCAndUniswapSwapper, OTCSwapper, UniswapSwapp
 
   constructor(
     address _otcPool,
+    address _governor,
     address _tradeFactory,
     address _weth,
     address _uniswap
-  ) OTCSwapper(_otcPool) UniswapSwapper(_tradeFactory, _weth, _uniswap) {}
+  ) OTCSwapper(_otcPool) UniswapSwapper(_governor, _tradeFactory, _weth, _uniswap) {}
 
   function _getTotalAmountOut(
     address _tokenIn,

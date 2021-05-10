@@ -18,10 +18,11 @@ contract UniswapSwapper is IUniswapSwapper, Swapper {
   address public immutable override UNISWAP;
 
   constructor(
+    address _governor,
     address _tradeFactory,
     address _weth,
     address _uniswap
-  ) Swapper(_tradeFactory) {
+  ) Swapper(_governor, _tradeFactory) {
     WETH = _weth;
     UNISWAP = _uniswap;
   }

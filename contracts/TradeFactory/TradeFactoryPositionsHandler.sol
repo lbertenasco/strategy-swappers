@@ -4,15 +4,9 @@ pragma solidity 0.8.4;
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
+import '../SwapperRegistry.sol';
 
-import '@lbertenasco/contract-utils/contracts/utils/CollectableDust.sol';
-import '@lbertenasco/contract-utils/contracts/utils/Governable.sol';
-
-import './utils/Machinery.sol';
-import './SwapperRegistry.sol';
-import './Swapper.sol';
-
-interface ITradeFactory {
+interface ITradeFactoryPositionsHandler {
   struct Trade {
     uint256 _id;
     address _owner;
@@ -41,12 +35,6 @@ interface ITradeFactory {
 
   event TradesOfOwnerChangedSwapper(address indexed _owner, uint256[] _ids, string _newSwapper);
 
-  event TradeExpired(uint256 indexed _id);
-
-  event TradeExecuted(uint256 indexed _id, uint256 _receivedAmount);
-
-  event SwapperAndTokenEnabled(address indexed _swapper, address _token);
-
   function pendingTradesById(uint256)
     external
     view
@@ -67,8 +55,6 @@ interface ITradeFactory {
 
   function swapperSafetyCheckpoint(address) external view returns (uint256);
 
-  function approvedTokensBySwappers(address _swapper) external view returns (address[] memory _tokens);
-
   function SWAPPER_REGISTRY() external view returns (address);
 
   function setSwapperSafetyCheckpoint(uint256 _checkpoint) external;
@@ -87,18 +73,13 @@ interface ITradeFactory {
   function cancelAllPending() external returns (uint256[] memory _canceledTradesIds);
 
   function changePendingTradesSwapper(string memory _swapper) external returns (uint256[] memory _changedSwapperIds);
-
-  function execute(uint256 _id) external returns (uint256 _receivedAmount);
-
-  function expire(uint256 _id) external returns (uint256 _freedAmount);
 }
 
-contract TradeFactory is ITradeFactory, Governable, Machinery, CollectableDust {
+abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler {
   using SafeERC20 for IERC20;
   using EnumerableSet for EnumerableSet.UintSet;
-  using EnumerableSet for EnumerableSet.AddressSet;
 
-  uint256 internal _tradeCounter = 0;
+  uint256 private _tradeCounter = 0;
 
   mapping(uint256 => Trade) public override pendingTradesById;
 
@@ -108,21 +89,10 @@ contract TradeFactory is ITradeFactory, Governable, Machinery, CollectableDust {
 
   mapping(address => EnumerableSet.UintSet) internal _pendingTradesByOwner;
 
-  mapping(address => EnumerableSet.AddressSet) internal _approvedTokensBySwappers;
-
   address public immutable override SWAPPER_REGISTRY;
 
-  constructor(
-    address _governor,
-    address _mechanicsRegistry,
-    address _swapperRegistry
-  ) Governable(_governor) Machinery(_mechanicsRegistry) {
+  constructor(address _swapperRegistry) {
     SWAPPER_REGISTRY = _swapperRegistry;
-  }
-
-  modifier onlyStrategy {
-    require(msg.sender == msg.sender, 'TradeFactory: not a strategy'); // TODO:
-    _;
   }
 
   function pendingTradesIds() external view override returns (uint256[] memory _pendingIds) {
@@ -139,31 +109,9 @@ contract TradeFactory is ITradeFactory, Governable, Machinery, CollectableDust {
     }
   }
 
-  function approvedTokensBySwappers(address _swapper) external view override returns (address[] memory _tokens) {
-    _tokens = new address[](_approvedTokensBySwappers[_swapper].length());
-    for (uint256 i = 0; i < _approvedTokensBySwappers[_swapper].length(); i++) {
-      _tokens[i] = _approvedTokensBySwappers[_swapper].at(i);
-    }
-  }
-
-  function setSwapperSafetyCheckpoint(uint256 _checkpoint) external override onlyStrategy {
-    _setSwapperSafetyCheckpoint(msg.sender, _checkpoint);
-  }
-
   function _setSwapperSafetyCheckpoint(address _to, uint256 _checkpoint) internal {
     require(_checkpoint <= block.timestamp, 'TradeFactory: invalid checkpoint');
     swapperSafetyCheckpoint[_to] = _checkpoint;
-  }
-
-  function create(
-    string memory _swapper,
-    address _tokenIn,
-    address _tokenOut,
-    uint256 _amountIn,
-    uint256 _maxSlippage,
-    uint256 _deadline
-  ) external override onlyStrategy returns (uint256 _id) {
-    _id = _create(_swapper, msg.sender, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _deadline);
   }
 
   function _create(
@@ -201,20 +149,11 @@ contract TradeFactory is ITradeFactory, Governable, Machinery, CollectableDust {
     );
   }
 
-  function cancelPending(uint256 _id) external override onlyStrategy {
-    require(pendingTradesById[_id]._owner == msg.sender, 'TradeFactory: does not own trade');
-    _cancelPending(_id);
-  }
-
   function _cancelPending(uint256 _id) internal {
     require(_pendingTradesIds.contains(_id), 'TradeFactory: trade not pending');
     Trade memory _trade = pendingTradesById[_id];
     _removePendingTrade(_trade._owner, _id);
     emit TradeCanceled(_id);
-  }
-
-  function cancelAllPending() external override onlyStrategy returns (uint256[] memory _canceledTradesIds) {
-    _canceledTradesIds = _cancelAllPendingOfOwner(msg.sender);
   }
 
   function _cancelAllPendingOfOwner(address _owner) internal returns (uint256[] memory _canceledTradesIds) {
@@ -235,10 +174,6 @@ contract TradeFactory is ITradeFactory, Governable, Machinery, CollectableDust {
     delete pendingTradesById[_id];
   }
 
-  function changePendingTradesSwapper(string memory _swapper) external override onlyStrategy returns (uint256[] memory _changedSwapperIds) {
-    _changedSwapperIds = _changePendingTradesSwapperOfOwner(msg.sender, _swapper);
-  }
-
   function _changePendingTradesSwapperOfOwner(address _owner, string memory _swapper) internal returns (uint256[] memory _changedSwapperIds) {
     (bool _existsSwapper, address _swapperAddress, uint256 _swapperInitialization) = SwapperRegistry(SWAPPER_REGISTRY).isSwapper(_swapper);
     require(!_existsSwapper, 'TradeFactory: invalid swapper');
@@ -249,67 +184,5 @@ contract TradeFactory is ITradeFactory, Governable, Machinery, CollectableDust {
       _changedSwapperIds[i] = _pendingTradesByOwner[_owner].at(i);
     }
     emit TradesOfOwnerChangedSwapper(_owner, _changedSwapperIds, _swapper);
-  }
-
-  function execute(uint256 _id) external override onlyMechanic returns (uint256 _receivedAmount) {
-    _receivedAmount = _execute(_id);
-  }
-
-  function _execute(uint256 _id) internal returns (uint256 _receivedAmount) {
-    require(_pendingTradesIds.contains(_id), 'TradeFactory: trade not pending');
-    Trade memory _trade = pendingTradesById[_id];
-    require(_trade._deadline >= block.timestamp, 'TradeFactory: trade has expired');
-    require(!ISwapperRegistry(SWAPPER_REGISTRY).deprecatedByAddress(_trade._swapper), 'TradeFactory: deprecated swapper');
-    if (!_approvedTokensBySwappers[_trade._swapper].contains(_trade._tokenIn)) {
-      _enableSwapperToken(_trade._swapper, _trade._tokenIn);
-    }
-    IERC20(_trade._tokenIn).safeTransferFrom(_trade._owner, address(this), _trade._amountIn);
-    _receivedAmount = ISwapper(_trade._swapper).swap(_trade._owner, _trade._tokenIn, _trade._tokenOut, _trade._amountIn, _trade._maxSlippage);
-    _removePendingTrade(_trade._owner, _id);
-    emit TradeExecuted(_id, _receivedAmount);
-  }
-
-  function expire(uint256 _id) external override onlyMechanic returns (uint256 _freedAmount) {
-    _freedAmount = _expire(_id);
-  }
-
-  function _expire(uint256 _id) internal returns (uint256 _freedAmount) {
-    require(_pendingTradesIds.contains(_id), 'TradeFactory: trade not pending');
-    Trade memory _trade = pendingTradesById[_id];
-    require(_trade._deadline <= block.timestamp, 'TradeFactory: swap not expired');
-    _freedAmount = _trade._amountIn;
-    // We have to take tokens from strategy, to decrease the allowance
-    IERC20(_trade._tokenIn).safeTransferFrom(_trade._owner, address(this), _trade._amountIn);
-    // Send tokens back to strategy
-    IERC20(_trade._tokenIn).safeTransfer(_trade._owner, _trade._amountIn);
-    // Remove trade
-    _removePendingTrade(_trade._owner, _id);
-    emit TradeExpired(_id);
-  }
-
-  function _enableSwapperToken(address _swapper, address _token) internal {
-    IERC20(_token).safeApprove(_swapper, type(uint256).max);
-    _approvedTokensBySwappers[_swapper].add(_token);
-    emit SwapperAndTokenEnabled(_swapper, _token);
-  }
-
-  function setMechanicsRegistry(address _mechanicsRegistry) external override onlyGovernor {
-    _setMechanicsRegistry(_mechanicsRegistry);
-  }
-
-  function setPendingGovernor(address _pendingGovernor) external override onlyGovernor {
-    _setPendingGovernor(_pendingGovernor);
-  }
-
-  function acceptGovernor() external override onlyPendingGovernor {
-    _acceptGovernor();
-  }
-
-  function sendDust(
-    address _to,
-    address _token,
-    uint256 _amount
-  ) external virtual override onlyGovernor {
-    _sendDust(_to, _token, _amount);
   }
 }

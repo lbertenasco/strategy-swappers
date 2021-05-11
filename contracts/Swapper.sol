@@ -28,7 +28,7 @@ interface ISwapper {
 abstract contract Swapper is ISwapper, Governable, CollectableDust {
   using SafeERC20 for IERC20;
 
-  uint256 public immutable override SLIPPAGE_PRECISION = 10000;
+  uint256 public immutable override SLIPPAGE_PRECISION = 10000; // 1 is 0.0001%, 1_000 is 0.1%
   address public immutable override TRADE_FACTORY;
 
   constructor(address _governor, address _tradeFactory) Governable(_governor) {

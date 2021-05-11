@@ -4,7 +4,7 @@ pragma solidity 0.8.4;
 
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 
-import '../TradeFactory.sol';
+import '../TradeFactory/TradeFactory.sol';
 
 interface ISwapperEnabled {
   event TradeFactorySet(address indexed _tradeFactory);
@@ -54,7 +54,7 @@ abstract contract SwapperEnabled is ISwapperEnabled {
   function _setSwapper(string calldata _swapper, bool _migrateSwaps) internal {
     swapper = _swapper;
     if (_migrateSwaps) {
-      ITradeFactory(tradeFactory).changePendingTradesSwapper(_swapper);
+      ITradeFactoryPositionsHandler(tradeFactory).changePendingTradesSwapper(_swapper);
     }
     emit SwapperSet(_swapper);
   }
@@ -79,12 +79,12 @@ abstract contract SwapperEnabled is ISwapperEnabled {
     uint256 _deadline
   ) internal returns (uint256 _id) {
     IERC20(_tokenIn).safeIncreaseAllowance(tradeFactory, _amountIn);
-    return ITradeFactory(tradeFactory).create(_swapper, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _deadline);
+    return ITradeFactoryPositionsHandler(tradeFactory).create(_swapper, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _deadline);
   }
 
   // onlyMultisig:
   function _setSwapperCheckpoint(uint256 _checkpoint) internal {
-    ITradeFactory(tradeFactory).setSwapperSafetyCheckpoint(_checkpoint);
+    ITradeFactoryPositionsHandler(tradeFactory).setSwapperSafetyCheckpoint(_checkpoint);
   }
 
   // onlyStrategist or multisig:
@@ -95,9 +95,9 @@ abstract contract SwapperEnabled is ISwapperEnabled {
   }
 
   function _cancelPendingTrade(uint256 _pendingTradeId) internal {
-    (, , , address _tokenIn, , uint256 _amountIn, , ) = ITradeFactory(tradeFactory).pendingTradesById(_pendingTradeId);
+    (, , , address _tokenIn, , uint256 _amountIn, , ) = ITradeFactoryPositionsHandler(tradeFactory).pendingTradesById(_pendingTradeId);
     IERC20(_tokenIn).safeDecreaseAllowance(tradeFactory, _amountIn);
-    ITradeFactory(tradeFactory).cancelPending(_pendingTradeId);
+    ITradeFactoryPositionsHandler(tradeFactory).cancelPending(_pendingTradeId);
   }
 
   function _tradeFactoryAllowance(address _token) internal view returns (uint256 _allowance) {

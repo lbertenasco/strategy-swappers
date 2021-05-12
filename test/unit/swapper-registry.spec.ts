@@ -1,8 +1,18 @@
+import { Contract, ContractFactory } from '@ethersproject/contracts';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { contract, then, when } from '../utils/bdd';
 
 contract('SwapperRegistry', () => {
+  let swapperRegistryFactory: ContractFactory;
+  let swapperRegistry: Contract;
+
+  before(async () => {
+    swapperRegistryFactory = await ethers.getContractFactory('contracts/mock/SwapperRegistry.sol:SwapperRegistryMock');
+  });
+
+  beforeEach(async () => {});
+
   describe('swappers', () => {
     when('there are no swappers', () => {
       then('returns empty array');

@@ -7,7 +7,7 @@ import { getStatic } from 'ethers/lib/utils';
 
 chai.use(chaiAsPromised);
 
-const checkTxRevertedWithMessage = async ({ tx, message }: { tx: Promise<TransactionRequest>; message: RegExp | string }): Promise<void> => {
+const checkTxRevertedWithMessage = async ({ tx, message }: { tx: Promise<TransactionResponse>; message: RegExp | string }): Promise<void> => {
   await expect(tx).to.be.reverted;
   if (message instanceof RegExp) {
     await expect(tx).eventually.rejected.have.property('message').match(message);
@@ -16,7 +16,7 @@ const checkTxRevertedWithMessage = async ({ tx, message }: { tx: Promise<Transac
   }
 };
 
-const checkTxRevertedWithZeroAddress = async (tx: Promise<TransactionRequest>): Promise<void> => {
+const checkTxRevertedWithZeroAddress = async (tx: Promise<TransactionResponse>): Promise<void> => {
   await checkTxRevertedWithMessage({
     tx,
     message: /zero-address/,
@@ -78,11 +78,11 @@ const checkTxEmittedEvents = async ({
   events,
 }: {
   contract: Contract;
-  tx: Promise<TransactionRequest>;
+  tx: TransactionResponse;
   events: { name: string; args: any[] }[];
 }): Promise<void> => {
   for (let i = 0; i < events.length; i++) {
-    await expect(tx)
+    expect(tx)
       .to.emit(contract, events[i].name)
       .withArgs(...events[i].args);
   }
@@ -102,8 +102,8 @@ const deployShouldSetVariablesAndEmitEvents = async ({
   }[];
 }): Promise<void> => {
   const deployContractTx = await contract.getDeployTransaction(...args);
-  const tx = contract.signer.sendTransaction(deployContractTx);
-  const address = getStatic<(tx: TransactionResponse) => string>(contract.constructor, 'getContractAddress')(await tx);
+  const tx = await contract.signer.sendTransaction(deployContractTx);
+  const address = getStatic<(tx: TransactionResponse) => string>(contract.constructor, 'getContractAddress')(tx);
   const deployedContract = getStatic<(address: string, contractInterface: ContractInterface, signer?: Signer) => Contract>(
     contract.constructor,
     'getContract'
@@ -121,7 +121,7 @@ const txShouldHaveSetVariablesAndEmitEvents = async ({
   settersGettersVariablesAndEvents,
 }: {
   contract: Contract;
-  tx: Promise<TransactionRequest>;
+  tx: TransactionResponse;
   settersGettersVariablesAndEvents: {
     getterFunc: string;
     variable: any;

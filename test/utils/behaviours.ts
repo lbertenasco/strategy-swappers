@@ -1,9 +1,12 @@
 import { expect } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import chai from 'chai';
-import { Contract, ContractFactory, ContractInterface, Signer } from 'ethers';
+import { Contract, ContractFactory, ContractInterface, Signer, Wallet } from 'ethers';
 import { TransactionRequest, TransactionResponse } from '@ethersproject/abstract-provider';
 import { getStatic } from 'ethers/lib/utils';
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
+import { wallet } from '.';
+import { given, then, when } from './bdd';
 
 chai.use(chaiAsPromised);
 
@@ -171,6 +174,70 @@ const txShouldSetVariableAndEmitEvent = async ({
   });
 };
 
+const shouldBeExecutableOnlyByTradeFactory = ({
+  contract,
+  funcAndSignature,
+  params,
+  tradeFactory,
+}: {
+  contract: () => Contract;
+  funcAndSignature: string;
+  params?: any[];
+  tradeFactory: () => SignerWithAddress | Wallet;
+}) => {
+  params = params ?? [];
+  when('not called from trade factory', () => {
+    let onlyTradeFactoryAllowedTx: Promise<TransactionResponse>;
+    given(async () => {
+      const notGovernor = await wallet.generateRandom();
+      onlyTradeFactoryAllowedTx = contract()
+        .connect(notGovernor)
+        [funcAndSignature](...params!, { gasPrice: 0 });
+    });
+    then('tx is reverted with reason', async () => {
+      await expect(onlyTradeFactoryAllowedTx).to.be.revertedWith('Swapper: not trade factory');
+    });
+  });
+  when('called from factory', () => {
+    let onlyTradeFactoryAllowedTx: Promise<TransactionResponse>;
+    given(async () => {
+      onlyTradeFactoryAllowedTx = contract()
+        .connect(tradeFactory())
+        [funcAndSignature](...params!, { gasPrice: 0 });
+    });
+    then('tx is not reverted or not reverted with reason only trade factory', async () => {
+      await expect(onlyTradeFactoryAllowedTx).to.not.be.revertedWith('Swapper: not trade factory');
+    });
+  });
+};
+
+const shouldBeCheckPreAssetSwap = ({
+  contract,
+  funcAndSignature,
+  params,
+}: {
+  contract: () => Contract;
+  funcAndSignature: string;
+  params?: any[];
+}) => {
+  params = params ?? [];
+  when('receiver is zero address', () => {
+    then('tx is reverted with reason');
+  });
+  when('token in is zero address', () => {
+    then('tx is reverted with reason');
+  });
+  when('token out is zero address', () => {
+    then('tx is reverted with reason');
+  });
+  when('amount is zero', () => {
+    then('tx is reverted with reason');
+  });
+  when('max slippage is zero', () => {
+    then('tx is reverted with reason');
+  });
+};
+
 export default {
   deployShouldRevertWithMessage,
   deployShouldRevertWithZeroAddress,
@@ -180,4 +247,6 @@ export default {
   txShouldHaveSetVariablesAndEmitEvents,
   txShouldSetVariableAndEmitEvent,
   checkTxRevertedWithMessage,
+  shouldBeExecutableOnlyByTradeFactory,
+  shouldBeCheckPreAssetSwap,
 };

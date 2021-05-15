@@ -30,6 +30,7 @@ abstract contract Swapper is ISwapper, Governable, CollectableDust {
   address public immutable override TRADE_FACTORY;
 
   constructor(address _governor, address _tradeFactory) Governable(_governor) {
+    require(_tradeFactory != address(0), 'Swapper: zero address');
     TRADE_FACTORY = _tradeFactory;
   }
 

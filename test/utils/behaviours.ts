@@ -5,7 +5,7 @@ import { Contract, ContractFactory, ContractInterface, Signer, Wallet } from 'et
 import { TransactionRequest, TransactionResponse } from '@ethersproject/abstract-provider';
 import { getStatic } from 'ethers/lib/utils';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
-import { wallet } from '.';
+import { constants, wallet } from '.';
 import { given, then, when } from './bdd';
 
 chai.use(chaiAsPromised);
@@ -211,30 +211,51 @@ const shouldBeExecutableOnlyByTradeFactory = ({
   });
 };
 
-const shouldBeCheckPreAssetSwap = ({
-  contract,
-  funcAndSignature,
-  params,
-}: {
-  contract: () => Contract;
-  funcAndSignature: string;
-  params?: any[];
-}) => {
-  params = params ?? [];
+const shouldBeCheckPreAssetSwap = ({ contract, func }: { contract: () => Contract; func: string }) => {
   when('receiver is zero address', () => {
-    then('tx is reverted with reason');
+    let tx: Promise<TransactionResponse>;
+    given(async () => {
+      tx = contract()[func](constants.ZERO_ADDRESS, constants.NOT_ZERO_ADDRESS, constants.NOT_ZERO_ADDRESS, constants.ONE, constants.ONE);
+    });
+    then('tx is reverted with reason', async () => {
+      await expect(tx).to.be.revertedWith('Swapper: zero address');
+    });
   });
   when('token in is zero address', () => {
-    then('tx is reverted with reason');
+    let tx: Promise<TransactionResponse>;
+    given(async () => {
+      tx = contract()[func](constants.NOT_ZERO_ADDRESS, constants.ZERO_ADDRESS, constants.NOT_ZERO_ADDRESS, constants.ONE, constants.ONE);
+    });
+    then('tx is reverted with reason', async () => {
+      await expect(tx).to.be.revertedWith('Swapper: zero address');
+    });
   });
   when('token out is zero address', () => {
-    then('tx is reverted with reason');
+    let tx: Promise<TransactionResponse>;
+    given(async () => {
+      tx = contract()[func](constants.NOT_ZERO_ADDRESS, constants.NOT_ZERO_ADDRESS, constants.ZERO_ADDRESS, constants.ONE, constants.ONE);
+    });
+    then('tx is reverted with reason', async () => {
+      await expect(tx).to.be.revertedWith('Swapper: zero address');
+    });
   });
   when('amount is zero', () => {
-    then('tx is reverted with reason');
+    let tx: Promise<TransactionResponse>;
+    given(async () => {
+      tx = contract()[func](constants.NOT_ZERO_ADDRESS, constants.NOT_ZERO_ADDRESS, constants.NOT_ZERO_ADDRESS, constants.ZERO, constants.ONE);
+    });
+    then('tx is reverted with reason', async () => {
+      await expect(tx).to.be.revertedWith('Swapper: zero amount');
+    });
   });
   when('max slippage is zero', () => {
-    then('tx is reverted with reason');
+    let tx: Promise<TransactionResponse>;
+    given(async () => {
+      tx = contract()[func](constants.NOT_ZERO_ADDRESS, constants.NOT_ZERO_ADDRESS, constants.NOT_ZERO_ADDRESS, constants.ONE, constants.ZERO);
+    });
+    then('tx is reverted with reason', async () => {
+      await expect(tx).to.be.revertedWith('Swapper: zero slippage');
+    });
   });
 };
 

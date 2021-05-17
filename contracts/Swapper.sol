@@ -52,6 +52,14 @@ abstract contract Swapper is ISwapper, Governable, CollectableDust {
     require(_maxSlippage > 0, 'Swapper: zero slippage');
   }
 
+  function _executeSwap(
+    address _receiver,
+    address _tokenIn,
+    address _tokenOut,
+    uint256 _amountIn,
+    uint256 _maxSlippage
+  ) internal virtual returns (uint256 _receivedAmount);
+
   function swap(
     address _receiver,
     address _tokenIn,
@@ -64,14 +72,6 @@ abstract contract Swapper is ISwapper, Governable, CollectableDust {
     _receivedAmount = _executeSwap(_receiver, _tokenIn, _tokenOut, _amountIn, _maxSlippage);
     emit Swapped(_receiver, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _receivedAmount);
   }
-
-  function _executeSwap(
-    address _receiver,
-    address _tokenIn,
-    address _tokenOut,
-    uint256 _amountIn,
-    uint256 _maxSlippage
-  ) internal virtual returns (uint256 _receivedAmount);
 
   function setPendingGovernor(address _pendingGovernor) external override onlyGovernor {
     _setPendingGovernor(_pendingGovernor);

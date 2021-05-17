@@ -1,9 +1,12 @@
 import { expect } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import chai from 'chai';
-import { Contract, ContractFactory, ContractInterface, Signer } from 'ethers';
+import { Contract, ContractFactory, ContractInterface, Signer, Wallet } from 'ethers';
 import { TransactionRequest, TransactionResponse } from '@ethersproject/abstract-provider';
 import { getStatic } from 'ethers/lib/utils';
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
+import { constants, wallet } from '.';
+import { given, then, when } from './bdd';
 
 chai.use(chaiAsPromised);
 
@@ -171,6 +174,91 @@ const txShouldSetVariableAndEmitEvent = async ({
   });
 };
 
+const shouldBeExecutableOnlyByTradeFactory = ({
+  contract,
+  funcAndSignature,
+  params,
+  tradeFactory,
+}: {
+  contract: () => Contract;
+  funcAndSignature: string;
+  params?: any[];
+  tradeFactory: () => SignerWithAddress | Wallet;
+}) => {
+  params = params ?? [];
+  when('not called from trade factory', () => {
+    let onlyTradeFactoryAllowedTx: Promise<TransactionResponse>;
+    given(async () => {
+      const notGovernor = await wallet.generateRandom();
+      onlyTradeFactoryAllowedTx = contract()
+        .connect(notGovernor)
+        [funcAndSignature](...params!, { gasPrice: 0 });
+    });
+    then('tx is reverted with reason', async () => {
+      await expect(onlyTradeFactoryAllowedTx).to.be.revertedWith('Swapper: not trade factory');
+    });
+  });
+  when('called from factory', () => {
+    let onlyTradeFactoryAllowedTx: Promise<TransactionResponse>;
+    given(async () => {
+      onlyTradeFactoryAllowedTx = contract()
+        .connect(tradeFactory())
+        [funcAndSignature](...params!, { gasPrice: 0 });
+    });
+    then('tx is not reverted or not reverted with reason only trade factory', async () => {
+      await expect(onlyTradeFactoryAllowedTx).to.not.be.revertedWith('Swapper: not trade factory');
+    });
+  });
+};
+
+const shouldBeCheckPreAssetSwap = ({ contract, func }: { contract: () => Contract; func: string }) => {
+  when('receiver is zero address', () => {
+    let tx: Promise<TransactionResponse>;
+    given(async () => {
+      tx = contract()[func](constants.ZERO_ADDRESS, constants.NOT_ZERO_ADDRESS, constants.NOT_ZERO_ADDRESS, constants.ONE, constants.ONE);
+    });
+    then('tx is reverted with reason', async () => {
+      await expect(tx).to.be.revertedWith('Swapper: zero address');
+    });
+  });
+  when('token in is zero address', () => {
+    let tx: Promise<TransactionResponse>;
+    given(async () => {
+      tx = contract()[func](constants.NOT_ZERO_ADDRESS, constants.ZERO_ADDRESS, constants.NOT_ZERO_ADDRESS, constants.ONE, constants.ONE);
+    });
+    then('tx is reverted with reason', async () => {
+      await expect(tx).to.be.revertedWith('Swapper: zero address');
+    });
+  });
+  when('token out is zero address', () => {
+    let tx: Promise<TransactionResponse>;
+    given(async () => {
+      tx = contract()[func](constants.NOT_ZERO_ADDRESS, constants.NOT_ZERO_ADDRESS, constants.ZERO_ADDRESS, constants.ONE, constants.ONE);
+    });
+    then('tx is reverted with reason', async () => {
+      await expect(tx).to.be.revertedWith('Swapper: zero address');
+    });
+  });
+  when('amount is zero', () => {
+    let tx: Promise<TransactionResponse>;
+    given(async () => {
+      tx = contract()[func](constants.NOT_ZERO_ADDRESS, constants.NOT_ZERO_ADDRESS, constants.NOT_ZERO_ADDRESS, constants.ZERO, constants.ONE);
+    });
+    then('tx is reverted with reason', async () => {
+      await expect(tx).to.be.revertedWith('Swapper: zero amount');
+    });
+  });
+  when('max slippage is zero', () => {
+    let tx: Promise<TransactionResponse>;
+    given(async () => {
+      tx = contract()[func](constants.NOT_ZERO_ADDRESS, constants.NOT_ZERO_ADDRESS, constants.NOT_ZERO_ADDRESS, constants.ONE, constants.ZERO);
+    });
+    then('tx is reverted with reason', async () => {
+      await expect(tx).to.be.revertedWith('Swapper: zero slippage');
+    });
+  });
+};
+
 export default {
   deployShouldRevertWithMessage,
   deployShouldRevertWithZeroAddress,
@@ -180,4 +268,6 @@ export default {
   txShouldHaveSetVariablesAndEmitEvents,
   txShouldSetVariableAndEmitEvent,
   checkTxRevertedWithMessage,
+  shouldBeExecutableOnlyByTradeFactory,
+  shouldBeCheckPreAssetSwap,
 };

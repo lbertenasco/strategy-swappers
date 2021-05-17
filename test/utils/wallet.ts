@@ -1,4 +1,10 @@
 import { Wallet } from 'ethers';
+import { ethers } from 'hardhat';
+
+const generateRandom = async () => {
+  const wallet = (await Wallet.createRandom()).connect(ethers.provider);
+  return wallet;
+};
 
 const generateRandomAddress = async () => {
   const wallet = await Wallet.createRandom();
@@ -6,5 +12,6 @@ const generateRandomAddress = async () => {
 };
 
 export default {
+  generateRandom,
   generateRandomAddress,
 };

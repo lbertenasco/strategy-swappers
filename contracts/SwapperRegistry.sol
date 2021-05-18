@@ -112,7 +112,7 @@ contract SwapperRegistry is ISwapperRegistry, CollectableDust, Governable {
     _isSwapper = _swapperAddress != address(0);
   }
 
-  function addSwapper(string memory _name, address _swapper) external virtual override onlyGovernor {
+  function addSwapper(string memory _name, address _swapper) external override onlyGovernor {
     _addSwapper(_name, _swapper);
   }
 
@@ -128,7 +128,7 @@ contract SwapperRegistry is ISwapperRegistry, CollectableDust, Governable {
     emit SwapperAdded(_swapper, _name);
   }
 
-  function deprecateSwapper(address _swapper) external virtual override onlyGovernor {
+  function deprecateSwapper(address _swapper) external override onlyGovernor {
     _deprecateSwapper(_swapper);
   }
 

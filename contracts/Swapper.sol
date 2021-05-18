@@ -7,8 +7,6 @@ import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '@lbertenasco/contract-utils/contracts/utils/Governable.sol';
 import '@lbertenasco/contract-utils/contracts/utils/CollectableDust.sol';
 
-import './TradeFactory.sol';
-
 interface ISwapper {
   event Swapped(address _receiver, address _tokenIn, address _tokenOut, uint256 _amountIn, uint256 _maxSlippage, uint256 _receivedAmount);
 
@@ -32,6 +30,7 @@ abstract contract Swapper is ISwapper, Governable, CollectableDust {
   address public immutable override TRADE_FACTORY;
 
   constructor(address _governor, address _tradeFactory) Governable(_governor) {
+    require(_tradeFactory != address(0), 'Swapper: zero address');
     TRADE_FACTORY = _tradeFactory;
   }
 
@@ -53,6 +52,14 @@ abstract contract Swapper is ISwapper, Governable, CollectableDust {
     require(_maxSlippage > 0, 'Swapper: zero slippage');
   }
 
+  function _executeSwap(
+    address _receiver,
+    address _tokenIn,
+    address _tokenOut,
+    uint256 _amountIn,
+    uint256 _maxSlippage
+  ) internal virtual returns (uint256 _receivedAmount);
+
   function swap(
     address _receiver,
     address _tokenIn,
@@ -65,14 +72,6 @@ abstract contract Swapper is ISwapper, Governable, CollectableDust {
     _receivedAmount = _executeSwap(_receiver, _tokenIn, _tokenOut, _amountIn, _maxSlippage);
     emit Swapped(_receiver, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _receivedAmount);
   }
-
-  function _executeSwap(
-    address _receiver,
-    address _tokenIn,
-    address _tokenOut,
-    uint256 _amountIn,
-    uint256 _maxSlippage
-  ) internal virtual returns (uint256 _receivedAmount);
 
   function setPendingGovernor(address _pendingGovernor) external override onlyGovernor {
     _setPendingGovernor(_pendingGovernor);

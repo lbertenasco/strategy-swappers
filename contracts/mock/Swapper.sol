@@ -23,7 +23,7 @@ contract SwapperMock is Swapper {
     address _tokenOut,
     uint256 _amountIn,
     uint256 _maxSlippage
-  ) external {
+  ) external pure {
     _assertPreSwap(_receiver, _tokenIn, _tokenOut, _amountIn, _maxSlippage);
   }
 

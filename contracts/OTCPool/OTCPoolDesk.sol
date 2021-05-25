@@ -59,16 +59,8 @@ abstract contract OTCPoolDesk is IOTCPoolDesk {
     require(_offeredTokenToPool != address(0) && _wantedTokenFromPool != address(0), 'OTCPool: tokens should not be zero');
     require(_amountToOffer > 0, 'OTCPool: should provide more than zero');
     IERC20(_offeredTokenToPool).safeTransferFrom(_depositor, address(this), _amountToOffer);
-    _addAvailableFor(_offeredTokenToPool, _wantedTokenFromPool, _amountToOffer);
-    emit Deposited(_depositor, _offeredTokenToPool, _wantedTokenFromPool, _amountToOffer);
-  }
-
-  function _addAvailableFor(
-    address _offeredTokenToPool,
-    address _wantedTokenFromPool,
-    uint256 _amountToOffer
-  ) internal {
     availableFor[_offeredTokenToPool][_wantedTokenFromPool] += _amountToOffer;
+    emit Deposited(_depositor, _offeredTokenToPool, _wantedTokenFromPool, _amountToOffer);
   }
 
   function _withdraw(
@@ -80,17 +72,9 @@ abstract contract OTCPoolDesk is IOTCPoolDesk {
     require(_receiver != address(0), 'OTCPool: to should not be zero');
     require(_offeredTokenToPool != address(0) && _wantedTokenFromPool != address(0), 'OTCPool: tokens should not be zero');
     require(_amountToWithdraw > 0, 'OTCPool: should provide more than zero');
-    _reduceAvailableFor(_offeredTokenToPool, _wantedTokenFromPool, _amountToWithdraw);
-    IERC20(_offeredTokenToPool).safeTransfer(_receiver, _amountToWithdraw);
-    emit Withdrew(_receiver, _offeredTokenToPool, _wantedTokenFromPool, _amountToWithdraw);
-  }
-
-  function _reduceAvailableFor(
-    address _offeredTokenToPool,
-    address _wantedTokenFromPool,
-    uint256 _amountToWithdraw
-  ) internal {
     require(availableFor[_offeredTokenToPool][_wantedTokenFromPool] >= _amountToWithdraw, 'OTCPool: not enough provided');
     availableFor[_offeredTokenToPool][_wantedTokenFromPool] -= _amountToWithdraw;
+    IERC20(_offeredTokenToPool).safeTransfer(_receiver, _amountToWithdraw);
+    emit Withdrew(_receiver, _offeredTokenToPool, _wantedTokenFromPool, _amountToWithdraw);
   }
 }

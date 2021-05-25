@@ -13,12 +13,38 @@ contract OTCPoolDeskMock is OTCPoolDesk {
     _setOTCProvider(_OTCProvider);
   }
 
+  function setAvailableFor(
+    address _offeredTokenToPool,
+    address _wantedTokenFromPool,
+    uint256 _amountToOffer
+  ) external {
+    availableFor[_offeredTokenToPool][_wantedTokenFromPool] = _amountToOffer;
+  }
+
+  function depositInternal(
+    address _depositor,
+    address _offeredTokenToPool,
+    address _wantedTokenFromPool,
+    uint256 _amountToOffer
+  ) external {
+    _deposit(_depositor, _offeredTokenToPool, _wantedTokenFromPool, _amountToOffer);
+  }
+
   function deposit(
     address _offeredTokenToPool,
     address _wantedTokenFromPool,
     uint256 _amountToOffer
   ) external override {
     _deposit(msg.sender, _offeredTokenToPool, _wantedTokenFromPool, _amountToOffer);
+  }
+
+  function withdrawInternal(
+    address _receiver,
+    address _offeredTokenToPool,
+    address _wantedTokenFromPool,
+    uint256 _amountToWithdraw
+  ) external {
+    _withdraw(_receiver, _offeredTokenToPool, _wantedTokenFromPool, _amountToWithdraw);
   }
   
   function withdraw(

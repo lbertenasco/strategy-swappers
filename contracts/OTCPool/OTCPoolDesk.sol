@@ -55,7 +55,7 @@ abstract contract OTCPoolDesk is IOTCPoolDesk {
     address _wantedTokenFromPool,
     uint256 _amountToOffer
   ) internal {
-    require(_depositor != address(0), 'OTCPool: provider should not be zero');
+    require(_depositor != address(0), 'OTCPool: depositor should not be zero');
     require(_offeredTokenToPool != address(0) && _wantedTokenFromPool != address(0), 'OTCPool: tokens should not be zero');
     require(_amountToOffer > 0, 'OTCPool: should provide more than zero');
     IERC20(_offeredTokenToPool).safeTransferFrom(_depositor, address(this), _amountToOffer);
@@ -69,9 +69,9 @@ abstract contract OTCPoolDesk is IOTCPoolDesk {
     address _wantedTokenFromPool,
     uint256 _amountToWithdraw
   ) internal {
-    require(_receiver != address(0), 'OTCPool: to should not be zero');
+    require(_receiver != address(0), 'OTCPool: receiver should not be zero');
     require(_offeredTokenToPool != address(0) && _wantedTokenFromPool != address(0), 'OTCPool: tokens should not be zero');
-    require(_amountToWithdraw > 0, 'OTCPool: should provide more than zero');
+    require(_amountToWithdraw > 0, 'OTCPool: should withdraw more than zero');
     require(availableFor[_offeredTokenToPool][_wantedTokenFromPool] >= _amountToWithdraw, 'OTCPool: not enough provided');
     availableFor[_offeredTokenToPool][_wantedTokenFromPool] -= _amountToWithdraw;
     IERC20(_offeredTokenToPool).safeTransfer(_receiver, _amountToWithdraw);

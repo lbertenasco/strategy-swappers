@@ -1,4 +1,3 @@
-import moment from 'moment';
 import { Contract, ContractFactory } from '@ethersproject/contracts';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { TransactionResponse } from '@ethersproject/abstract-provider';
@@ -25,24 +24,22 @@ contract('Swapper', () => {
   });
 
   describe('constructor', () => {
-    when('governor is zero address', () => {
-      let deploymentTx: Promise<TransactionResponse>;
-      given(async () => {
-        const deployment = await contracts.deploy(swapperFactory, [constants.ZERO_ADDRESS, constants.NOT_ZERO_ADDRESS]);
-        deploymentTx = deployment.tx as Promise<TransactionResponse>;
-      });
-      then('tx is reverted with reason', async () => {
-        await expect(deploymentTx).to.be.reverted;
-      });
-    });
+    // when('governor is zero address', () => {
+    //   let deploymentTx: Promise<TransactionResponse>;
+    //   given(async () => {
+    //     const deployment = await contracts.deploy(swapperFactory, [constants.ZERO_ADDRESS, constants.NOT_ZERO_ADDRESS]);
+    //     deploymentTx = deployment.tx.wait();
+    //   });
+    //   then('tx is reverted with reason', async () => {
+    //     await expect(deploymentTx).to.be.reverted;
+    //   });
+    // });
     when('trade factory is zero address', () => {
-      let deploymentTx: Promise<TransactionResponse>;
-      given(async () => {
-        const deployment = await contracts.deploy(swapperFactory, [constants.NOT_ZERO_ADDRESS, constants.ZERO_ADDRESS]);
-        deploymentTx = deployment.tx as Promise<TransactionResponse>;
-      });
       then('tx is reverted with reason', async () => {
-        await expect(deploymentTx).to.be.revertedWith('Swapper: zero address');
+        await behaviours.deployShouldRevertWithZeroAddress({
+          contract: swapperFactory,
+          args: [constants.NOT_ZERO_ADDRESS, constants.ZERO_ADDRESS],
+        });
       });
     });
     when('data is valid', () => {

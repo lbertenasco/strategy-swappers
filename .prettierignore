@@ -7,6 +7,7 @@
 .env.example
 .env
 .DS_STORE
+workspace.code-workspace
 
 # Hardhat
 artifacts

@@ -1,4 +1,3 @@
-import moment from 'moment';
 import { Contract, ContractFactory } from '@ethersproject/contracts';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { TransactionResponse } from '@ethersproject/abstract-provider';
@@ -6,10 +5,9 @@ import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { behaviours, constants, contracts, erc20, wallet } from '../../utils';
 import { contract, given, then, when } from '../../utils/bdd';
-import { BigNumber } from '@ethersproject/bignumber';
 import { utils } from 'ethers';
 
-contract.only('OTCPoolDesk', () => {
+contract('OTCPoolDesk', () => {
   let OTCProvider: SignerWithAddress;
   let OTCPoolDeskFactory: ContractFactory;
   let OTCPoolDesk: Contract;

@@ -84,6 +84,7 @@ abstract contract OTCPoolTradeable is IOTCPoolTradeable, OTCPoolDesk {
     IERC20(_offeredTokenToPool).safeTransferFrom(_swapper, address(this), _tookFromSwapper);
     availableFor[_wantedTokenFromPool][_offeredTokenToPool] -= _tookFromPool;
     swappedAvailable[_offeredTokenToPool] += _tookFromSwapper;
+    IERC20(_wantedTokenFromPool).safeTransfer(_swapper, _tookFromPool);
     emit TradePerformed(_swapper, _offeredTokenToPool, _wantedTokenFromPool, _tookFromPool, _tookFromSwapper);
   }
 
@@ -92,7 +93,7 @@ abstract contract OTCPoolTradeable is IOTCPoolTradeable, OTCPoolDesk {
     address _offeredTokenToPool,
     address _wantedTokenFromPool,
     uint256 _maxOfferedAmount
-  ) internal view returns (uint256 _tookFromPool, uint256 _tookFromSwapper) {
+  ) internal view virtual returns (uint256 _tookFromPool, uint256 _tookFromSwapper) {
     uint256 _maxWantedFromOffered = IOTCSwapper(_swapper).getTotalAmountOut(_offeredTokenToPool, _wantedTokenFromPool, _maxOfferedAmount);
     _tookFromPool = Math.min(availableFor[_wantedTokenFromPool][_offeredTokenToPool], _maxWantedFromOffered);
     _tookFromSwapper = IOTCSwapper(_swapper).getTotalAmountOut(_wantedTokenFromPool, _offeredTokenToPool, _tookFromPool);

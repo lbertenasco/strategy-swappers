@@ -64,8 +64,13 @@ contract OneInchSwapper is IOneInchSwapper, Swapper {
     uint256 _flags,
     uint256 _maxSlippage
   ) internal view returns (uint256 _minAmountOut, uint256[] memory) {
-    (uint256 _amountOut, uint256[] memory _distribution) =
-      IOneSplit(ONE_INCH).getExpectedReturn(IERC20(_tokenIn), IERC20(_tokenOut), _amountIn, _parts, _flags);
+    (uint256 _amountOut, uint256[] memory _distribution) = IOneSplit(ONE_INCH).getExpectedReturn(
+      IERC20(_tokenIn),
+      IERC20(_tokenOut),
+      _amountIn,
+      _parts,
+      _flags
+    );
     _minAmountOut = _amountOut - ((_amountOut * _maxSlippage) / SLIPPAGE_PRECISION / 100);
     return (_minAmountOut, _distribution);
   }

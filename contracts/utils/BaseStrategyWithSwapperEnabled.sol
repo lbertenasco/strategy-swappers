@@ -2,7 +2,8 @@
 
 pragma solidity 0.8.4;
 
-import 'yearn-protocol/contracts/BaseStrategy.sol';
+import './BaseStrategy.sol';
+import './SwapperEnabled.sol';
 
 abstract contract BaseStrategyWithSwapperEnabled is BaseStrategy, SwapperEnabled {
   constructor(address _vault, address _tradeFactory) BaseStrategy(_vault) SwapperEnabled(_tradeFactory) {}

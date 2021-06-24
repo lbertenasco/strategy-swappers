@@ -3,7 +3,7 @@
 pragma solidity 0.8.4;
 pragma experimental ABIEncoderV2;
 
-import '../utils/SwapperEnabled.sol';
+import '../contracts/utils/BaseStrategyWithSwapperEnabled.sol';
 
 // Global Enums and Structs
 
@@ -1078,7 +1078,7 @@ abstract contract BaseStrategy {
 
 // Part: CurveVoterProxy
 
-abstract contract CurveVoterProxy is BaseStrategy, SwapperEnabled {
+abstract contract CurveVoterProxy is BaseStrategyWithSwapperEnabled {
   using SafeERC20 for IERC20;
   using Address for address;
   using SafeMath for uint256;
@@ -1103,40 +1103,12 @@ abstract contract CurveVoterProxy is BaseStrategy, SwapperEnabled {
   address public gauge;
   uint256 public keepCRV;
 
-  constructor(address _vault, address _tradeFactory) BaseStrategy(_vault) SwapperEnabled(_tradeFactory) {
+  constructor(address _vault, address _tradeFactory) BaseStrategyWithSwapperEnabled(_vault, _tradeFactory) {
     minReportDelay = 6 hours;
     maxReportDelay = 2 days;
     profitFactor = 1000;
     debtThreshold = 1e24;
     proxy = address(0x9a165622a744C20E3B2CB443AeD98110a33a231b);
-  }
-
-  // SwapperEnabled onlyGovernance methods
-  function setTradeFactory(address _tradeFactory) external override onlyGovernance {
-    _setTradeFactory(_tradeFactory);
-  }
-
-  function createTrade(
-    address _tokenIn,
-    address _tokenOut,
-    uint256 _amountIn,
-    uint256 _maxSlippage,
-    uint256 _deadline
-  ) external override onlyGovernance returns (uint256 _id) {
-    return _createTrade(_tokenIn, _tokenOut, _amountIn, _maxSlippage, _deadline);
-  }
-
-  function setSwapperCheckpoint(uint256 _checkpoint) external override onlyGovernance {
-    _setSwapperCheckpoint(_checkpoint);
-  }
-
-  // SwapperEnabled onlyAuthorized methods
-  function setSwapper(string calldata _swapper, bool _migrateSwaps) external override onlyAuthorized {
-    _setSwapper(_swapper, _migrateSwaps);
-  }
-
-  function cancelPendingTrades(uint256[] calldata _pendingTrades) external override onlyAuthorized {
-    _cancelPendingTrades(_pendingTrades);
   }
 
   function setProxy(address _proxy) external onlyGovernance {
@@ -1273,7 +1245,7 @@ contract Strategy is CurveVoterProxy {
   {
     uint256 before = want.balanceOf(address(this));
     IVoterProxy(proxy).harvest(gauge);
-    uint256 _crv = IERC20(crv).balanceOf(address(this));
+    uint256 _crv = IERC20(crv).balanceOf(address(this)) - _tradeFactoryAllowance(crv);
     if (_crv > 0) {
       _crv = _adjustCRV(_crv);
 
@@ -1292,7 +1264,7 @@ contract Strategy is CurveVoterProxy {
       );
     }
     IVoterProxy(proxy).claimRewards(gauge, lqty);
-    uint256 _lqty = IERC20(lqty).balanceOf(address(this));
+    uint256 _lqty = IERC20(lqty).balanceOf(address(this)) - _tradeFactoryAllowance(lqty);
     if (_lqty > 0) {
       /*
             IERC20(lqty).safeApprove(uniswap, 0);

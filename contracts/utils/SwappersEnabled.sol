@@ -18,7 +18,7 @@ interface IAtomicSwapperEnabled {
     address _tokenOut,
     uint256 _amountIn,
     uint256 _maxSlippage
-  ) external returns (uint256 _id);
+  ) external returns (uint256 _amountOut);
 }
 
 /*
@@ -43,7 +43,7 @@ abstract contract SwappersEnabled is SwapperEnabled, IAtomicSwapperEnabled {
     address _tokenOut,
     uint256 _amountIn,
     uint256 _maxSlippage
-  ) internal returns (uint256 _id) {
+  ) internal returns (uint256 _amountOut) {
     return _executeTrade(atomicSwapper, _tokenIn, _tokenOut, _amountIn, _maxSlippage);
   }
 

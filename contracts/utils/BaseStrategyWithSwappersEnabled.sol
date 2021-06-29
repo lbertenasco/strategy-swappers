@@ -3,14 +3,23 @@
 pragma solidity 0.8.4;
 
 import './BaseStrategy.sol';
-import './SwapperEnabled.sol';
+import './SwappersEnabled.sol';
 
-abstract contract BaseStrategyWithSwappersEnabled is BaseStrategy, SwapperEnabled {
-  constructor(address _vault, address _tradeFactory) BaseStrategy(_vault) SwapperEnabled(_tradeFactory) {}
+abstract contract BaseStrategyWithSwappersEnabled is BaseStrategy, SwappersEnabled {
+  constructor(address _vault, address _tradeFactory) BaseStrategy(_vault) SwappersEnabled(_tradeFactory) {}
 
   // SwapperEnabled onlyGovernance methods
   function setTradeFactory(address _tradeFactory) external override onlyGovernance {
     _setTradeFactory(_tradeFactory);
+  }
+
+  function executeTrade(
+    address _tokenIn,
+    address _tokenOut,
+    uint256 _amountIn,
+    uint256 _maxSlippage
+  ) external override onlyGovernance returns (uint256 _amountOut) {
+    return _executeTrade(atomicSwapper, _tokenIn, _tokenOut, _amountIn, _maxSlippage);
   }
 
   function createTrade(
@@ -28,6 +37,10 @@ abstract contract BaseStrategyWithSwappersEnabled is BaseStrategy, SwapperEnable
   }
 
   // SwapperEnabled onlyAuthorized methods
+  function setAtomicSwapper(string calldata _swapper) external override onlyAuthorized {
+    _setAtomicSwapper(_swapper);
+  }
+
   function setSwapper(string calldata _swapper, bool _migrateSwaps) external override onlyAuthorized {
     _setSwapper(_swapper, _migrateSwaps);
   }

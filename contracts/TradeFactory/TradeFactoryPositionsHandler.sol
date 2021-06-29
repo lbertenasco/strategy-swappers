@@ -59,6 +59,14 @@ interface ITradeFactoryPositionsHandler {
 
   function setSwapperSafetyCheckpoint(uint256 _checkpoint) external;
 
+  function execute(
+    string memory _atomicSwapper,
+    address _tokenIn,
+    address _tokenOut,
+    uint256 _amountIn,
+    uint256 _maxSlippage
+  ) external returns (uint256 _amountOut);
+
   function create(
     string memory _swapper,
     address _tokenIn,

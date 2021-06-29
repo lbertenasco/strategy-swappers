@@ -31,6 +31,16 @@ contract TradeFactory is TradeFactoryPositionsHandler, TradeFactoryExecutor, ITr
     _;
   }
 
+  function execute(
+    string memory _atomicSwapper,
+    address _tokenIn,
+    address _tokenOut,
+    uint256 _amountIn,
+    uint256 _maxSlippage
+  ) external override onlyStrategy returns (uint256 _id) {
+    // TODO execute atomic swap
+  }
+
   function create(
     string memory _swapper,
     address _tokenIn,

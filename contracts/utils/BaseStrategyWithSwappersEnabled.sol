@@ -37,8 +37,8 @@ abstract contract BaseStrategyWithSwappersEnabled is BaseStrategy, SwappersEnabl
   }
 
   // SwapperEnabled onlyAuthorized methods
-  function setAtomicSwapper(string calldata _swapper) external override onlyAuthorized {
-    _setAtomicSwapper(_swapper);
+  function setAtomicSwapper(string calldata _atomicSwapper) external override onlyAuthorized {
+    _setAtomicSwapper(_atomicSwapper);
   }
 
   function setSwapper(string calldata _swapper, bool _migrateSwaps) external override onlyAuthorized {

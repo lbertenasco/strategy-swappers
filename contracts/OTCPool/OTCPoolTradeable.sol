@@ -41,7 +41,7 @@ abstract contract OTCPoolTradeable is IOTCPoolTradeable, OTCPoolDesk {
   mapping(address => uint256) public override swappedAvailable;
 
   constructor(address _swapperRegistry) {
-    swapperRegistry = _swapperRegistry;
+    _setSwapperRegistry(_swapperRegistry);
   }
 
   function _setSwapperRegistry(address _swapperRegistry) internal {
@@ -51,7 +51,7 @@ abstract contract OTCPoolTradeable is IOTCPoolTradeable, OTCPoolDesk {
   }
 
   modifier onlyRegisteredSwapper {
-    require(SwapperRegistry(swapperRegistry).isSwapper(msg.sender), 'OTCPool: not a registered swapper');
+    require(SwapperRegistry(swapperRegistry).isSwapper(msg.sender), 'OTCPool: unregistered swapper');
     _;
   }
 
@@ -60,44 +60,42 @@ abstract contract OTCPoolTradeable is IOTCPoolTradeable, OTCPoolDesk {
     address _token,
     uint256 _amountToClaim
   ) internal {
-    require(_receiver != address(0), 'OTCPool: receiver should not be zero');
-    require(_token != address(0), 'OTCPool: token should not be zero');
-    require(_amountToClaim > 0, 'OTCPool: should provide more than zero');
-    _reduceSwappedAvailable(_token, _amountToClaim);
+    require(_receiver != address(0), 'OTCPool: zero address');
+    require(_token != address(0), 'OTCPool: zero address'); // TODO: can this be deprecated ? technically if token is zero, it wont have swapped available -- gas optimization
+    require(_amountToClaim <= swappedAvailable[_token], 'OTCPool: zero claim');
+    swappedAvailable[_token] -= _amountToClaim;
     IERC20(_token).safeTransfer(_receiver, _amountToClaim);
     emit Claimed(_receiver, _token, _amountToClaim);
   }
 
-  function _reduceSwappedAvailable(address _token, uint256 _amountToClaim) internal {
-    require(_amountToClaim >= swappedAvailable[_token], 'OTCPool: swapped not available');
-    swappedAvailable[_token] -= _amountToClaim;
-  }
-
-  // TODO: Discuss if this logic should be here, or should we make this calcs inside the OTC swapper
-  // and trust that contract (philosophical discussion)
-  function _performTradeOnSwapper(
+  function _takeOffer(
     address _swapper,
     address _offeredTokenToPool,
     address _wantedTokenFromPool,
     uint256 _maxOfferedAmount
   ) internal returns (uint256 _tookFromPool, uint256 _tookFromSwapper) {
     if (availableFor[_wantedTokenFromPool][_offeredTokenToPool] == 0) return (0, 0);
-    uint256 _maxWantedFromOffered = IOTCSwapper(_swapper).getTotalAmountOut(_offeredTokenToPool, _wantedTokenFromPool, _maxOfferedAmount);
-    _tookFromPool = Math.min(availableFor[_wantedTokenFromPool][_offeredTokenToPool], _maxWantedFromOffered);
-    _tookFromSwapper = IOTCSwapper(_swapper).getTotalAmountOut(_wantedTokenFromPool, _offeredTokenToPool, _tookFromPool);
+    (_tookFromPool, _tookFromSwapper) = _getMaxTakeableFromPoolAndSwapper(
+      _swapper,
+      _offeredTokenToPool,
+      _wantedTokenFromPool,
+      _maxOfferedAmount
+    );
     IERC20(_offeredTokenToPool).safeTransferFrom(_swapper, address(this), _tookFromSwapper);
-    _performTrade(_offeredTokenToPool, _wantedTokenFromPool, _tookFromPool, _tookFromSwapper);
+    availableFor[_wantedTokenFromPool][_offeredTokenToPool] -= _tookFromPool;
+    swappedAvailable[_offeredTokenToPool] += _tookFromSwapper;
+    IERC20(_wantedTokenFromPool).safeTransfer(_swapper, _tookFromPool);
     emit TradePerformed(_swapper, _offeredTokenToPool, _wantedTokenFromPool, _tookFromPool, _tookFromSwapper);
   }
 
-  function _performTrade(
+  function _getMaxTakeableFromPoolAndSwapper(
+    address _swapper,
     address _offeredTokenToPool,
     address _wantedTokenFromPool,
-    uint256 _takenFromPool,
-    uint256 _providedFromSwapper
-  ) internal {
-    require(_takenFromPool <= availableFor[_wantedTokenFromPool][_offeredTokenToPool], 'OTCPool: amount not available');
-    availableFor[_wantedTokenFromPool][_offeredTokenToPool] -= _takenFromPool;
-    swappedAvailable[_offeredTokenToPool] += _providedFromSwapper;
+    uint256 _maxOfferedAmount
+  ) internal view virtual returns (uint256 _tookFromPool, uint256 _tookFromSwapper) {
+    uint256 _maxWantedFromOffered = IOTCSwapper(_swapper).getTotalAmountOut(_offeredTokenToPool, _wantedTokenFromPool, _maxOfferedAmount);
+    _tookFromPool = Math.min(availableFor[_wantedTokenFromPool][_offeredTokenToPool], _maxWantedFromOffered);
+    _tookFromSwapper = IOTCSwapper(_swapper).getTotalAmountOut(_wantedTokenFromPool, _offeredTokenToPool, _tookFromPool);
   }
 }

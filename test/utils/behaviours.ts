@@ -2,11 +2,11 @@ import { expect } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import chai from 'chai';
 import { Contract, ContractFactory, ContractInterface, Signer, Wallet } from 'ethers';
-import { TransactionRequest, TransactionResponse } from '@ethersproject/abstract-provider';
+import { TransactionResponse } from '@ethersproject/abstract-provider';
 import { getStatic } from 'ethers/lib/utils';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
-import { constants, wallet } from '.';
 import { given, then, when } from './bdd';
+import { constants, wallet } from '.';
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 
 chai.use(chaiAsPromised);
 
@@ -54,7 +54,7 @@ const txShouldRevertWithZeroAddress = async ({
   contract: Contract;
   func: string;
   args: any[];
-  tx?: Promise<TransactionRequest>;
+  tx?: Promise<TransactionResponse>;
 }): Promise<void> => {
   const tx = contract[func].apply(this, args);
   await checkTxRevertedWithZeroAddress(tx);
@@ -85,7 +85,7 @@ const checkTxEmittedEvents = async ({
   events: { name: string; args: any[] }[];
 }): Promise<void> => {
   for (let i = 0; i < events.length; i++) {
-    expect(tx)
+    await expect(tx)
       .to.emit(contract, events[i].name)
       .withArgs(...events[i].args);
   }
@@ -171,6 +171,12 @@ const txShouldSetVariableAndEmitEvent = async ({
         eventEmitted,
       },
     ],
+  });
+};
+
+const waitForTxAndNotThrow = (tx: Promise<TransactionResponse>): Promise<any> => {
+  return new Promise((resolve) => {
+    tx.then(resolve).catch(resolve);
   });
 };
 
@@ -268,6 +274,7 @@ export default {
   txShouldHaveSetVariablesAndEmitEvents,
   txShouldSetVariableAndEmitEvent,
   checkTxRevertedWithMessage,
+  waitForTxAndNotThrow,
   shouldBeExecutableOnlyByTradeFactory,
   shouldBeCheckPreAssetSwap,
 };

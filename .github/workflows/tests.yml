@@ -26,17 +26,16 @@ jobs:
             ${{ runner.os }}-build-${{ env.cache-name }}-
             ${{ runner.os }}-build-
             ${{ runner.os }}-
-
       - name: Install node
         uses: actions/setup-node@v1
         with:
           node-version: "12.x"
 
       - name: Install dependencies
-        run: npm install
+        run: yarn --frozen-lockfile
 
       - name: Run unit tests
-        run: npm run test:unit
+        run: yarn test:unit
 
   e2e:
     runs-on: ubuntu-latest
@@ -57,16 +56,15 @@ jobs:
             ${{ runner.os }}-build-${{ env.cache-name }}-
             ${{ runner.os }}-build-
             ${{ runner.os }}-
-
       - name: Install node
         uses: actions/setup-node@v1
         with:
           node-version: "12.x"
 
       - name: Install dependencies
-        run: npm install
+        run: yarn --frozen-lockfile
 
       - name: Run e2e tests
-        run: npm run test:e2e
+        run: yarn test:e2e
         env:
           MAINNET_HTTPS_URL: https://eth-mainnet.alchemyapi.io/v2/Pfnk4FU1-CLxNi2Fp68PPCUrvH3aqJJR

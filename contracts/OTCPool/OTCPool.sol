@@ -52,7 +52,7 @@ contract OTCPool is IOTCPool, OTCPoolDesk, OTCPoolTradeable, Governable, Collect
     address _wantedTokenFromPool,
     uint256 _maxOfferedAmount
   ) external override onlyRegisteredSwapper returns (uint256 _tookFromPool, uint256 _tookFromSwapper) {
-    (_tookFromPool, _tookFromSwapper) = _performTradeOnSwapper(msg.sender, _offeredTokenToPool, _wantedTokenFromPool, _maxOfferedAmount);
+    (_tookFromPool, _tookFromSwapper) = _takeOffer(msg.sender, _offeredTokenToPool, _wantedTokenFromPool, _maxOfferedAmount);
     _subTokenUnderManagement(_wantedTokenFromPool, _tookFromPool);
     _addTokenUnderManagement(_offeredTokenToPool, _tookFromSwapper);
   }

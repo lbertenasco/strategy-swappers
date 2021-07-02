@@ -7,6 +7,7 @@
 .env.example
 .env
 .DS_STORE
+workspace.code-workspace
 
 # Hardhat
 artifacts
@@ -14,7 +15,7 @@ cache
 
 # JS
 node_modules
-package-lock.json
+yarn.lock
 
 # Solidity
 contracts/mock

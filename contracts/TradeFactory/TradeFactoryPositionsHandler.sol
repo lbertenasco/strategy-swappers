@@ -97,14 +97,14 @@ abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler 
 
   function pendingTradesIds() external view override returns (uint256[] memory _pendingIds) {
     _pendingIds = new uint256[](_pendingTradesIds.length());
-    for (uint256 i = 0; i < _pendingTradesIds.length(); i++) {
+    for (uint256 i; i < _pendingTradesIds.length(); i++) {
       _pendingIds[i] = _pendingTradesIds.at(i);
     }
   }
 
   function pendingTradesIds(address _owner) external view override returns (uint256[] memory _pendingIds) {
     _pendingIds = new uint256[](_pendingTradesByOwner[_owner].length());
-    for (uint256 i = 0; i < _pendingTradesByOwner[_owner].length(); i++) {
+    for (uint256 i; i < _pendingTradesByOwner[_owner].length(); i++) {
       _pendingIds[i] = _pendingTradesByOwner[_owner].at(i);
     }
   }
@@ -159,10 +159,10 @@ abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler 
   function _cancelAllPendingOfOwner(address _owner) internal returns (uint256[] memory _canceledTradesIds) {
     require(_pendingTradesByOwner[_owner].length() > 0, 'TradeFactory: no trades pending from user');
     _canceledTradesIds = new uint256[](_pendingTradesByOwner[_owner].length());
-    for (uint256 i = 0; i < _pendingTradesByOwner[_owner].length(); i++) {
+    for (uint256 i; i < _pendingTradesByOwner[_owner].length(); i++) {
       _canceledTradesIds[i] = _pendingTradesByOwner[_owner].at(i);
     }
-    for (uint256 i = 0; i < _canceledTradesIds.length; i++) {
+    for (uint256 i; i < _canceledTradesIds.length; i++) {
       _removePendingTrade(_owner, _canceledTradesIds[i]);
     }
     emit TradesOfOwnerCanceled(_owner, _canceledTradesIds);
@@ -179,7 +179,7 @@ abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler 
     require(!_existsSwapper, 'TradeFactory: invalid swapper');
     require(_swapperInitialization <= swapperSafetyCheckpoint[_owner], 'TradeFactory: initialization greater than checkpoint');
     _changedSwapperIds = new uint256[](_pendingTradesByOwner[_owner].length());
-    for (uint256 i = 0; i < _pendingTradesByOwner[_owner].length(); i++) {
+    for (uint256 i; i < _pendingTradesByOwner[_owner].length(); i++) {
       pendingTradesById[_pendingTradesByOwner[_owner].at(i)]._swapper = _swapperAddress;
       _changedSwapperIds[i] = _pendingTradesByOwner[_owner].at(i);
     }

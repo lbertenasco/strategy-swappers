@@ -55,11 +55,11 @@ contract TradeFactory is TradeFactoryPositionsHandler, TradeFactoryExecutor, ITr
     _changedSwapperIds = _changePendingTradesSwapperOfOwner(msg.sender, _swapper);
   }
 
-  // TradeFactoryExecutor
-
   function setSwapperSafetyCheckpoint(uint256 _checkpoint) external override onlyStrategy {
     _setSwapperSafetyCheckpoint(msg.sender, _checkpoint);
   }
+
+  // TradeFactoryExecutor
 
   function execute(uint256 _id) external override onlyMechanic returns (uint256 _receivedAmount) {
     _receivedAmount = _execute(_id);

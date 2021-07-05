@@ -26,39 +26,6 @@ contract TradeFactory is TradeFactoryPositionsHandler, TradeFactoryExecutor, ITr
     address _swapperRegistry
   ) Governable(_governor) Machinery(_mechanicsRegistry) TradeFactoryPositionsHandler(_swapperRegistry) {}
 
-  modifier onlyStrategy {
-    require(msg.sender == msg.sender, 'TradeFactory: not a strategy'); // TODO:
-    _;
-  }
-
-  function create(
-    string memory _swapper,
-    address _tokenIn,
-    address _tokenOut,
-    uint256 _amountIn,
-    uint256 _maxSlippage,
-    uint256 _deadline
-  ) external override onlyStrategy returns (uint256 _id) {
-    _id = _create(_swapper, msg.sender, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _deadline);
-  }
-
-  function cancelPending(uint256 _id) external override onlyStrategy {
-    require(pendingTradesById[_id]._owner == msg.sender, 'TradeFactory: does not own trade');
-    _cancelPending(_id);
-  }
-
-  function cancelAllPending() external override onlyStrategy returns (uint256[] memory _canceledTradesIds) {
-    _canceledTradesIds = _cancelAllPendingOfOwner(msg.sender);
-  }
-
-  function changePendingTradesSwapper(string memory _swapper) external override onlyStrategy returns (uint256[] memory _changedSwapperIds) {
-    _changedSwapperIds = _changePendingTradesSwapperOfOwner(msg.sender, _swapper);
-  }
-
-  function setSwapperSafetyCheckpoint(uint256 _checkpoint) external override onlyStrategy {
-    _setSwapperSafetyCheckpoint(msg.sender, _checkpoint);
-  }
-
   // TradeFactoryExecutor
 
   function execute(uint256 _id) external override onlyMechanic returns (uint256 _receivedAmount) {

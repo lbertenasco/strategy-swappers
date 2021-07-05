@@ -6,31 +6,31 @@ import '../../TradeFactory/TradeFactoryPositionsHandler.sol';
 contract TradeFactoryPositionsHandlerMock is TradeFactoryPositionsHandler {
   constructor(address _swapperRegistry) TradeFactoryPositionsHandler(_swapperRegistry) {}
 
-  function create(
+  function createWithOwner(
     string memory _swapper,
+    address _owner,
     address _tokenIn,
     address _tokenOut,
     uint256 _amountIn,
     uint256 _maxSlippage,
     uint256 _deadline
-  ) external override returns (uint256 _id) {
-    _id = _create(_swapper, msg.sender, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _deadline);
+  ) external returns (uint256 _id) {
+    _id = _create(_swapper, _owner, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _deadline);
   }
 
-  function cancelPending(uint256 _id) external override {
-    require(pendingTradesById[_id]._owner == msg.sender, 'TradeFactory: does not own trade');
+  function cancelPendingInternal(uint256 _id) external {
     _cancelPending(_id);
   }
 
-  function cancelAllPending() external override returns (uint256[] memory _canceledTradesIds) {
-    _canceledTradesIds = _cancelAllPendingOfOwner(msg.sender);
+  function cancelAllPendingWithOwner(address _owner) external returns (uint256[] memory _canceledTradesIds) {
+    _canceledTradesIds = _cancelAllPendingOfOwner(_owner);
   }
 
-  function changePendingTradesSwapper(string memory _swapper) external override returns (uint256[] memory _changedSwapperIds) {
-    _changedSwapperIds = _changePendingTradesSwapperOfOwner(msg.sender, _swapper);
+  function changePendingTradesSwapperWithOwner(address _owner, string memory _swapper) external returns (uint256[] memory _changedSwapperIds) {
+    _changedSwapperIds = _changePendingTradesSwapperOfOwner(_owner, _swapper);
   }
 
-  function setSwapperSafetyCheckpoint(uint256 _checkpoint) external override {
-    _setSwapperSafetyCheckpoint(msg.sender, _checkpoint);
+  function setSwapperSafetyCheckpointToAddress(address _address,uint256 _checkpoint) external {
+    swapperSafetyCheckpoint[_address] = _checkpoint;
   }
 }

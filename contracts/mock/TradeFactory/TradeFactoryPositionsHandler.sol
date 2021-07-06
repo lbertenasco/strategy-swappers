@@ -17,19 +17,7 @@ contract TradeFactoryPositionsHandlerMock is TradeFactoryPositionsHandler {
   ) external returns (uint256 _id) {
     _id = _create(_swapper, _owner, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _deadline);
   }
-
-  function cancelPendingInternal(uint256 _id) external {
-    _cancelPending(_id);
-  }
-
-  function cancelAllPendingWithOwner(address _owner) external returns (uint256[] memory _canceledTradesIds) {
-    _canceledTradesIds = _cancelAllPendingOfOwner(_owner);
-  }
-
-  function changePendingTradesSwapperWithOwner(address _owner, string memory _swapper) external returns (uint256[] memory _changedSwapperIds) {
-    _changedSwapperIds = _changePendingTradesSwapperOfOwner(_owner, _swapper);
-  }
-
+  
   function setSwapperSafetyCheckpointToAddress(address _address,uint256 _checkpoint) external {
     swapperSafetyCheckpoint[_address] = _checkpoint;
   }

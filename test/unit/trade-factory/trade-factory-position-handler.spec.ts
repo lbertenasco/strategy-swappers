@@ -12,12 +12,13 @@ import moment from 'moment';
 
 contract.only('TradeFactoryPositionsHandler', () => {
   let user: SignerWithAddress;
+  let randomGuy: SignerWithAddress;
   let swapperRegistry: MockContract;
   let positionsHandlerFactory: ContractFactory;
   let positionsHandler: Contract;
 
   before(async () => {
-    [user] = await ethers.getSigners();
+    [user, randomGuy] = await ethers.getSigners();
     positionsHandlerFactory = await ethers.getContractFactory(
       'contracts/mock/TradeFactory/TradeFactoryPositionsHandler.sol:TradeFactoryPositionsHandlerMock'
     );
@@ -37,7 +38,22 @@ contract.only('TradeFactoryPositionsHandler', () => {
       });
     });
     when('there are pending trades', () => {
-      then('returns array of ids');
+      let tradeId: BigNumber;
+      given(async () => {
+        swapperRegistry.smocked['isSwapper(string)'].will.return.with([true, wallet.generateRandomAddress(), 0]);
+        const tx = await create({
+          swapper: 'my-swapper',
+          tokenIn: wallet.generateRandomAddress(),
+          tokenOut: wallet.generateRandomAddress(),
+          amountIn: utils.parseEther('100'),
+          maxSlippage: 1000,
+          deadline: moment().add('30', 'minutes').unix(),
+        });
+        tradeId = tx.id;
+      });
+      then('returns array of ids', async () => {
+        expect(await positionsHandler['pendingTradesIds()']()).to.eql([tradeId]);
+      });
     });
   });
 
@@ -48,7 +64,22 @@ contract.only('TradeFactoryPositionsHandler', () => {
       });
     });
     when('strategy has pending trades', () => {
-      then('returns array of ids');
+      let tradeId: BigNumber;
+      given(async () => {
+        swapperRegistry.smocked['isSwapper(string)'].will.return.with([true, wallet.generateRandomAddress(), 0]);
+        const tx = await create({
+          swapper: 'my-swapper',
+          tokenIn: wallet.generateRandomAddress(),
+          tokenOut: wallet.generateRandomAddress(),
+          amountIn: utils.parseEther('100'),
+          maxSlippage: 1000,
+          deadline: moment().add('30', 'minutes').unix(),
+        });
+        tradeId = tx.id;
+      });
+      then('returns array of ids', async () => {
+        expect(await positionsHandler['pendingTradesIds(address)'](user.address)).to.eql([tradeId]);
+      });
     });
   });
 
@@ -99,16 +130,6 @@ contract.only('TradeFactoryPositionsHandler', () => {
         );
       });
     });
-    when('owner is zero address', () => {
-      given(async () => {
-        await positionsHandler.setSwapperSafetyCheckpointToAddress(constants.ZERO_ADDRESS, strategySafetyCheckpoint);
-      });
-      then('tx is reverted with reason', async () => {
-        await expect(
-          positionsHandler.createWithOwner(swapper, constants.ZERO_ADDRESS, tokenIn, tokenOut, amountIn, maxSlippage, deadline)
-        ).to.be.revertedWith('TradeFactory: zero address');
-      });
-    });
     when('token in is zero address', () => {
       then('tx is reverted with reason', async () => {
         await expect(positionsHandler.create(swapper, constants.ZERO_ADDRESS, tokenOut, amountIn, maxSlippage, deadline)).to.be.revertedWith(
@@ -151,10 +172,16 @@ contract.only('TradeFactoryPositionsHandler', () => {
       let createTx: TransactionResponse;
       let tradeId: BigNumber;
       given(async () => {
-        createTx = await positionsHandler.create(swapper, tokenIn, tokenOut, amountIn, maxSlippage, deadline);
-        const txReceipt = await createTx.wait();
-        const parsedEvent = positionsHandler.interface.parseLog(txReceipt.logs[0]);
-        tradeId = parsedEvent.args._id;
+        const createTrade = await create({
+          swapper,
+          tokenIn,
+          tokenOut,
+          amountIn,
+          maxSlippage,
+          deadline,
+        });
+        createTx = createTrade.tx;
+        tradeId = createTrade.id;
       });
       then('consults swapper with registry', async () => {
         expect(swapperRegistry.smocked['isSwapper(string)'].calls[0]._swapper).to.be.equal(swapper);
@@ -162,7 +189,7 @@ contract.only('TradeFactoryPositionsHandler', () => {
       then('trade gets added to pending trades', async () => {
         const pendingTrade = await positionsHandler.pendingTradesById(tradeId);
         expect(pendingTrade._id).to.equal(BigNumber.from('1'));
-        expect(pendingTrade._owner).to.equal(user.address);
+        expect(pendingTrade._strategy).to.equal(user.address);
         expect(pendingTrade._swapper).to.equal(swapperAddress);
         expect(pendingTrade._tokenIn).to.equal(tokenIn);
         expect(pendingTrade._tokenOut).to.equal(tokenOut);
@@ -192,26 +219,27 @@ contract.only('TradeFactoryPositionsHandler', () => {
   describe('cancelPending', () => {
     given(async () => {
       swapperRegistry.smocked['isSwapper(string)'].will.return.with([true, wallet.generateRandomAddress(), 0]);
-      await positionsHandler
-        .connect(user)
-        .create(
-          'my-swapper',
-          wallet.generateRandomAddress(),
-          wallet.generateRandomAddress(),
-          utils.parseEther('100'),
-          1000,
-          moment().add('30', 'minutes').unix()
-        );
+      await positionsHandler.create(
+        'my-swapper',
+        wallet.generateRandomAddress(),
+        wallet.generateRandomAddress(),
+        utils.parseEther('100'),
+        1000,
+        moment().add('30', 'minutes').unix()
+      );
     });
     when('pending trade does not exist', () => {
       then('tx is reverted with reason', async () => {
-        await expect(positionsHandler.cancelPendingInternal(BigNumber.from('12'))).to.be.revertedWith('TradeFactory: trade not pending');
+        await expect(positionsHandler.cancelPending(BigNumber.from('12'))).to.be.revertedWith('TradeFactory: trade not pending');
       });
+    });
+    when('trying to cancel a trade thats not owned by sender', () => {
+      then('tx is reverted with reason');
     });
     when('pending trade exists', () => {
       let cancelTx: TransactionResponse;
       given(async () => {
-        cancelTx = await positionsHandler.cancelPendingInternal(1);
+        cancelTx = await positionsHandler.cancelPending(1);
       });
       then('removes trade from trades', async () => {
         expect((await positionsHandler.pendingTradesById(1))._id).to.equal(0);
@@ -223,18 +251,63 @@ contract.only('TradeFactoryPositionsHandler', () => {
         expect(await positionsHandler['pendingTradesIds()']()).to.be.empty;
       });
       then('emits event', async () => {
-        await expect(cancelTx).to.emit(positionsHandler, 'TradeCanceled').withArgs(1);
+        await expect(cancelTx).to.emit(positionsHandler, 'TradeCanceled').withArgs(user.address, 1);
       });
     });
   });
 
-  describe('cancelAllPendingOfOwner', () => {
+  describe('cancelAllPending', () => {
     when('owner does not have pending trades', () => {
-      then('tx is reverted with reason');
+      then('tx is reverted with reason', async () => {
+        await expect(positionsHandler.cancelAllPending()).to.be.revertedWith('TradeFactory: no trades pending from strategy');
+      });
     });
     when('owner does have pending trades', () => {
-      then('calls remove trade with correct values');
-      then('emits event');
+      let tradeIds: BigNumber[];
+      let cancellAllPendingTx: TransactionResponse;
+      given(async () => {
+        tradeIds = [];
+        swapperRegistry.smocked['isSwapper(string)'].will.return.with([true, wallet.generateRandomAddress(), 0]);
+        tradeIds.push(
+          (
+            await create({
+              swapper: 'my-swapper',
+              tokenIn: wallet.generateRandomAddress(),
+              tokenOut: wallet.generateRandomAddress(),
+              amountIn: utils.parseEther('100'),
+              maxSlippage: 1000,
+              deadline: moment().add('30', 'minutes').unix(),
+            })
+          ).id
+        );
+        tradeIds.push(
+          (
+            await create({
+              swapper: 'my-swapper',
+              tokenIn: wallet.generateRandomAddress(),
+              tokenOut: wallet.generateRandomAddress(),
+              amountIn: utils.parseEther('100'),
+              maxSlippage: 1000,
+              deadline: moment().add('30', 'minutes').unix(),
+            })
+          ).id
+        );
+        cancellAllPendingTx = await positionsHandler.cancelAllPending();
+      });
+      then('removes trades from trades', async () => {
+        for (let i = 0; i < tradeIds.length; i++) {
+          expect((await positionsHandler.pendingTradesById(tradeIds[i]))._id).to.equal(0);
+        }
+      });
+      then("removes trades from pending strategy's trade", async () => {
+        expect(await positionsHandler['pendingTradesIds(address)'](user.address)).to.be.empty;
+      });
+      then('removes trades from pending trades ids', async () => {
+        expect(await positionsHandler['pendingTradesIds()']()).to.be.empty;
+      });
+      then('emits event', async () => {
+        await expect(cancellAllPendingTx).to.emit(positionsHandler, 'TradesCanceled').withArgs(user.address, tradeIds);
+      });
     });
   });
 
@@ -246,7 +319,7 @@ contract.only('TradeFactoryPositionsHandler', () => {
     });
   });
 
-  describe('changePendingTradesSwapperOfOwner', () => {
+  describe('changePendingTradesSwapper', () => {
     when('swapper is not registered', () => {
       then('tx is reverted with reason');
     });
@@ -258,4 +331,25 @@ contract.only('TradeFactoryPositionsHandler', () => {
       then('emits event');
     });
   });
+
+  async function create({
+    swapper,
+    tokenIn,
+    tokenOut,
+    amountIn,
+    maxSlippage,
+    deadline,
+  }: {
+    swapper: string;
+    tokenIn: string;
+    tokenOut: string;
+    amountIn: BigNumber;
+    maxSlippage: number;
+    deadline: number;
+  }): Promise<{ tx: TransactionResponse; id: BigNumber }> {
+    const tx = await positionsHandler.create(swapper, tokenIn, tokenOut, amountIn, maxSlippage, deadline);
+    const txReceipt = await tx.wait();
+    const parsedEvent = positionsHandler.interface.parseLog(txReceipt.logs[0]);
+    return { tx, id: parsedEvent.args._id };
+  }
 });

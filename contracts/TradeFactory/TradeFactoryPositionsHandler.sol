@@ -10,7 +10,7 @@ import '../SwapperRegistry.sol';
 interface ITradeFactoryPositionsHandler {
   struct Trade {
     uint256 _id;
-    address _owner;
+    address _strategy;
     address _swapper;
     address _tokenIn;
     address _tokenOut;
@@ -21,7 +21,7 @@ interface ITradeFactoryPositionsHandler {
 
   event TradeCreated(
     uint256 indexed _id,
-    address _owner,
+    address _strategy,
     address _swapper,
     address _tokenIn,
     address _tokenOut,
@@ -30,18 +30,18 @@ interface ITradeFactoryPositionsHandler {
     uint256 _deadline
   );
 
-  event TradeCanceled(uint256 indexed _id);
+  event TradeCanceled(address indexed _strategy, uint256 indexed _id);
 
-  event TradesOfOwnerCanceled(address indexed _owner, uint256[] _ids);
+  event TradesCanceled(address indexed _strategy, uint256[] _ids);
 
-  event TradesOfOwnerChangedSwapper(address indexed _owner, uint256[] _ids, string _newSwapper);
+  event TradesSwapperChanged(address indexed _strategy, uint256[] _ids, string _newSwapper);
 
   function pendingTradesById(uint256)
     external
     view
     returns (
       uint256 _id,
-      address _owner,
+      address _strategy,
       address _swapper,
       address _tokenIn,
       address _tokenOut,
@@ -52,7 +52,7 @@ interface ITradeFactoryPositionsHandler {
 
   function pendingTradesIds() external view returns (uint256[] memory _pendingIds);
 
-  function pendingTradesIds(address _owner) external view returns (uint256[] memory _pendingIds);
+  function pendingTradesIds(address _strategy) external view returns (uint256[] memory _pendingIds);
 
   function swapperSafetyCheckpoint(address) external view returns (uint256);
 
@@ -108,10 +108,10 @@ abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler 
     }
   }
 
-  function pendingTradesIds(address _owner) external view override returns (uint256[] memory _pendingIds) {
-    _pendingIds = new uint256[](_pendingTradesByOwner[_owner].length());
-    for (uint256 i; i < _pendingTradesByOwner[_owner].length(); i++) {
-      _pendingIds[i] = _pendingTradesByOwner[_owner].at(i);
+  function pendingTradesIds(address _strategy) external view override returns (uint256[] memory _pendingIds) {
+    _pendingIds = new uint256[](_pendingTradesByOwner[_strategy].length());
+    for (uint256 i; i < _pendingTradesByOwner[_strategy].length(); i++) {
+      _pendingIds[i] = _pendingTradesByOwner[_strategy].at(i);
     }
   }
 
@@ -127,16 +127,35 @@ abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler 
   }
 
   function cancelPending(uint256 _id) external override onlyStrategy {
-    require(pendingTradesById[_id]._owner == msg.sender, 'TradeFactory: does not own trade');
-    _cancelPending(_id);
+    require(_pendingTradesIds.contains(_id), 'TradeFactory: trade not pending');
+    require(pendingTradesById[_id]._strategy == msg.sender, 'TradeFactory: does not own trade');
+    Trade memory _trade = pendingTradesById[_id];
+    _removePendingTrade(_trade._strategy, _id);
+    emit TradeCanceled(msg.sender, _id);
   }
 
   function cancelAllPending() external override onlyStrategy returns (uint256[] memory _canceledTradesIds) {
-    _canceledTradesIds = _cancelAllPendingOfOwner(msg.sender);
+    require(_pendingTradesByOwner[msg.sender].length() > 0, 'TradeFactory: no trades pending from strategy');
+    _canceledTradesIds = new uint256[](_pendingTradesByOwner[msg.sender].length());
+    for (uint256 i; i < _pendingTradesByOwner[msg.sender].length(); i++) {
+      _canceledTradesIds[i] = _pendingTradesByOwner[msg.sender].at(i);
+    }
+    for (uint256 i; i < _canceledTradesIds.length; i++) {
+      _removePendingTrade(msg.sender, _canceledTradesIds[i]);
+    }
+    emit TradesCanceled(msg.sender, _canceledTradesIds);
   }
 
   function changePendingTradesSwapper(string memory _swapper) external override onlyStrategy returns (uint256[] memory _changedSwapperIds) {
-    _changedSwapperIds = _changePendingTradesSwapperOfOwner(msg.sender, _swapper);
+    (bool _existsSwapper, address _swapperAddress, uint256 _swapperInitialization) = SwapperRegistry(SWAPPER_REGISTRY).isSwapper(_swapper);
+    require(!_existsSwapper, 'TradeFactory: invalid swapper');
+    require(_swapperInitialization <= swapperSafetyCheckpoint[msg.sender], 'TradeFactory: initialization greater than checkpoint');
+    _changedSwapperIds = new uint256[](_pendingTradesByOwner[msg.sender].length());
+    for (uint256 i; i < _pendingTradesByOwner[msg.sender].length(); i++) {
+      pendingTradesById[_pendingTradesByOwner[msg.sender].at(i)]._swapper = _swapperAddress;
+      _changedSwapperIds[i] = _pendingTradesByOwner[msg.sender].at(i);
+    }
+    emit TradesSwapperChanged(msg.sender, _changedSwapperIds, _swapper);
   }
 
   function setSwapperSafetyCheckpoint(uint256 _checkpoint) external override onlyStrategy {
@@ -146,7 +165,7 @@ abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler 
 
   function _create(
     string memory _swapper,
-    address _owner,
+    address _strategy,
     address _tokenIn,
     address _tokenOut,
     uint256 _amountIn,
@@ -155,21 +174,20 @@ abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler 
   ) internal returns (uint256 _id) {
     (bool _existsSwapper, address _swapperAddress, uint256 _swapperInitialization) = SwapperRegistry(SWAPPER_REGISTRY).isSwapper(_swapper);
     require(_existsSwapper, 'TradeFactory: invalid swapper');
-    require(_swapperInitialization <= swapperSafetyCheckpoint[_owner], 'TradeFactory: initialization greater than checkpoint');
-    require(_owner != address(0), 'TradeFactory: zero address');
+    require(_swapperInitialization <= swapperSafetyCheckpoint[_strategy], 'TradeFactory: initialization greater than checkpoint');
     require(_tokenIn != address(0) && _tokenOut != address(0), 'TradeFactory: zero address');
     require(_amountIn > 0, 'TradeFactory: zero amount');
     require(_maxSlippage > 0, 'TradeFactory: zero slippage');
     require(_deadline > block.timestamp, 'TradeFactory: deadline too soon');
     _id = _tradeCounter;
-    Trade memory _trade = Trade(_tradeCounter, _owner, _swapperAddress, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _deadline);
+    Trade memory _trade = Trade(_tradeCounter, _strategy, _swapperAddress, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _deadline);
     pendingTradesById[_trade._id] = _trade;
-    _pendingTradesByOwner[_owner].add(_trade._id);
+    _pendingTradesByOwner[_strategy].add(_trade._id);
     _pendingTradesIds.add(_trade._id);
     _tradeCounter += 1;
     emit TradeCreated(
       _trade._id,
-      _trade._owner,
+      _trade._strategy,
       _trade._swapper,
       _trade._tokenIn,
       _trade._tokenOut,
@@ -179,40 +197,9 @@ abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler 
     );
   }
 
-  function _cancelPending(uint256 _id) internal {
-    require(_pendingTradesIds.contains(_id), 'TradeFactory: trade not pending');
-    Trade memory _trade = pendingTradesById[_id];
-    _removePendingTrade(_trade._owner, _id);
-    emit TradeCanceled(_id);
-  }
-
-  function _cancelAllPendingOfOwner(address _owner) internal returns (uint256[] memory _canceledTradesIds) {
-    require(_pendingTradesByOwner[_owner].length() > 0, 'TradeFactory: no trades pending from user');
-    _canceledTradesIds = new uint256[](_pendingTradesByOwner[_owner].length());
-    for (uint256 i; i < _pendingTradesByOwner[_owner].length(); i++) {
-      _canceledTradesIds[i] = _pendingTradesByOwner[_owner].at(i);
-    }
-    for (uint256 i; i < _canceledTradesIds.length; i++) {
-      _removePendingTrade(_owner, _canceledTradesIds[i]);
-    }
-    emit TradesOfOwnerCanceled(_owner, _canceledTradesIds);
-  }
-
-  function _removePendingTrade(address _owner, uint256 _id) internal {
-    _pendingTradesByOwner[_owner].remove(_id);
+  function _removePendingTrade(address _strategy, uint256 _id) internal {
+    _pendingTradesByOwner[_strategy].remove(_id);
     _pendingTradesIds.remove(_id);
     delete pendingTradesById[_id];
-  }
-
-  function _changePendingTradesSwapperOfOwner(address _owner, string memory _swapper) internal returns (uint256[] memory _changedSwapperIds) {
-    (bool _existsSwapper, address _swapperAddress, uint256 _swapperInitialization) = SwapperRegistry(SWAPPER_REGISTRY).isSwapper(_swapper);
-    require(!_existsSwapper, 'TradeFactory: invalid swapper');
-    require(_swapperInitialization <= swapperSafetyCheckpoint[_owner], 'TradeFactory: initialization greater than checkpoint');
-    _changedSwapperIds = new uint256[](_pendingTradesByOwner[_owner].length());
-    for (uint256 i; i < _pendingTradesByOwner[_owner].length(); i++) {
-      pendingTradesById[_pendingTradesByOwner[_owner].at(i)]._swapper = _swapperAddress;
-      _changedSwapperIds[i] = _pendingTradesByOwner[_owner].at(i);
-    }
-    emit TradesOfOwnerChangedSwapper(_owner, _changedSwapperIds, _swapper);
   }
 }

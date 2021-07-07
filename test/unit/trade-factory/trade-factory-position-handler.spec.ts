@@ -10,7 +10,7 @@ import { constants, wallet } from '../../utils';
 import { BigNumber, utils } from 'ethers';
 import moment from 'moment';
 
-contract.only('TradeFactoryPositionsHandler', () => {
+contract('TradeFactoryPositionsHandler', () => {
   let user: SignerWithAddress;
   let randomGuy: SignerWithAddress;
   let swapperRegistry: MockContract;
@@ -175,16 +175,14 @@ contract.only('TradeFactoryPositionsHandler', () => {
       let createTx: TransactionResponse;
       let tradeId: BigNumber;
       given(async () => {
-        const createTrade = await create({
+        ({ tx: createTx, id: tradeId } = await create({
           swapper,
           tokenIn,
           tokenOut,
           amountIn,
           maxSlippage,
           deadline,
-        });
-        createTx = createTrade.tx;
-        tradeId = createTrade.id;
+        }));
       });
       then('consults swapper with registry', async () => {
         expect(swapperRegistry.smocked['isSwapper(string)'].calls[0]._swapper).to.be.equal(swapper);

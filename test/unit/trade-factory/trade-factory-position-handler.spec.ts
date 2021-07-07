@@ -1,11 +1,11 @@
-import { Contract, ContractFactory } from '@ethersproject/contracts';
+import { Contract } from '@ethersproject/contracts';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { abi as swapperRegistryABI } from '../../../artifacts/contracts/SwapperRegistry.sol/ISwapperRegistry.json';
 import { TransactionResponse } from '@ethersproject/abstract-provider';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { contract, given, then, when } from '../../utils/bdd';
-import { smockit, MockContract } from '@eth-optimism/smock';
+import { smockit, smoddit, MockContract, ModifiableContractFactory } from '@eth-optimism/smock';
 import { constants, wallet } from '../../utils';
 import { BigNumber, utils } from 'ethers';
 import moment from 'moment';
@@ -14,14 +14,12 @@ contract.only('TradeFactoryPositionsHandler', () => {
   let user: SignerWithAddress;
   let randomGuy: SignerWithAddress;
   let swapperRegistry: MockContract;
-  let positionsHandlerFactory: ContractFactory;
+  let positionsHandlerFactory: ModifiableContractFactory;
   let positionsHandler: Contract;
 
   before(async () => {
     [user, randomGuy] = await ethers.getSigners();
-    positionsHandlerFactory = await ethers.getContractFactory(
-      'contracts/mock/TradeFactory/TradeFactoryPositionsHandler.sol:TradeFactoryPositionsHandlerMock'
-    );
+    positionsHandlerFactory = await smoddit('contracts/mock/TradeFactory/TradeFactoryPositionsHandler.sol:TradeFactoryPositionsHandlerMock');
   });
 
   beforeEach(async () => {
@@ -103,9 +101,14 @@ contract.only('TradeFactoryPositionsHandler', () => {
     const deadline = moment().add('30', 'minutes').unix();
     const strategySafetyCheckpoint = moment().unix();
     given(async () => {
-      await positionsHandler.setSwapperSafetyCheckpoint(strategySafetyCheckpoint);
+      await positionsHandler.smodify.put({
+        swapperSafetyCheckpoint: {
+          [user.address]: strategySafetyCheckpoint,
+        },
+      });
       swapperRegistry.smocked['isSwapper(string)'].will.return.with([true, swapperAddress, BigNumber.from(`${strategySafetyCheckpoint}`)]);
     });
+    // TODO: only strategy
     when('swapper is not registered', () => {
       given(async () => {
         swapperRegistry.smocked['isSwapper(string)'].will.return.with([false, '0x0000000000000000000000000000000000000000', constants.ZERO]);
@@ -228,6 +231,7 @@ contract.only('TradeFactoryPositionsHandler', () => {
         moment().add('30', 'minutes').unix()
       );
     });
+    // TODO: only strategy
     when('pending trade does not exist', () => {
       then('tx is reverted with reason', async () => {
         await expect(positionsHandler.cancelPending(BigNumber.from('12'))).to.be.revertedWith('TradeFactory: trade not pending');
@@ -257,6 +261,7 @@ contract.only('TradeFactoryPositionsHandler', () => {
   });
 
   describe('cancelAllPending', () => {
+    // TODO: only strategy
     when('owner does not have pending trades', () => {
       then('tx is reverted with reason', async () => {
         await expect(positionsHandler.cancelAllPending()).to.be.revertedWith('TradeFactory: no trades pending from strategy');
@@ -313,22 +318,119 @@ contract.only('TradeFactoryPositionsHandler', () => {
 
   describe('removePendingTrade', () => {
     when('pending trade exists', () => {
-      then('removes pending trade id from owners pending trade list');
-      then('removes it from pending trades ids list');
-      then('removes it from pending trades');
+      let tradeId: BigNumber;
+      given(async () => {
+        swapperRegistry.smocked['isSwapper(string)'].will.return.with([true, wallet.generateRandomAddress(), 0]);
+        ({ id: tradeId } = await create({
+          swapper: 'my-swapper',
+          tokenIn: wallet.generateRandomAddress(),
+          tokenOut: wallet.generateRandomAddress(),
+          amountIn: utils.parseEther('100'),
+          maxSlippage: 1000,
+          deadline: moment().add('30', 'minutes').unix(),
+        }));
+        await positionsHandler.removePendingTrade(user.address, tradeId);
+      });
+      then('removes trade from trades', async () => {
+        expect((await positionsHandler.pendingTradesById(tradeId))._id).to.equal(0);
+      });
+      then("removes trade from pending strategy's trade", async () => {
+        expect(await positionsHandler['pendingTradesIds(address)'](user.address)).to.be.empty;
+      });
+      then('removes trade from pending trades ids', async () => {
+        expect(await positionsHandler['pendingTradesIds()']()).to.be.empty;
+      });
     });
   });
 
   describe('changePendingTradesSwapper', () => {
+    let tradeIds: BigNumber[];
+    given(async () => {
+      tradeIds = [];
+      swapperRegistry.smocked['isSwapper(string)'].will.return.with([true, wallet.generateRandomAddress(), 0]);
+      tradeIds.push(
+        (
+          await create({
+            swapper: 'my-swapper',
+            tokenIn: wallet.generateRandomAddress(),
+            tokenOut: wallet.generateRandomAddress(),
+            amountIn: utils.parseEther('100'),
+            maxSlippage: 1000,
+            deadline: moment().add('30', 'minutes').unix(),
+          })
+        ).id
+      );
+      tradeIds.push(
+        (
+          await create({
+            swapper: 'my-swapper',
+            tokenIn: wallet.generateRandomAddress(),
+            tokenOut: wallet.generateRandomAddress(),
+            amountIn: utils.parseEther('100'),
+            maxSlippage: 1000,
+            deadline: moment().add('30', 'minutes').unix(),
+          })
+        ).id
+      );
+    });
+    // TODO: only strategy
     when('swapper is not registered', () => {
-      then('tx is reverted with reason');
+      let changePendingTradesSwapper: Promise<TransactionResponse>;
+      given(async () => {
+        swapperRegistry.smocked['isSwapper(string)'].will.return.with([false, constants.ZERO_ADDRESS, 0]);
+        changePendingTradesSwapper = positionsHandler.changePendingTradesSwapper('new-swapper');
+      });
+      then('tx is reverted with reason', async () => {
+        await expect(changePendingTradesSwapper).to.be.revertedWith('TradeFactory: invalid swapper');
+      });
     });
     when('swapper was initiated later than strategy safety checkpoint', () => {
-      then('tx is reverted with reason');
+      let changePendingTradesSwapper: Promise<TransactionResponse>;
+      const strategySafetyCheckpoint = moment().unix();
+      given(async () => {
+        await positionsHandler.smodify.put({
+          swapperSafetyCheckpoint: {
+            [user.address]: strategySafetyCheckpoint,
+          },
+        });
+        swapperRegistry.smocked['isSwapper(string)'].will.return.with([
+          true,
+          '0x0000000000000000000000000000000000000000',
+          strategySafetyCheckpoint + 1,
+        ]);
+        changePendingTradesSwapper = positionsHandler.changePendingTradesSwapper('new-swapper');
+      });
+      then('tx is reverted with reason', async () => {
+        await expect(changePendingTradesSwapper).to.be.revertedWith('TradeFactory: initialization greater than checkpoint');
+      });
     });
     when('swapper is valid', () => {
-      then("changes all pending trade's swapper");
-      then('emits event');
+      let changePendingTradesSwapper: TransactionResponse;
+      const newSwapper = 'new-swapper';
+      const newSwapperAddress = wallet.generateRandomAddress();
+      const strategySafetyCheckpoint = moment().unix();
+      given(async () => {
+        await positionsHandler.smodify.put({
+          swapperSafetyCheckpoint: {
+            [user.address]: strategySafetyCheckpoint,
+          },
+        });
+        swapperRegistry.smocked['isSwapper(string)'].will.return.with([true, newSwapperAddress, 0]);
+        changePendingTradesSwapper = await positionsHandler.changePendingTradesSwapper(newSwapper);
+      });
+      then('consults swapper with registry', async () => {
+        expect(
+          swapperRegistry.smocked['isSwapper(string)'].calls[swapperRegistry.smocked['isSwapper(string)'].calls.length - 1]._swapper
+        ).to.be.equal(newSwapper);
+      });
+      then("changes all pending trade's swapper", async () => {
+        for (let i = 0; i < tradeIds.length; i++) {
+          expect((await positionsHandler.pendingTradesById(tradeIds[i]))._swapper).to.equal(newSwapperAddress);
+        }
+      });
+      then('emits event', async () => {
+        await expect(changePendingTradesSwapper).to.emit(positionsHandler, 'TradesSwapperChanged').withArgs(user.address, tradeIds, newSwapper);
+      });
     });
   });
 

@@ -148,7 +148,7 @@ abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler 
 
   function changePendingTradesSwapper(string memory _swapper) external override onlyStrategy returns (uint256[] memory _changedSwapperIds) {
     (bool _existsSwapper, address _swapperAddress, uint256 _swapperInitialization) = SwapperRegistry(SWAPPER_REGISTRY).isSwapper(_swapper);
-    require(!_existsSwapper, 'TradeFactory: invalid swapper');
+    require(_existsSwapper, 'TradeFactory: invalid swapper');
     require(_swapperInitialization <= swapperSafetyCheckpoint[msg.sender], 'TradeFactory: initialization greater than checkpoint');
     _changedSwapperIds = new uint256[](_pendingTradesByOwner[msg.sender].length());
     for (uint256 i; i < _pendingTradesByOwner[msg.sender].length(); i++) {

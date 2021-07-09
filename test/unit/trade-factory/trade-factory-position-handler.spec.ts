@@ -166,7 +166,7 @@ contract('TradeFactoryPositionsHandler', () => {
         await expect(positionsHandler.create(swapper, tokenIn, tokenOut, amountIn, maxSlippage, constants.ZERO_ADDRESS)).to.be.revertedWith(
           'TradeFactory: deadline too soon'
         );
-        await expect(positionsHandler.create(swapper, tokenIn, tokenOut, amountIn, maxSlippage, moment().unix())).to.be.revertedWith(
+        await expect(positionsHandler.create(swapper, tokenIn, tokenOut, amountIn, maxSlippage, moment().unix() - 1)).to.be.revertedWith(
           'TradeFactory: deadline too soon'
         );
       });
@@ -234,9 +234,6 @@ contract('TradeFactoryPositionsHandler', () => {
       then('tx is reverted with reason', async () => {
         await expect(positionsHandler.cancelPending(BigNumber.from('12'))).to.be.revertedWith('TradeFactory: trade not pending');
       });
-    });
-    when('trying to cancel a trade thats not owned by sender', () => {
-      then('tx is reverted with reason');
     });
     when('pending trade exists', () => {
       let cancelTx: TransactionResponse;

@@ -5,13 +5,13 @@ import '@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '../Swapper.sol';
 
-interface IUniswapSwapper is ISwapper {
+interface IUniswapV2Swapper is ISwapper {
   function WETH() external view returns (address);
 
   function UNISWAP() external view returns (address);
 }
 
-contract UniswapSwapper is IUniswapSwapper, Swapper {
+contract UniswapV2Swapper is IUniswapV2Swapper, Swapper {
   using SafeERC20 for IERC20;
 
   address public immutable override WETH;
@@ -53,7 +53,7 @@ contract UniswapSwapper is IUniswapSwapper, Swapper {
   }
 
   function _getPath(address _tokenIn, address _tokenOut) internal view returns (address[] memory _path) {
-    // todo: token in weth
+    // TODO: token in weth
     if (_tokenOut == WETH) {
       _path = new address[](2);
       _path[0] = _tokenIn;

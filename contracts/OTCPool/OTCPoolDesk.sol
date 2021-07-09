@@ -42,6 +42,11 @@ abstract contract OTCPoolDesk is IOTCPoolDesk, CollectableDustWithTokensManageme
     _setOTCProvider(_OTCProvider);
   }
 
+  modifier onlyOTCProvider {
+    require(msg.sender == OTCProvider, 'OTCPool: unauthorized');
+    _;
+  }
+
   function setOTCProvider(address _OTCProvider) external virtual override onlyGovernor {
     _setOTCProvider(_OTCProvider);
   }
@@ -52,23 +57,17 @@ abstract contract OTCPoolDesk is IOTCPoolDesk, CollectableDustWithTokensManageme
     emit OTCProviderSet(_OTCProvider);
   }
 
-  modifier onlyOTCProvider {
-    require(msg.sender == OTCProvider, 'OTCPool: unauthorized');
-    _;
-  }
-
   function deposit(
     address _offeredTokenToPool,
     address _wantedTokenFromPool,
     uint256 _amount
   ) public virtual override onlyOTCProvider {
-    require(OTCProvider != address(0), 'OTCPool: depositor should not be zero');
     require(_offeredTokenToPool != address(0) && _wantedTokenFromPool != address(0), 'OTCPool: tokens should not be zero');
     require(_amount > 0, 'OTCPool: should provide more than zero');
-    IERC20(_offeredTokenToPool).safeTransferFrom(OTCProvider, address(this), _amount);
+    IERC20(_offeredTokenToPool).safeTransferFrom(msg.sender, address(this), _amount);
     availableFor[_offeredTokenToPool][_wantedTokenFromPool] += _amount;
     _addTokenUnderManagement(_offeredTokenToPool, _amount);
-    emit Deposited(OTCProvider, _offeredTokenToPool, _wantedTokenFromPool, _amount);
+    emit Deposited(msg.sender, _offeredTokenToPool, _wantedTokenFromPool, _amount);
   }
 
   function withdraw(
@@ -76,13 +75,12 @@ abstract contract OTCPoolDesk is IOTCPoolDesk, CollectableDustWithTokensManageme
     address _wantedTokenFromPool,
     uint256 _amount
   ) public virtual override onlyOTCProvider {
-    require(OTCProvider != address(0), 'OTCPool: receiver should not be zero');
     require(_offeredTokenToPool != address(0) && _wantedTokenFromPool != address(0), 'OTCPool: tokens should not be zero');
     require(_amount > 0, 'OTCPool: should withdraw more than zero');
     require(availableFor[_offeredTokenToPool][_wantedTokenFromPool] >= _amount, 'OTCPool: not enough provided');
     availableFor[_offeredTokenToPool][_wantedTokenFromPool] -= _amount;
-    IERC20(_offeredTokenToPool).safeTransfer(OTCProvider, _amount);
+    IERC20(_offeredTokenToPool).safeTransfer(msg.sender, _amount);
     _subTokenUnderManagement(_offeredTokenToPool, _amount);
-    emit Withdrew(OTCProvider, _offeredTokenToPool, _wantedTokenFromPool, _amount);
+    emit Withdrew(msg.sender, _offeredTokenToPool, _wantedTokenFromPool, _amount);
   }
 }

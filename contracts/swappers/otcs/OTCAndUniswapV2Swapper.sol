@@ -3,11 +3,11 @@ pragma solidity 0.8.4;
 
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '../../OTCSwapper.sol';
-import '../UniswapSwapper.sol';
+import '../UniswapV2Swapper.sol';
 
-interface IOTCAndUniswapSwapper is IOTCSwapper, IUniswapSwapper {}
+interface IOTCAndUniswapV2Swapper is IOTCSwapper, IUniswapV2Swapper {}
 
-contract OTCAndUniswapSwapper is IOTCAndUniswapSwapper, OTCSwapper, UniswapSwapper {
+contract OTCAndUniswapV2Swapper is IOTCAndUniswapV2Swapper, OTCSwapper, UniswapV2Swapper {
   using SafeERC20 for IERC20;
 
   constructor(
@@ -16,7 +16,7 @@ contract OTCAndUniswapSwapper is IOTCAndUniswapSwapper, OTCSwapper, UniswapSwapp
     address _tradeFactory,
     address _weth,
     address _uniswap
-  ) OTCSwapper(_otcPool) UniswapSwapper(_governor, _tradeFactory, _weth, _uniswap) {}
+  ) OTCSwapper(_otcPool) UniswapV2Swapper(_governor, _tradeFactory, _weth, _uniswap) {}
 
   function _getTotalAmountOut(
     address _tokenIn,

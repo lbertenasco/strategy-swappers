@@ -5,28 +5,37 @@ import '@nomiclabs/hardhat-etherscan';
 import { removeConsoleLog } from 'hardhat-preprocessor';
 import 'hardhat-gas-reporter';
 import 'solidity-coverage';
+import 'hardhat-deploy';
+import { HardhatUserConfig, NetworksUserConfig } from 'hardhat/types';
 
-module.exports = {
-  defaultNetwork: 'hardhat',
-  networks: process.env.TEST
-    ? {}
-    : {
-        hardhat: {
-          forking: {
-            enabled: process.env.FORK ? true : false,
-            url: process.env.MAINNET_HTTPS_URL,
-          },
-        },
-        localMainnet: {
-          url: process.env.LOCAL_MAINNET_HTTPS_URL,
-          accounts: [process.env.LOCAL_MAINNET_PRIVATE_KEY],
-        },
-        mainnet: {
-          url: process.env.MAINNET_HTTPS_URL,
-          accounts: [process.env.MAINNET_PRIVATE_KEY],
-          gasPrice: 'auto',
+const networks: NetworksUserConfig = process.env.TEST
+  ? {}
+  : {
+      hardhat: {
+        forking: {
+          enabled: process.env.FORK ? true : false,
+          url: process.env.MAINNET_HTTPS_URL as string,
         },
       },
+      localMainnet: {
+        url: process.env.LOCAL_MAINNET_HTTPS_URL as string,
+        accounts: [process.env.LOCAL_MAINNET_PRIVATE_KEY as string],
+      },
+      mainnet: {
+        url: process.env.MAINNET_HTTPS_URL as string,
+        accounts: [process.env.MAINNET_PRIVATE_KEY as string],
+        gasPrice: 'auto',
+        tags: ['production'],
+      },
+    };
+
+const config: HardhatUserConfig = {
+  defaultNetwork: 'hardhat',
+  namedAccounts: {
+    deployer: 0,
+    governor: '0x0000000000000000000000000000000000000001', // TODO: Set mainnet governor
+  },
+  networks,
   solidity: {
     compilers: [
       {
@@ -46,9 +55,9 @@ module.exports = {
     ],
   },
   gasReporter: {
-    enabled: process.env.REPORT_GAS ? true : false,
-    currency: process.env.COINMARKETCAP_DEFAULT_CURRENCY,
+    currency: process.env.COINMARKETCAP_DEFAULT_CURRENCY || 'USD',
     coinmarketcap: process.env.COINMARKETCAP_API_KEY,
+    enabled: process.env.REPORT_GAS ? true : false,
   },
   preprocess: {
     eachLine: removeConsoleLog((hre) => hre.network.name !== 'hardhat'),
@@ -57,3 +66,5 @@ module.exports = {
     apiKey: process.env.ETHERSCAN_API_KEY,
   },
 };
+
+export default config;

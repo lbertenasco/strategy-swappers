@@ -4,8 +4,10 @@ pragma solidity 0.8.4;
 import '@openzeppelin/contracts/utils/math/Math.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
+
 import '../SwapperRegistry.sol';
 import '../OTCSwapper.sol';
+
 import './OTCPoolDesk.sol';
 
 interface IOTCPoolTradeable {
@@ -44,43 +46,50 @@ abstract contract OTCPoolTradeable is IOTCPoolTradeable, OTCPoolDesk {
     _setSwapperRegistry(_swapperRegistry);
   }
 
+  modifier onlyRegisteredSwapper {
+    require(SwapperRegistry(swapperRegistry).isSwapper(msg.sender), 'OTCPool: unregistered swapper');
+    _;
+  }
+
+  function setSwapperRegistry(address _swapperRegistry) external override onlyGovernor {
+    _setSwapperRegistry(_swapperRegistry);
+  }
+
   function _setSwapperRegistry(address _swapperRegistry) internal {
     require(_swapperRegistry != address(0), 'OTCPool: zero address');
     swapperRegistry = _swapperRegistry;
     emit SwapperRegistrySet(_swapperRegistry);
   }
 
-  modifier onlyRegisteredSwapper {
-    require(SwapperRegistry(swapperRegistry).isSwapper(msg.sender), 'OTCPool: unregistered swapper');
-    _;
-  }
-
-  function _claim(
-    address _receiver,
-    address _token,
-    uint256 _amountToClaim
-  ) internal {
-    require(_receiver != address(0), 'OTCPool: zero address');
+  function claim(address _token, uint256 _amountToClaim) external override onlyOTCProvider {
+    require(msg.sender != address(0), 'OTCPool: zero address');
     require(_token != address(0), 'OTCPool: zero address'); // TODO: can this be deprecated ? technically if token is zero, it wont have swapped available -- gas optimization
     require(_amountToClaim <= swappedAvailable[_token], 'OTCPool: zero claim');
     swappedAvailable[_token] -= _amountToClaim;
-    IERC20(_token).safeTransfer(_receiver, _amountToClaim);
-    emit Claimed(_receiver, _token, _amountToClaim);
+    IERC20(_token).safeTransfer(msg.sender, _amountToClaim);
+    _subTokenUnderManagement(_token, _amountToClaim);
+    emit Claimed(msg.sender, _token, _amountToClaim);
   }
 
-  function _takeOffer(
-    address _swapper,
+  function takeOffer(
     address _offeredTokenToPool,
     address _wantedTokenFromPool,
-    uint256 _offeredAmount
-  ) internal returns (uint256 _tookFromPool, uint256 _tookFromSwapper) {
+    uint256 _maxOfferedAmount
+  ) external override onlyRegisteredSwapper returns (uint256 _tookFromPool, uint256 _tookFromSwapper) {
     if (availableFor[_wantedTokenFromPool][_offeredTokenToPool] == 0) return (0, 0);
-    (_tookFromPool, _tookFromSwapper) = _getMaxTakeableFromPoolAndSwapper(_swapper, _offeredTokenToPool, _wantedTokenFromPool, _offeredAmount);
-    IERC20(_offeredTokenToPool).safeTransferFrom(_swapper, address(this), _tookFromSwapper);
+    (_tookFromPool, _tookFromSwapper) = _getMaxTakeableFromPoolAndSwapper(
+      msg.sender,
+      _offeredTokenToPool,
+      _wantedTokenFromPool,
+      _maxOfferedAmount
+    );
+    IERC20(_offeredTokenToPool).safeTransferFrom(msg.sender, address(this), _tookFromSwapper);
+    _addTokenUnderManagement(_offeredTokenToPool, _tookFromSwapper);
     availableFor[_wantedTokenFromPool][_offeredTokenToPool] -= _tookFromPool;
     swappedAvailable[_offeredTokenToPool] += _tookFromSwapper;
-    IERC20(_wantedTokenFromPool).safeTransfer(_swapper, _tookFromPool);
-    emit TradePerformed(_swapper, _offeredTokenToPool, _wantedTokenFromPool, _tookFromPool, _tookFromSwapper);
+    IERC20(_wantedTokenFromPool).safeTransfer(msg.sender, _tookFromPool);
+    _subTokenUnderManagement(_wantedTokenFromPool, _tookFromPool);
+    emit TradePerformed(msg.sender, _offeredTokenToPool, _wantedTokenFromPool, _tookFromPool, _tookFromSwapper);
   }
 
   function _getMaxTakeableFromPoolAndSwapper(

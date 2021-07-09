@@ -1,0 +1,20 @@
+import { HardhatRuntimeEnvironment } from 'hardhat/types';
+import { DeployFunction } from 'hardhat-deploy/types';
+
+const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
+  const { deployer, governor } = await hre.getNamedAccounts();
+
+  // TODO: Set mainnet provider
+  const OTC_PROVIDER = '0x0000000000000000000000000000000000000001';
+  const swapperRegistry = await hre.deployments.get('SwapperRegistry');
+
+  await hre.deployments.deploy('TradeFactory', {
+    contract: 'contracts/OTCPool/OTCPool.sol:OTCPool',
+    from: deployer,
+    args: [governor, OTC_PROVIDER, swapperRegistry.address],
+    log: true,
+  });
+};
+export default deployFunction;
+deployFunction.dependencies = ['SwapperRegistry'];
+deployFunction.tags = ['OTCPool'];

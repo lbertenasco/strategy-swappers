@@ -4,6 +4,10 @@ pragma solidity 0.8.4;
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 
+import '@lbertenasco/contract-utils/contracts/utils/Governable.sol';
+
+import '../utils/CollectableDustWithTokensManagement.sol';
+
 interface IOTCPoolDesk {
   event OTCProviderSet(address indexed _OTCProvider);
   event Deposited(address indexed _depositor, address _offeredTokenToPool, address _wantedTokenFromPool, uint256 _amountToOffer);
@@ -28,13 +32,17 @@ interface IOTCPoolDesk {
   ) external;
 }
 
-abstract contract OTCPoolDesk is IOTCPoolDesk {
+abstract contract OTCPoolDesk is IOTCPoolDesk, CollectableDustWithTokensManagement, Governable {
   using SafeERC20 for IERC20;
 
   address public override OTCProvider;
   mapping(address => mapping(address => uint256)) public override availableFor;
 
   constructor(address _OTCProvider) {
+    _setOTCProvider(_OTCProvider);
+  }
+
+  function setOTCProvider(address _OTCProvider) external virtual override onlyGovernor {
     _setOTCProvider(_OTCProvider);
   }
 
@@ -49,32 +57,32 @@ abstract contract OTCPoolDesk is IOTCPoolDesk {
     _;
   }
 
-  function _deposit(
-    address _depositor,
+  function deposit(
     address _offeredTokenToPool,
     address _wantedTokenFromPool,
-    uint256 _amountToOffer
-  ) internal {
-    require(_depositor != address(0), 'OTCPool: depositor should not be zero');
+    uint256 _amount
+  ) public virtual override onlyOTCProvider {
+    require(OTCProvider != address(0), 'OTCPool: depositor should not be zero');
     require(_offeredTokenToPool != address(0) && _wantedTokenFromPool != address(0), 'OTCPool: tokens should not be zero');
-    require(_amountToOffer > 0, 'OTCPool: should provide more than zero');
-    IERC20(_offeredTokenToPool).safeTransferFrom(_depositor, address(this), _amountToOffer);
-    availableFor[_offeredTokenToPool][_wantedTokenFromPool] += _amountToOffer;
-    emit Deposited(_depositor, _offeredTokenToPool, _wantedTokenFromPool, _amountToOffer);
+    require(_amount > 0, 'OTCPool: should provide more than zero');
+    IERC20(_offeredTokenToPool).safeTransferFrom(OTCProvider, address(this), _amount);
+    availableFor[_offeredTokenToPool][_wantedTokenFromPool] += _amount;
+    _addTokenUnderManagement(_offeredTokenToPool, _amount);
+    emit Deposited(OTCProvider, _offeredTokenToPool, _wantedTokenFromPool, _amount);
   }
 
-  function _withdraw(
-    address _receiver,
+  function withdraw(
     address _offeredTokenToPool,
     address _wantedTokenFromPool,
-    uint256 _amountToWithdraw
-  ) internal {
-    require(_receiver != address(0), 'OTCPool: receiver should not be zero');
+    uint256 _amount
+  ) public virtual override onlyOTCProvider {
+    require(OTCProvider != address(0), 'OTCPool: receiver should not be zero');
     require(_offeredTokenToPool != address(0) && _wantedTokenFromPool != address(0), 'OTCPool: tokens should not be zero');
-    require(_amountToWithdraw > 0, 'OTCPool: should withdraw more than zero');
-    require(availableFor[_offeredTokenToPool][_wantedTokenFromPool] >= _amountToWithdraw, 'OTCPool: not enough provided');
-    availableFor[_offeredTokenToPool][_wantedTokenFromPool] -= _amountToWithdraw;
-    IERC20(_offeredTokenToPool).safeTransfer(_receiver, _amountToWithdraw);
-    emit Withdrew(_receiver, _offeredTokenToPool, _wantedTokenFromPool, _amountToWithdraw);
+    require(_amount > 0, 'OTCPool: should withdraw more than zero');
+    require(availableFor[_offeredTokenToPool][_wantedTokenFromPool] >= _amount, 'OTCPool: not enough provided');
+    availableFor[_offeredTokenToPool][_wantedTokenFromPool] -= _amount;
+    IERC20(_offeredTokenToPool).safeTransfer(OTCProvider, _amount);
+    _subTokenUnderManagement(_offeredTokenToPool, _amount);
+    emit Withdrew(OTCProvider, _offeredTokenToPool, _wantedTokenFromPool, _amount);
   }
 }

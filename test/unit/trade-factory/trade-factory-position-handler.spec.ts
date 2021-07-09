@@ -5,7 +5,7 @@ import { TransactionResponse } from '@ethersproject/abstract-provider';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { contract, given, then, when } from '../../utils/bdd';
-import { smockit, smoddit, MockContract, ModifiableContractFactory } from '@eth-optimism/smock';
+import { smockit, smoddit, MockContract, ModifiableContractFactory, ModifiableContract } from '@eth-optimism/smock';
 import { constants, evm, wallet } from '../../utils';
 import { BigNumber, utils } from 'ethers';
 import moment from 'moment';
@@ -14,7 +14,7 @@ contract('TradeFactoryPositionsHandler', () => {
   let user: SignerWithAddress;
   let swapperRegistry: MockContract;
   let positionsHandlerFactory: ModifiableContractFactory;
-  let positionsHandler: Contract;
+  let positionsHandler: ModifiableContract;
 
   before(async () => {
     [user] = await ethers.getSigners();
@@ -165,7 +165,7 @@ contract('TradeFactoryPositionsHandler', () => {
         await expect(positionsHandler.create(swapper, tokenIn, tokenOut, amountIn, maxSlippage, constants.ZERO_ADDRESS)).to.be.revertedWith(
           'TradeFactory: deadline too soon'
         );
-        const staticDeadline = moment().unix() + 10;
+        const staticDeadline = moment().unix() + 100;
         await evm.advanceToTime(staticDeadline);
         await expect(positionsHandler.create(swapper, tokenIn, tokenOut, amountIn, maxSlippage, staticDeadline)).to.be.revertedWith(
           'TradeFactory: deadline too soon'

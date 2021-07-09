@@ -30,7 +30,7 @@ interface IOTCPoolTradeable {
   function takeOffer(
     address _offeredTokenToPool,
     address _wantedTokenFromPool,
-    uint256 _maxOfferedAmount
+    uint256 _offeredAmount
   ) external returns (uint256 _tookFromPool, uint256 _tookFromSwapper);
 }
 
@@ -72,15 +72,10 @@ abstract contract OTCPoolTradeable is IOTCPoolTradeable, OTCPoolDesk {
     address _swapper,
     address _offeredTokenToPool,
     address _wantedTokenFromPool,
-    uint256 _maxOfferedAmount
+    uint256 _offeredAmount
   ) internal returns (uint256 _tookFromPool, uint256 _tookFromSwapper) {
     if (availableFor[_wantedTokenFromPool][_offeredTokenToPool] == 0) return (0, 0);
-    (_tookFromPool, _tookFromSwapper) = _getMaxTakeableFromPoolAndSwapper(
-      _swapper,
-      _offeredTokenToPool,
-      _wantedTokenFromPool,
-      _maxOfferedAmount
-    );
+    (_tookFromPool, _tookFromSwapper) = _getMaxTakeableFromPoolAndSwapper(_swapper, _offeredTokenToPool, _wantedTokenFromPool, _offeredAmount);
     IERC20(_offeredTokenToPool).safeTransferFrom(_swapper, address(this), _tookFromSwapper);
     availableFor[_wantedTokenFromPool][_offeredTokenToPool] -= _tookFromPool;
     swappedAvailable[_offeredTokenToPool] += _tookFromSwapper;
@@ -90,12 +85,12 @@ abstract contract OTCPoolTradeable is IOTCPoolTradeable, OTCPoolDesk {
 
   function _getMaxTakeableFromPoolAndSwapper(
     address _swapper,
-    address _offeredTokenToPool,
-    address _wantedTokenFromPool,
-    uint256 _maxOfferedAmount
+    address _offered,
+    address _wanted,
+    uint256 _offeredAmount
   ) internal view virtual returns (uint256 _tookFromPool, uint256 _tookFromSwapper) {
-    uint256 _maxWantedFromOffered = IOTCSwapper(_swapper).getTotalAmountOut(_offeredTokenToPool, _wantedTokenFromPool, _maxOfferedAmount);
-    _tookFromPool = Math.min(availableFor[_wantedTokenFromPool][_offeredTokenToPool], _maxWantedFromOffered);
-    _tookFromSwapper = IOTCSwapper(_swapper).getTotalAmountOut(_wantedTokenFromPool, _offeredTokenToPool, _tookFromPool);
+    uint256 _maxWantedFromOffered = IOTCSwapper(_swapper).getTotalAmountOut(_offered, _wanted, _offeredAmount);
+    _tookFromPool = Math.min(availableFor[_wanted][_offered], _maxWantedFromOffered);
+    _tookFromSwapper = IOTCSwapper(_swapper).getTotalAmountOut(_wanted, _offered, _tookFromPool);
   }
 }

@@ -2,32 +2,33 @@ import moment from 'moment';
 import { Contract, ContractFactory } from '@ethersproject/contracts';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { TransactionResponse } from '@ethersproject/abstract-provider';
+import { abi as OTCSwapperABI } from '../../../artifacts/contracts/OTCSwapper.sol/IOTCSwapper.json';
+import { abi as swapperRegistryABI } from '../../../artifacts/contracts/SwapperRegistry.sol/ISwapperRegistry.json';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
-import { behaviours, constants, contracts, erc20, wallet } from '../../utils';
+import { behaviours, bn, constants, contracts, erc20, wallet } from '../../utils';
 import { contract, given, then, when } from '../../utils/bdd';
 import { BigNumber } from '@ethersproject/bignumber';
 import { utils } from 'ethers';
 import { expectNoEventWithName } from '../../utils/event-utils';
+import { MockContract, ModifiableContract, smockit } from '@eth-optimism/smock';
 
 contract('OTCPoolTradeable', () => {
   let randomGuy: SignerWithAddress;
   let OTCProvider: SignerWithAddress;
   let OTCPoolTradeableFactory: ContractFactory;
   let OTCPoolTradeable: Contract;
-  let swapperRegistryFactory: ContractFactory;
-  let swapperRegistry: Contract;
-  let otcSwapperFactory: ContractFactory;
+  let swapperRegistry: MockContract;
+  let otcSwapper: MockContract;
 
   before(async () => {
     [randomGuy, OTCProvider] = await ethers.getSigners();
     OTCPoolTradeableFactory = await ethers.getContractFactory('contracts/mock/OTCPool/OTCPoolTradeable.sol:OTCPoolTradeableMock');
-    swapperRegistryFactory = await ethers.getContractFactory('contracts/mock/SwapperRegistry.sol:SwapperRegistryMock');
-    otcSwapperFactory = await ethers.getContractFactory('contracts/mock/StaticOTCSwapper.sol:StaticOTCSwapper');
   });
 
   beforeEach(async () => {
-    swapperRegistry = await swapperRegistryFactory.deploy(await wallet.generateRandomAddress());
+    otcSwapper = await smockit(OTCSwapperABI);
+    swapperRegistry = await smockit(swapperRegistryABI);
     OTCPoolTradeable = await OTCPoolTradeableFactory.deploy(OTCProvider.address, swapperRegistry.address);
   });
 
@@ -142,42 +143,47 @@ contract('OTCPoolTradeable', () => {
     title,
     availableOnPool,
     maxWantedFromOffered,
-    swapperTokenBAmountOut,
   }: {
     title: string;
     availableOnPool: BigNumber | number | string;
     maxWantedFromOffered: BigNumber | number | string;
-    swapperTokenBAmountOut: BigNumber | number | string;
   }) => {
-    let otcSwapper: Contract;
-    let wantedFromSwapper: string;
-    let offeredFromSwapper: string;
+    let wanted: string;
+    let offered: string;
     given(async () => {
-      otcSwapper = await otcSwapperFactory.deploy();
-      wantedFromSwapper = await wallet.generateRandomAddress();
-      offeredFromSwapper = await wallet.generateRandomAddress();
+      wanted = await wallet.generateRandomAddress();
+      offered = await wallet.generateRandomAddress();
     });
     when(title, () => {
       let tookFromPool: BigNumber;
       let tookFromSwapper: BigNumber;
+      const offeredAmount = utils.parseEther(bn.random(1, 100).toString());
+      const shouldTakeFromSwapper = utils.parseEther(bn.random(1, 100).toString());
+      const shouldTakeFromPool = maxWantedFromOffered <= availableOnPool ? maxWantedFromOffered : availableOnPool;
       given(async () => {
-        await otcSwapper.setTotalAmountOut(offeredFromSwapper, maxWantedFromOffered);
-        await otcSwapper.setTotalAmountOut(wantedFromSwapper, swapperTokenBAmountOut);
-        await OTCPoolTradeable.setAvailableFor(wantedFromSwapper, offeredFromSwapper, availableOnPool);
+        otcSwapper.smocked.getTotalAmountOut.will.return.with((tokenIn, tokenOut) => {
+          if (tokenIn == offered && tokenOut == wanted) return maxWantedFromOffered;
+          if (tokenIn == wanted && tokenOut == offered) return shouldTakeFromSwapper;
+        });
+        await OTCPoolTradeable.setAvailableFor(wanted, offered, availableOnPool);
         [tookFromPool, tookFromSwapper] = await OTCPoolTradeable.getMaxTakeableFromPoolAndSwapper(
           otcSwapper.address,
-          offeredFromSwapper,
-          wantedFromSwapper,
-          0 // it's zero since swapper.getTotalAmountOut is mocked to return static value
+          offered,
+          wanted,
+          offeredAmount
         );
       });
-      // then('swapper is called to calculate max wanted offer with correct information');
-      // then('swapper is called to calculate how much should be taken from the swapper correctly');
+      then('swapper is called to calculate max wanted offerered with correct information', () => {
+        expect(otcSwapper.smocked.getTotalAmountOut.calls[0]).to.be.eql([offered, wanted, offeredAmount]);
+      });
+      then('swapper is called to calculate how much should be taken from the swapper correctly', () => {
+        expect(otcSwapper.smocked.getTotalAmountOut.calls[1]).to.be.eql([wanted, offered, bn.toBN(shouldTakeFromPool)]);
+      });
       then('took from pool returns correct value', () => {
-        expect(tookFromPool).to.equal(maxWantedFromOffered <= availableOnPool ? maxWantedFromOffered : availableOnPool);
+        expect(tookFromPool).to.equal(shouldTakeFromPool);
       });
       then('took from swapper returns correct value', () => {
-        expect(tookFromSwapper).to.equal(swapperTokenBAmountOut);
+        expect(tookFromSwapper).to.equal(shouldTakeFromSwapper);
       });
     });
   };
@@ -187,19 +193,16 @@ contract('OTCPoolTradeable', () => {
       title: 'when there is nothing available on pool',
       availableOnPool: 0,
       maxWantedFromOffered: 10,
-      swapperTokenBAmountOut: 149,
     });
     getMaxTakeableFromPoolAndSwapperTest({
       title: 'offered converted to wanted is less than available',
       availableOnPool: 100,
       maxWantedFromOffered: 10,
-      swapperTokenBAmountOut: 99,
     });
     getMaxTakeableFromPoolAndSwapperTest({
       title: 'offered converted to wanted is more than available',
       availableOnPool: 10,
       maxWantedFromOffered: 50,
-      swapperTokenBAmountOut: 99,
     });
   });
 

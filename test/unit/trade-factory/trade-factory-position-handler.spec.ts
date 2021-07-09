@@ -12,13 +12,12 @@ import moment from 'moment';
 
 contract('TradeFactoryPositionsHandler', () => {
   let user: SignerWithAddress;
-  let randomGuy: SignerWithAddress;
   let swapperRegistry: MockContract;
   let positionsHandlerFactory: ModifiableContractFactory;
   let positionsHandler: Contract;
 
   before(async () => {
-    [user, randomGuy] = await ethers.getSigners();
+    [user] = await ethers.getSigners();
     positionsHandlerFactory = await smoddit('contracts/mock/TradeFactory/TradeFactoryPositionsHandler.sol:TradeFactoryPositionsHandlerMock');
   });
 

@@ -23,7 +23,12 @@ const toBN = (value: string | number | BigNumber): BigNumber => {
   return BigNumber.isBigNumber(value) ? value : BigNumber.from(value);
 };
 
+const random = (min: number, max: number): BigNumber => {
+  return BigNumber.from(`${Math.floor(Math.random() * (max - min + 1)) + min}`);
+};
+
 export default {
   expectToEqualWithThreshold,
   toBN,
+  random,
 };

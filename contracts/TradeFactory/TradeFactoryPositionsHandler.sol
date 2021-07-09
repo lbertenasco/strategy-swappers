@@ -178,7 +178,7 @@ abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler 
     require(_tokenIn != address(0) && _tokenOut != address(0), 'TradeFactory: zero address');
     require(_amountIn > 0, 'TradeFactory: zero amount');
     require(_maxSlippage > 0, 'TradeFactory: zero slippage');
-    require(_deadline > block.timestamp, 'TradeFactory: deadline too soon');
+    require(block.timestamp < _deadline, 'TradeFactory: deadline too soon');
     _id = _tradeCounter;
     Trade memory _trade = Trade(_tradeCounter, _strategy, _swapperAddress, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _deadline);
     pendingTradesById[_trade._id] = _trade;

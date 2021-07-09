@@ -1,5 +1,4 @@
-import moment from 'moment';
-import { Contract, ContractFactory } from '@ethersproject/contracts';
+import { Contract } from '@ethersproject/contracts';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { TransactionResponse } from '@ethersproject/abstract-provider';
 import { abi as OTCSwapperABI } from '../../../artifacts/contracts/OTCSwapper.sol/IOTCSwapper.json';
@@ -9,27 +8,28 @@ import { ethers } from 'hardhat';
 import { behaviours, bn, constants, contracts, erc20, wallet } from '../../utils';
 import { contract, given, then, when } from '../../utils/bdd';
 import { BigNumber } from '@ethersproject/bignumber';
-import { utils } from 'ethers';
+import { utils, Wallet } from 'ethers';
 import { expectNoEventWithName } from '../../utils/event-utils';
-import { MockContract, ModifiableContract, smockit } from '@eth-optimism/smock';
+import { MockContract, ModifiableContract, ModifiableContractFactory, smockit, smoddit } from '@eth-optimism/smock';
 
 contract('OTCPoolTradeable', () => {
-  let randomGuy: SignerWithAddress;
   let OTCProvider: SignerWithAddress;
-  let OTCPoolTradeableFactory: ContractFactory;
-  let OTCPoolTradeable: Contract;
+  let swapper: SignerWithAddress;
+  let OTCPoolTradeableFactory: ModifiableContractFactory;
+  let OTCPoolTradeable: ModifiableContract;
   let swapperRegistry: MockContract;
   let otcSwapper: MockContract;
 
   before(async () => {
-    [randomGuy, OTCProvider] = await ethers.getSigners();
-    OTCPoolTradeableFactory = await ethers.getContractFactory('contracts/mock/OTCPool/OTCPoolTradeable.sol:OTCPoolTradeableMock');
+    [OTCProvider, swapper] = await ethers.getSigners();
+    OTCPoolTradeableFactory = await smoddit('contracts/mock/OTCPool/OTCPoolTradeable.sol:OTCPoolTradeableMock');
   });
 
   beforeEach(async () => {
     otcSwapper = await smockit(OTCSwapperABI);
     swapperRegistry = await smockit(swapperRegistryABI);
     OTCPoolTradeable = await OTCPoolTradeableFactory.deploy(OTCProvider.address, swapperRegistry.address);
+    swapperRegistry.smocked['isSwapper(address)'].will.return.with(true);
   });
 
   describe('constructor', () => {
@@ -54,6 +54,7 @@ contract('OTCPoolTradeable', () => {
   });
 
   describe('setSwapperRegistry', () => {
+    // TODO: Only governor
     when('swapper registry is zero address', () => {
       let setSwapperTx: Promise<TransactionResponse>;
       given(async () => {
@@ -78,23 +79,21 @@ contract('OTCPoolTradeable', () => {
   });
 
   describe('onlyRegisteredSwapper', () => {
-    // behave like only registered swapper
+    when('not being called registered swapper', () => {
+      then('tx is reverted with reason');
+    });
+    when('being called registered swapper', () => {
+      then('swapper registry registry is consulted');
+      then('tx is not reverted');
+    });
   });
 
   describe('claim', () => {
-    when('receiver is zero address', () => {
-      let claimTx: Promise<TransactionResponse>;
-      given(async () => {
-        claimTx = OTCPoolTradeable.claimInternal(constants.ZERO_ADDRESS, constants.NOT_ZERO_ADDRESS, 1);
-      });
-      then('tx is reverted with reason', async () => {
-        await expect(claimTx).to.be.revertedWith('OTCPool: zero address');
-      });
-    });
+    // TODO: Only OTC Provider
     when('token is zero address', () => {
       let claimTx: Promise<TransactionResponse>;
       given(async () => {
-        claimTx = OTCPoolTradeable.claimInternal(constants.NOT_ZERO_ADDRESS, constants.ZERO_ADDRESS, 1);
+        claimTx = OTCPoolTradeable.claim(constants.ZERO_ADDRESS, 1);
       });
       then('tx is reverted with reason', async () => {
         await expect(claimTx).to.be.revertedWith('OTCPool: zero address');
@@ -103,7 +102,7 @@ contract('OTCPoolTradeable', () => {
     when('amount to claim is more than available', () => {
       let claimTx: Promise<TransactionResponse>;
       given(async () => {
-        claimTx = OTCPoolTradeable.claimInternal(constants.NOT_ZERO_ADDRESS, constants.NOT_ZERO_ADDRESS, 1);
+        claimTx = OTCPoolTradeable.claim(constants.NOT_ZERO_ADDRESS, 1);
       });
       then('tx is reverted with reason', async () => {
         await expect(claimTx).to.be.revertedWith('OTCPool: zero claim');
@@ -121,6 +120,11 @@ contract('OTCPoolTradeable', () => {
           name: 'token',
           symbol: 'TK',
         });
+        await OTCPoolTradeable.smodify.put({
+          _tokensUnderManagement: {
+            [token.address]: available.toString(),
+          },
+        });
         await OTCPoolTradeable.setSwappedAvailable(token.address, available);
         claimTx = await OTCPoolTradeable.claim(token.address, toClaim);
       });
@@ -131,10 +135,10 @@ contract('OTCPoolTradeable', () => {
         expect(await token.balanceOf(OTCPoolTradeable.address)).to.equal(available.sub(toClaim));
       });
       then('funds are sent to receiver', async () => {
-        expect(await token.balanceOf(randomGuy.address)).to.equal(toClaim);
+        expect(await token.balanceOf(OTCProvider.address)).to.equal(toClaim);
       });
       then('event is emitted', async () => {
-        await expect(claimTx).to.emit(OTCPoolTradeable, 'Claimed').withArgs(randomGuy.address, token.address, toClaim);
+        await expect(claimTx).to.emit(OTCPoolTradeable, 'Claimed').withArgs(OTCProvider.address, token.address, toClaim);
       });
     });
   });
@@ -229,20 +233,26 @@ contract('OTCPoolTradeable', () => {
     when(title, () => {
       given(async () => {
         await offeredByOTCProvider().mint(OTCPoolTradeable.address, amountOfferedByOTCProvider);
+        await OTCPoolTradeable.smodify.put({
+          _tokensUnderManagement: {
+            [offeredByOTCProvider().address]: amountOfferedByOTCProvider.toString(),
+          },
+        });
         await OTCPoolTradeable.setAvailableFor(offeredByOTCProvider().address, wantedByOTCProvider().address, amountOfferedByOTCProvider);
-        await offeredBySwapper().mint(randomGuy.address, tookFromSwapper);
+        await offeredBySwapper().mint(swapper.address, tookFromSwapper);
+        await offeredBySwapper().connect(swapper).approve(OTCPoolTradeable.address, tookFromSwapper);
         await OTCPoolTradeable.mockGetMaxTakeableFromPoolAndSwapper(tookFromPool, tookFromSwapper);
         initialBalanceOfOTCPool = await offeredByOTCProvider().balanceOf(OTCPoolTradeable.address);
-        initialBalanceOfSwapper = await offeredBySwapper().balanceOf(randomGuy.address);
+        initialBalanceOfSwapper = await offeredBySwapper().balanceOf(swapper.address);
         await offeredBySwapper().approve(OTCPoolTradeable.address, tookFromSwapper);
-        takeOfferTx = await OTCPoolTradeable.takeOffer(
+        takeOfferTx = await OTCPoolTradeable.connect(swapper).takeOffer(
           offeredBySwapper().address,
           wantedBySwapper().address,
           0 // its not used, since getMaxTakeable is mocked
         );
       });
       then('max tokens offered to be taken by otc pool are taken from swapper', async () => {
-        expect(await offeredBySwapper().balanceOf(randomGuy.address)).to.equal(initialBalanceOfSwapper.sub(tookFromSwapper));
+        expect(await offeredBySwapper().balanceOf(swapper.address)).to.equal(initialBalanceOfSwapper.sub(tookFromSwapper));
       });
       then('max tokens offered to be taken by otc pool are sent to pool', async () => {
         expect(await offeredBySwapper().balanceOf(OTCPoolTradeable.address)).to.equal(tookFromSwapper);
@@ -251,7 +261,7 @@ contract('OTCPoolTradeable', () => {
         expect(await offeredByOTCProvider().balanceOf(OTCPoolTradeable.address)).to.equal(initialBalanceOfOTCPool.sub(tookFromPool));
       });
       then('max tokens to be taken from pool are taken sent to swapper', async () => {
-        expect(await offeredByOTCProvider().balanceOf(randomGuy.address)).to.equal(tookFromPool);
+        expect(await offeredByOTCProvider().balanceOf(swapper.address)).to.equal(tookFromPool);
       });
       then('amount of available for that swap is reduced by the max possible amount', async () => {
         expect(await OTCPoolTradeable.availableFor(offeredByOTCProvider().address, wantedByOTCProvider().address)).to.equal(
@@ -264,7 +274,7 @@ contract('OTCPoolTradeable', () => {
       then('event is emitted', async () => {
         await expect(takeOfferTx)
           .to.emit(OTCPoolTradeable, 'TradePerformed')
-          .withArgs(randomGuy.address, offeredBySwapper().address, wantedBySwapper().address, tookFromPool, tookFromSwapper);
+          .withArgs(swapper.address, offeredBySwapper().address, wantedBySwapper().address, tookFromPool, tookFromSwapper);
       });
     });
   };
@@ -286,6 +296,7 @@ contract('OTCPoolTradeable', () => {
         initialAmount: utils.parseEther('0'),
       });
     });
+    // TODO: Only registered swapper
     when('there is no amount available for offered <-> wanted', () => {
       const offeredByOTC = () => token0;
       const wantedByOTC = () => token1;
@@ -296,12 +307,12 @@ contract('OTCPoolTradeable', () => {
       let takeOfferTx: TransactionResponse;
       given(async () => {
         await offeredByOTC().mint(OTCPoolTradeable.address, amountOfferedByOTC);
-        await offeredBySwapper().mint(randomGuy.address, amountOfferedBySwapper);
+        await offeredBySwapper().mint(swapper.address, amountOfferedBySwapper);
         await OTCPoolTradeable.setAvailableFor(offeredByOTC().address, wantedByOTC().address, amountOfferedByOTC);
-        takeOfferTx = await OTCPoolTradeable.takeOffer(offeredBySwapper().address, wantedBySwapper, amountOfferedBySwapper);
+        takeOfferTx = await OTCPoolTradeable.connect(swapper).takeOffer(offeredBySwapper().address, wantedBySwapper, amountOfferedBySwapper);
       });
       then('no tokens are taken from swapper', async () => {
-        expect(await offeredBySwapper().balanceOf(randomGuy.address)).to.equal(amountOfferedBySwapper);
+        expect(await offeredBySwapper().balanceOf(swapper.address)).to.equal(amountOfferedBySwapper);
       });
       then('no tokens are taken from otc pool', async () => {
         expect(await offeredByOTC().balanceOf(OTCPoolTradeable.address)).to.equal(amountOfferedByOTC);

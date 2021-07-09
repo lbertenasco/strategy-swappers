@@ -4,7 +4,6 @@ pragma solidity 0.8.4;
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
-import 'hardhat/console.sol';
 import '../SwapperRegistry.sol';
 
 interface ITradeFactoryPositionsHandler {
@@ -123,7 +122,29 @@ abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler 
     uint256 _maxSlippage,
     uint256 _deadline
   ) external override onlyStrategy returns (uint256 _id) {
-    _id = _create(_swapper, msg.sender, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _deadline);
+    (bool _existsSwapper, address _swapperAddress, uint256 _swapperInitialization) = SwapperRegistry(SWAPPER_REGISTRY).isSwapper(_swapper);
+    require(_existsSwapper, 'TradeFactory: invalid swapper');
+    require(_swapperInitialization <= swapperSafetyCheckpoint[msg.sender], 'TradeFactory: initialization greater than checkpoint');
+    require(_tokenIn != address(0) && _tokenOut != address(0), 'TradeFactory: zero address');
+    require(_amountIn > 0, 'TradeFactory: zero amount');
+    require(_maxSlippage > 0, 'TradeFactory: zero slippage');
+    require(block.timestamp < _deadline, 'TradeFactory: deadline too soon');
+    _id = _tradeCounter;
+    Trade memory _trade = Trade(_tradeCounter, msg.sender, _swapperAddress, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _deadline);
+    pendingTradesById[_trade._id] = _trade;
+    _pendingTradesByOwner[msg.sender].add(_trade._id);
+    _pendingTradesIds.add(_trade._id);
+    _tradeCounter += 1;
+    emit TradeCreated(
+      _trade._id,
+      _trade._strategy,
+      _trade._swapper,
+      _trade._tokenIn,
+      _trade._tokenOut,
+      _trade._amountIn,
+      _trade._maxSlippage,
+      _trade._deadline
+    );
   }
 
   function cancelPending(uint256 _id) external override onlyStrategy {
@@ -161,40 +182,6 @@ abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler 
   function setSwapperSafetyCheckpoint(uint256 _checkpoint) external override onlyStrategy {
     require(_checkpoint <= block.timestamp, 'TradeFactory: invalid checkpoint');
     swapperSafetyCheckpoint[msg.sender] = _checkpoint;
-  }
-
-  function _create(
-    string memory _swapper,
-    address _strategy,
-    address _tokenIn,
-    address _tokenOut,
-    uint256 _amountIn,
-    uint256 _maxSlippage,
-    uint256 _deadline
-  ) internal returns (uint256 _id) {
-    (bool _existsSwapper, address _swapperAddress, uint256 _swapperInitialization) = SwapperRegistry(SWAPPER_REGISTRY).isSwapper(_swapper);
-    require(_existsSwapper, 'TradeFactory: invalid swapper');
-    require(_swapperInitialization <= swapperSafetyCheckpoint[_strategy], 'TradeFactory: initialization greater than checkpoint');
-    require(_tokenIn != address(0) && _tokenOut != address(0), 'TradeFactory: zero address');
-    require(_amountIn > 0, 'TradeFactory: zero amount');
-    require(_maxSlippage > 0, 'TradeFactory: zero slippage');
-    require(_deadline > block.timestamp, 'TradeFactory: deadline too soon');
-    _id = _tradeCounter;
-    Trade memory _trade = Trade(_tradeCounter, _strategy, _swapperAddress, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _deadline);
-    pendingTradesById[_trade._id] = _trade;
-    _pendingTradesByOwner[_strategy].add(_trade._id);
-    _pendingTradesIds.add(_trade._id);
-    _tradeCounter += 1;
-    emit TradeCreated(
-      _trade._id,
-      _trade._strategy,
-      _trade._swapper,
-      _trade._tokenIn,
-      _trade._tokenOut,
-      _trade._amountIn,
-      _trade._maxSlippage,
-      _trade._deadline
-    );
   }
 
   function _removePendingTrade(address _strategy, uint256 _id) internal {

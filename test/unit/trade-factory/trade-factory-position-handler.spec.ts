@@ -6,11 +6,11 @@ import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { contract, given, then, when } from '../../utils/bdd';
 import { smockit, smoddit, MockContract, ModifiableContractFactory } from '@eth-optimism/smock';
-import { constants, wallet } from '../../utils';
+import { constants, evm, wallet } from '../../utils';
 import { BigNumber, utils } from 'ethers';
 import moment from 'moment';
 
-contract.only('TradeFactoryPositionsHandler', () => {
+contract('TradeFactoryPositionsHandler', () => {
   let user: SignerWithAddress;
   let randomGuy: SignerWithAddress;
   let swapperRegistry: MockContract;
@@ -166,7 +166,9 @@ contract.only('TradeFactoryPositionsHandler', () => {
         await expect(positionsHandler.create(swapper, tokenIn, tokenOut, amountIn, maxSlippage, constants.ZERO_ADDRESS)).to.be.revertedWith(
           'TradeFactory: deadline too soon'
         );
-        await expect(positionsHandler.create(swapper, tokenIn, tokenOut, amountIn, maxSlippage, moment().unix())).to.be.revertedWith(
+        const staticDeadline = moment().unix() + 10;
+        await evm.advanceToTime(staticDeadline);
+        await expect(positionsHandler.create(swapper, tokenIn, tokenOut, amountIn, maxSlippage, staticDeadline)).to.be.revertedWith(
           'TradeFactory: deadline too soon'
         );
       });
@@ -175,16 +177,14 @@ contract.only('TradeFactoryPositionsHandler', () => {
       let createTx: TransactionResponse;
       let tradeId: BigNumber;
       given(async () => {
-        const createTrade = await create({
+        ({ tx: createTx, id: tradeId } = await create({
           swapper,
           tokenIn,
           tokenOut,
           amountIn,
           maxSlippage,
           deadline,
-        });
-        createTx = createTrade.tx;
-        tradeId = createTrade.id;
+        }));
       });
       then('consults swapper with registry', async () => {
         expect(swapperRegistry.smocked['isSwapper(string)'].calls[0]._swapper).to.be.equal(swapper);
@@ -236,9 +236,6 @@ contract.only('TradeFactoryPositionsHandler', () => {
       then('tx is reverted with reason', async () => {
         await expect(positionsHandler.cancelPending(BigNumber.from('12'))).to.be.revertedWith('TradeFactory: trade not pending');
       });
-    });
-    when('trying to cancel a trade thats not owned by sender', () => {
-      then('tx is reverted with reason');
     });
     when('pending trade exists', () => {
       let cancelTx: TransactionResponse;

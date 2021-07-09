@@ -8,14 +8,12 @@ import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 import '@lbertenasco/contract-utils/contracts/utils/CollectableDust.sol';
 import '@lbertenasco/contract-utils/contracts/utils/Governable.sol';
 
-import '../utils/Machinery.sol';
-
 import './TradeFactoryPositionsHandler.sol';
 import './TradeFactoryExecutor.sol';
 
 interface ITradeFactory is ITradeFactoryExecutor, ITradeFactoryPositionsHandler {}
 
-contract TradeFactory is TradeFactoryPositionsHandler, TradeFactoryExecutor, ITradeFactory, Governable, Machinery, CollectableDust {
+contract TradeFactory is TradeFactoryPositionsHandler, TradeFactoryExecutor, ITradeFactory, Governable, CollectableDust {
   using SafeERC20 for IERC20;
   using EnumerableSet for EnumerableSet.UintSet;
   using EnumerableSet for EnumerableSet.AddressSet;
@@ -24,17 +22,7 @@ contract TradeFactory is TradeFactoryPositionsHandler, TradeFactoryExecutor, ITr
     address _governor,
     address _mechanicsRegistry,
     address _swapperRegistry
-  ) Governable(_governor) Machinery(_mechanicsRegistry) TradeFactoryPositionsHandler(_swapperRegistry) {}
-
-  // TradeFactoryExecutor
-
-  function execute(uint256 _id) external override onlyMechanic returns (uint256 _receivedAmount) {
-    _receivedAmount = _execute(_id);
-  }
-
-  function expire(uint256 _id) external override onlyMechanic returns (uint256 _freedAmount) {
-    _freedAmount = _expire(_id);
-  }
+  ) Governable(_governor) TradeFactoryExecutor(_mechanicsRegistry) TradeFactoryPositionsHandler(_swapperRegistry) {}
 
   // Machinery
 

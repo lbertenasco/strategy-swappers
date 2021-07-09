@@ -43,9 +43,9 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPos
     if (!_approvedTokensBySwappers[_trade._swapper].contains(_trade._tokenIn)) {
       _enableSwapperToken(_trade._swapper, _trade._tokenIn);
     }
-    IERC20(_trade._tokenIn).safeTransferFrom(_trade._owner, address(this), _trade._amountIn);
-    _receivedAmount = ISwapper(_trade._swapper).swap(_trade._owner, _trade._tokenIn, _trade._tokenOut, _trade._amountIn, _trade._maxSlippage);
-    _removePendingTrade(_trade._owner, _id);
+    IERC20(_trade._tokenIn).safeTransferFrom(_trade._strategy, address(this), _trade._amountIn);
+    _receivedAmount = ISwapper(_trade._swapper).swap(_trade._strategy, _trade._tokenIn, _trade._tokenOut, _trade._amountIn, _trade._maxSlippage);
+    _removePendingTrade(_trade._strategy, _id);
     emit TradeExecuted(_id, _receivedAmount);
   }
 
@@ -55,11 +55,11 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPos
     require(_trade._deadline <= block.timestamp, 'TradeFactory: swap not expired');
     _freedAmount = _trade._amountIn;
     // We have to take tokens from strategy, to decrease the allowance
-    IERC20(_trade._tokenIn).safeTransferFrom(_trade._owner, address(this), _trade._amountIn);
+    IERC20(_trade._tokenIn).safeTransferFrom(_trade._strategy, address(this), _trade._amountIn);
     // Send tokens back to strategy
-    IERC20(_trade._tokenIn).safeTransfer(_trade._owner, _trade._amountIn);
+    IERC20(_trade._tokenIn).safeTransfer(_trade._strategy, _trade._amountIn);
     // Remove trade
-    _removePendingTrade(_trade._owner, _id);
+    _removePendingTrade(_trade._strategy, _id);
     emit TradeExpired(_id);
   }
 

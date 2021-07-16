@@ -4,9 +4,9 @@ pragma solidity 0.8.4;
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 
-import '../Swapper.sol';
-import '../utils/Machinery.sol';
+import '@lbertenasco/contract-utils/contracts/utils/Machinery.sol';
 
+import '../Swapper.sol';
 import './TradeFactoryPositionsHandler.sol';
 
 interface ITradeFactoryExecutor {

@@ -138,14 +138,6 @@ contract SwapperRegistry is ISwapperRegistry, CollectableDust, Governable {
     emit SwapperDeprecated(_swapper);
   }
 
-  function setPendingGovernor(address _pendingGovernor) external override onlyGovernor {
-    _setPendingGovernor(_pendingGovernor);
-  }
-
-  function acceptGovernor() external override onlyPendingGovernor {
-    _acceptGovernor();
-  }
-
   function sendDust(
     address _to,
     address _token,

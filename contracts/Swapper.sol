@@ -73,14 +73,6 @@ abstract contract Swapper is ISwapper, Governable, CollectableDust {
     emit Swapped(_receiver, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _receivedAmount);
   }
 
-  function setPendingGovernor(address _pendingGovernor) external override onlyGovernor {
-    _setPendingGovernor(_pendingGovernor);
-  }
-
-  function acceptGovernor() external override onlyPendingGovernor {
-    _acceptGovernor();
-  }
-
   function sendDust(
     address _to,
     address _token,

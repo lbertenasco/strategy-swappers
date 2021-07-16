@@ -15,14 +15,15 @@ contract OTCAndUniswapV2Swapper is IOTCAndUniswapV2Swapper, OTCSwapper, UniswapV
     address _governor,
     address _tradeFactory,
     address _weth,
-    address _uniswap
-  ) OTCSwapper(_otcPool) UniswapV2Swapper(_governor, _tradeFactory, _weth, _uniswap) {}
+    address _uniswapFactory,
+    address _uniswapRouter
+  ) OTCSwapper(_otcPool) UniswapV2Swapper(_governor, _tradeFactory, _weth, _uniswapFactory, _uniswapRouter) {}
 
   function _getTotalAmountOut(
     address _tokenIn,
     address _tokenOut,
     uint256 _amountIn
   ) internal view override returns (uint256 _amountOut) {
-    _amountOut = IUniswapV2Router02(UNISWAP).getAmountsOut(_amountIn, _getPath(_tokenIn, _tokenOut))[0];
+    _amountOut = IUniswapV2Router02(UNISWAP_ROUTER).getAmountsOut(_amountIn, _getPath(_tokenIn, _tokenOut))[0];
   }
 }

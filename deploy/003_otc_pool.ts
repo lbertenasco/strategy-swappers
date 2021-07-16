@@ -1,11 +1,11 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
+import { ethers } from 'hardhat';
 
 const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployer, governor } = await hre.getNamedAccounts();
 
-  // TODO: Set mainnet provider
-  const OTC_PROVIDER = '0x0000000000000000000000000000000000000001';
+  const OTC_PROVIDER = '0xfeb4acf3df3cdea7399794d0869ef76a6efaff52'; // ychad.eth
   const swapperRegistry = await hre.deployments.get('SwapperRegistry');
 
   await hre.deployments.deploy('TradeFactory', {

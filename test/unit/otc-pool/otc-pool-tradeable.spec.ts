@@ -1,5 +1,5 @@
 import { Contract } from '@ethersproject/contracts';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signers';
 import { TransactionResponse } from '@ethersproject/abstract-provider';
 import { abi as OTCSwapperABI } from '../../../artifacts/contracts/OTCSwapper.sol/IOTCSwapper.json';
 import { abi as swapperRegistryABI } from '../../../artifacts/contracts/SwapperRegistry.sol/ISwapperRegistry.json';

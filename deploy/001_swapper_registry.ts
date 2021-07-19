@@ -11,5 +11,5 @@ const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnviro
     log: true,
   });
 };
-export default deployFunction;
 deployFunction.tags = ['SwapperRegistry'];
+export default deployFunction;

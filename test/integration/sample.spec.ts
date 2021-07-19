@@ -1,6 +1,6 @@
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 
-describe('Test', function () {
+describe.skip('Test', function () {
   it('should pass', () => {});
 });

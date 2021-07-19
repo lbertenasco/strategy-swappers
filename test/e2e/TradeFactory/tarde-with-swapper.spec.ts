@@ -42,6 +42,8 @@ contract('TradeFactory', () => {
       mechanicsRegistry.address
     ));
 
+    await tradeFactory.grantRole(await tradeFactory.STRATEGY(), strategy.address);
+
     tokenIn = await erc20.deploy({
       name: 'TA',
       symbol: 'TA',

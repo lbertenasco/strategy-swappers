@@ -746,10 +746,10 @@
     "@lbertenasco/bonded-stealth-tx" "0.2.1"
     "@openzeppelin/contracts" "4.1.0"
 
-"@lbertenasco/contract-utils@0.3.6":
-  version "0.3.6"
-  resolved "https://registry.yarnpkg.com/@lbertenasco/contract-utils/-/contract-utils-0.3.6.tgz#fbff356768e9af2d21d57b5f85c37129c4c5715d"
-  integrity sha512-2VfK1FF2DFHc1jX59QvMMNRmGCey+xhCb8hyMS2gI5lkfM4cpoS7wFoaRdgR8LJCz+2khNEVLeDlyeKQu3d/nA==
+"@lbertenasco/contract-utils@0.3.8":
+  version "0.3.8"
+  resolved "https://registry.yarnpkg.com/@lbertenasco/contract-utils/-/contract-utils-0.3.8.tgz#169729818fef5b0fe7d7d7d1e6f05b642807461f"
+  integrity sha512-5DDInOBSzOc44wLeQLlSVYRNVRwmcReYqeMWCaL3caMiAVPqVNmdns1hYQ4FvEcoNPJLKi6ua2szRVCMdycsxQ==
   dependencies:
     "@lbertenasco/bonded-stealth-tx" "0.3.1"
     "@openzeppelin/contracts" "4.2.0"

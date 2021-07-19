@@ -30,16 +30,6 @@ contract TradeFactory is TradeFactoryPositionsHandler, TradeFactoryExecutor, ITr
     _setMechanicsRegistry(_mechanicsRegistry);
   }
 
-  // Governable
-
-  function setPendingGovernor(address _pendingGovernor) external override onlyGovernor {
-    _setPendingGovernor(_pendingGovernor);
-  }
-
-  function acceptGovernor() external override onlyPendingGovernor {
-    _acceptGovernor();
-  }
-
   // Collectable Dust
 
   function sendDust(

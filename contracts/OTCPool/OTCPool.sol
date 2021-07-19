@@ -14,15 +14,6 @@ contract OTCPool is IOTCPool, CollectableDustWithTokensManagement, Governable, O
     address _swapperRegistry
   ) Governable(_governor) OTCPoolDesk(_OTCProvider) OTCPoolTradeable(_swapperRegistry) {}
 
-  // Governable
-  function setPendingGovernor(address _pendingGovernor) external override onlyGovernor {
-    _setPendingGovernor(_pendingGovernor);
-  }
-
-  function acceptGovernor() external override onlyPendingGovernor {
-    _acceptGovernor();
-  }
-
   // CollectableDustWithTokenManagement
   function sendDust(
     address _to,

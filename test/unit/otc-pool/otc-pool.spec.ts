@@ -22,14 +22,6 @@ contract('OTCPool', () => {
     OTCPool = await OTCPoolFactory.deploy(governor.address, OTCProvider.address, wallet.generateRandomAddress());
   });
 
-  describe('setPendingGovernor', () => {
-    // TODO: Only governor
-  });
-
-  describe('acceptGovernor', () => {
-    // TODO: Only pending governor
-  });
-
   describe('sendDust', () => {
     // TODO: Only governor
   });

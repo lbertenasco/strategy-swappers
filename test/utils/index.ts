@@ -6,5 +6,6 @@ import evm from './evm';
 import uniswap from './uniswap';
 import bn from './bn';
 import wallet from './wallet';
+import * as fixtures from './fixtures';
 
-export { contracts, behaviours, bn, constants, erc20, evm, uniswap, wallet };
+export { contracts, behaviours, bn, constants, erc20, evm, uniswap, wallet, fixtures };

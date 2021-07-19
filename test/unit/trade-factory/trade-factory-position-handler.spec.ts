@@ -7,11 +7,11 @@ import { ethers } from 'hardhat';
 import { contract, given, then, when } from '../../utils/bdd';
 import { smockit, smoddit, MockContract, ModifiableContractFactory, ModifiableContract } from '@eth-optimism/smock';
 import { constants, evm, wallet } from '../../utils';
-import { BigNumber, utils } from 'ethers';
+import { BigNumber, utils, Wallet } from 'ethers';
 import Web3 from 'web3';
 import moment from 'moment';
 
-contract.only('TradeFactoryPositionsHandler', () => {
+contract('TradeFactoryPositionsHandler', () => {
   let deployer: SignerWithAddress;
   let governor: SignerWithAddress;
   let strategy: SignerWithAddress;
@@ -52,46 +52,78 @@ contract.only('TradeFactoryPositionsHandler', () => {
   });
 
   describe('grantRole', () => {
-    const randomGuy = wallet.generateRandomAddress();
-    when('not called from governor', () => {
-      let grantRoleTx: Promise<TransactionResponse>;
-      given(() => {
-        grantRoleTx = positionsHandler.connect(deployer).grantRole(STRATEGY_ROLE, randomGuy);
+    when('granting STRATEGY_ROLE', () => {
+      const randomStrategy = wallet.generateRandomAddress();
+      when('not called from governor', () => {
+        let grantRoleTx: Promise<TransactionResponse>;
+        given(() => {
+          grantRoleTx = positionsHandler.connect(deployer).grantRole(STRATEGY_ROLE, randomStrategy);
+        });
+        then('tx get reverted with reason', async () => {
+          await expect(grantRoleTx).to.be.reverted;
+        });
       });
-      then('tx get reverted with reason', async () => {
-        await expect(grantRoleTx).to.be.reverted;
+      when('called from governor', () => {
+        given(async () => {
+          await positionsHandler.connect(governor).grantRole(STRATEGY_ROLE, randomStrategy);
+        });
+        then('role gets added to address', async () => {
+          expect(await positionsHandler.hasRole(STRATEGY_ROLE, randomStrategy)).to.be.true;
+        });
       });
     });
-    when('called from governor', () => {
-      given(async () => {
-        await positionsHandler.connect(governor).grantRole(STRATEGY_ROLE, randomGuy);
+    when('granting STRATEGY_ADMIN_ROLE', () => {
+      let randomGuy: Wallet;
+      beforeEach(async () => {
+        randomGuy = await wallet.generateRandom();
       });
-      then('role gets added to address', async () => {
-        expect(await positionsHandler.hasRole(STRATEGY_ROLE, randomGuy)).to.be.true;
+      when('not called from governor', () => {
+        let grantRoleTx: Promise<TransactionResponse>;
+        given(() => {
+          grantRoleTx = positionsHandler.connect(deployer).grantRole(STRATEGY_ADMIN_ROLE, randomGuy.address);
+        });
+        then('tx get reverted with reason', async () => {
+          await expect(grantRoleTx).to.be.reverted;
+        });
+      });
+      when('called from governor', () => {
+        given(async () => {
+          await positionsHandler.connect(governor).grantRole(STRATEGY_ADMIN_ROLE, randomGuy.address);
+        });
+        then('role gets added to address', async () => {
+          expect(await positionsHandler.hasRole(STRATEGY_ADMIN_ROLE, randomGuy.address)).to.be.true;
+        });
+        then('new strategy admin can add strategies', async () => {
+          const randomStrategy = wallet.generateRandomAddress();
+          await positionsHandler.connect(randomGuy).grantRole(STRATEGY_ROLE, randomStrategy, { gasPrice: 0 });
+          expect(await positionsHandler.hasRole(STRATEGY_ROLE, randomStrategy)).to.be.true;
+        });
       });
     });
   });
 
   describe('revokeRole', () => {
-    const randomGuy = wallet.generateRandomAddress();
-    given(async () => {
-      await positionsHandler.connect(governor).grantRole(STRATEGY_ROLE, randomGuy);
-    });
-    when('not called from governor', () => {
-      let grantRoleTx: Promise<TransactionResponse>;
-      given(() => {
-        grantRoleTx = positionsHandler.connect(deployer).revokeRole(STRATEGY_ROLE, randomGuy);
-      });
-      then('tx get reverted with reason', async () => {
-        await expect(grantRoleTx).to.be.reverted;
-      });
-    });
-    when('called from governor', () => {
+    const randomStrategy = wallet.generateRandomAddress();
+    when('revoking STRATEGY_ROLE', () => {
       given(async () => {
-        await positionsHandler.connect(governor).revokeRole(STRATEGY_ROLE, randomGuy);
+        await positionsHandler.connect(governor).grantRole(STRATEGY_ROLE, randomStrategy);
       });
-      then('role gets removed from address', async () => {
-        expect(await positionsHandler.hasRole(STRATEGY_ROLE, randomGuy)).to.be.false;
+      when('not called from governor', () => {
+        let grantRoleTx: Promise<TransactionResponse>;
+        given(() => {
+          grantRoleTx = positionsHandler.connect(deployer).revokeRole(STRATEGY_ROLE, randomStrategy);
+        });
+        then('tx get reverted with reason', async () => {
+          await expect(grantRoleTx).to.be.reverted;
+        });
+      });
+      when('called from governor', () => {
+        given(async () => {
+          await positionsHandler.connect(governor).revokeRole(STRATEGY_ROLE, randomStrategy);
+        });
+        then('role gets removed from address', async () => {
+          expect(await positionsHandler.hasRole(STRATEGY_ROLE, randomStrategy)).to.be.false;
+        });
       });
     });
   });

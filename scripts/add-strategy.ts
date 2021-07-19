@@ -1,8 +1,9 @@
 import { run, ethers } from 'hardhat';
 
 async function main() {
-  run('compile');
+  const strategyToAdd = '';
   const tradeFactory = await ethers.getContract('TradeFactory');
+  await tradeFactory.grantRole(await tradeFactory.STRATEGY(), strategyToAdd);
 }
 
 main()

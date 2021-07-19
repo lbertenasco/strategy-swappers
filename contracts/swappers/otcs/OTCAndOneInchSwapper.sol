@@ -14,8 +14,10 @@ contract OTCAndOneInchSwapper is IOTCAndOneInchSwapper, OTCSwapper, OneInchSwapp
     address _otcPool,
     address _governor,
     address _tradeFactory,
-    address _oneInch
-  ) OTCSwapper(_otcPool) OneInchSwapper(_governor, _tradeFactory, _oneInch) {}
+    address _oneInch,
+    uint256 _parts,
+    uint256 _flags
+  ) OTCSwapper(_otcPool) OneInchSwapper(_governor, _tradeFactory, _oneInch, _parts, _flags) {}
 
   function _getTotalAmountOut(
     address _tokenIn,

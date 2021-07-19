@@ -6,7 +6,7 @@ import { TransactionResponse } from '@ethersproject/abstract-provider';
 import { getStatic } from 'ethers/lib/utils';
 import { given, then, when } from './bdd';
 import { constants, wallet } from '.';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signers';
 
 chai.use(chaiAsPromised);
 

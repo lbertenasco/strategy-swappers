@@ -16,14 +16,22 @@ const networks: NetworksUserConfig = process.env.TEST
           enabled: process.env.FORK ? true : false,
           url: process.env.MAINNET_HTTPS_URL as string,
         },
+        chainId: 137,
+        // accounts: [{ privateKey: process.env.MAINNET_PRIVATE_KEY as string, balance: '0xfffffffffff' }],
       },
       localMainnet: {
         url: process.env.LOCAL_MAINNET_HTTPS_URL as string,
-        accounts: [process.env.LOCAL_MAINNET_PRIVATE_KEY as string],
+        // accounts: [process.env.LOCAL_MAINNET_PRIVATE_KEY as string],
       },
       mainnet: {
         url: process.env.MAINNET_HTTPS_URL as string,
         accounts: [process.env.MAINNET_PRIVATE_KEY as string],
+        gasPrice: 'auto',
+        tags: ['production'],
+      },
+      polygon: {
+        url: process.env.POLYGON_HTTPS_URL as string,
+        accounts: [process.env.POLYGON_PRIVATE_KEY as string],
         gasPrice: 'auto',
         tags: ['production'],
       },
@@ -32,8 +40,12 @@ const networks: NetworksUserConfig = process.env.TEST
 const config: HardhatUserConfig = {
   defaultNetwork: 'hardhat',
   namedAccounts: {
-    deployer: 0,
-    governor: '0x0000000000000000000000000000000000000001', // TODO: Set mainnet governor
+    deployer: 0, // yMECH Alejo
+    governor: 0, // yMECH Alejo
+    yMech: 0, // yMECH Alejo
+    // deployer: '0xB82193725471dC7bfaAB1a3AB93c7b42963F3265', // yMECH Alejo
+    // governor: '0xB82193725471dC7bfaAB1a3AB93c7b42963F3265', // yMECH Alejo
+    // ymech: '0xB82193725471dC7bfaAB1a3AB93c7b42963F3265', // yMECH Alejo
   },
   networks,
   solidity: {

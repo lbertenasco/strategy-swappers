@@ -32,7 +32,8 @@
     "test:e2e": "yarn test ./test/e2e/**/*.spec.ts",
     "test:integration": "yarn test ./test/integration/**/*.spec.ts",
     "test:gas": "REPORT_GAS=1 npx hardhat test",
-    "test:unit": "yarn test 'test/unit/**/*.spec.ts'"
+    "test:unit": "yarn test 'test/unit/**/*.spec.ts'",
+    "deploy:polygon": "npx hardhat deploy --tags Polygon --network polygon"
   },
   "dependencies": {
     "@nomiclabs/ethereumjs-vm": "^4.2.2",

@@ -40,30 +40,29 @@ contract UniswapV2Swapper is IUniswapV2Swapper, Swapper {
     uint256 _amountIn,
     uint256 _maxSlippage
   ) internal override returns (uint256 _receivedAmount) {
-    (address[] memory _path, uint256 _minAmountOut) = _getPathAndMinAmountOut(_tokenIn, _tokenOut, _amountIn, _maxSlippage);
+    (address[] memory _path, uint256 _amountOut) = _getPathAndAmountOut(_tokenIn, _tokenOut, _amountIn);
     IERC20(_path[0]).safeApprove(UNISWAP_ROUTER, 0);
     IERC20(_path[0]).safeApprove(UNISWAP_ROUTER, _amountIn);
     _receivedAmount = IUniswapV2Router02(UNISWAP_ROUTER).swapExactTokensForTokens(
       _amountIn,
-      _minAmountOut,
+      (_amountOut * _maxSlippage) / SLIPPAGE_PRECISION / 100, // calculate slippage
       _path,
       _receiver,
-      block.timestamp + 1800
+      block.timestamp
     )[0];
   }
 
-  function _getPathAndMinAmountOut(
+  function _getPathAndAmountOut(
     address _tokenIn,
     address _tokenOut,
-    uint256 _amountIn,
-    uint256 _maxSlippage
-  ) internal view returns (address[] memory _path, uint256 _minAmountOut) {
+    uint256 _amountIn
+  ) internal view returns (address[] memory _path, uint256 _amountOut) {
     // if a token is WETH, use unique short path
     if (_tokenIn == WETH || _tokenOut == WETH) {
       _path = new address[](2);
       _path[0] = _tokenIn;
       _path[1] = _tokenOut;
-      return (_path, _getMinAmountOut(_path, _amountIn, _maxSlippage));
+      return (_path, IUniswapV2Router02(UNISWAP_ROUTER).getAmountsOut(_amountIn, _path)[0]);
     }
 
     // no pool has been found for direct token swap, use WETH as bridge
@@ -72,7 +71,7 @@ contract UniswapV2Swapper is IUniswapV2Swapper, Swapper {
       _path[0] = _tokenIn;
       _path[1] = WETH;
       _path[2] = _tokenOut;
-      return (_path, _getMinAmountOut(_path, _amountIn, _maxSlippage));
+      return (_path, IUniswapV2Router02(UNISWAP_ROUTER).getAmountsOut(_amountIn, _path)[0]);
     }
 
     // compare both WETH-bridged and direct swaps to get best amountOut
@@ -80,26 +79,17 @@ contract UniswapV2Swapper is IUniswapV2Swapper, Swapper {
     _path[0] = _tokenIn;
     _path[1] = WETH;
     _path[2] = _tokenOut;
-    _minAmountOut = _getMinAmountOut(_path, _amountIn, _maxSlippage);
+    _amountOut = IUniswapV2Router02(UNISWAP_ROUTER).getAmountsOut(_amountIn, _path)[0];
 
     address[] memory _pathDirect = new address[](2);
     _path[0] = _tokenIn;
     _path[1] = _tokenOut;
-    uint256 _minAmountOutDirect = _getMinAmountOut(_pathDirect, _amountIn, _maxSlippage);
+    uint256 _amountOutDirect = IUniswapV2Router02(UNISWAP_ROUTER).getAmountsOut(_amountIn, _pathDirect)[0];
 
-    if (_minAmountOutDirect >= _minAmountOut) {
-      return (_pathDirect, _minAmountOutDirect);
+    if (_amountOutDirect >= _amountOut) {
+      return (_pathDirect, _amountOutDirect);
     }
 
-    return (_path, _minAmountOut); // not really neccesary, but useful for readability
-  }
-
-  function _getMinAmountOut(
-    address[] memory _path,
-    uint256 _amountIn,
-    uint256 _maxSlippage
-  ) internal view returns (uint256 _minAmountOut) {
-    uint256 _amountOut = IUniswapV2Router02(UNISWAP_ROUTER).getAmountsOut(_amountIn, _path)[0];
-    return _amountOut - ((_amountOut * _maxSlippage) / SLIPPAGE_PRECISION / 100);
+    return (_path, _amountOut); // not really neccesary, but useful for readability
   }
 }

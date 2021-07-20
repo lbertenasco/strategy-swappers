@@ -8,6 +8,7 @@ import { evm, wallet } from '../../utils';
 import { then, when } from '../../utils/bdd';
 import moment from 'moment';
 import { setTestChainId } from '../../../utils/deploy';
+import { getNodeUrl } from '../../../utils/network';
 
 // We set a fixed block number so tests can cache blockchain state
 const FORK_BLOCK_NUMBER = 12865115;
@@ -39,7 +40,7 @@ describe('OneInchSwapper', function () {
 
     beforeEach(async () => {
       await evm.reset({
-        jsonRpcUrl: process.env.MAINNET_HTTPS_URL,
+        jsonRpcUrl: getNodeUrl('mainnet'),
         blockNumber: FORK_BLOCK_NUMBER,
       });
 

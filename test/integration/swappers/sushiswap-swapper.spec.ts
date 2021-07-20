@@ -26,7 +26,7 @@ describe('SushiswapSwapper', function () {
     const FORK_BLOCK_NUMBER = 12865115;
 
     const MAX_SLIPPAGE = 10_000; // 1%
-    const AMOUNT_IN = utils.parseEther('10000');
+    const AMOUNT_IN = utils.parseEther('1000');
 
     const CRV_ADDRESS = '0xD533a949740bb3306d119CC777fa900bA034cd52';
     const DAI_ADDRESS = '0x6b175474e89094c44da98b954eedeac495271d0f';

@@ -40,8 +40,7 @@ contract UniswapV2Swapper is IUniswapV2Swapper, Swapper {
     uint256 _amountIn,
     uint256 _maxSlippage
   ) internal override returns (uint256 _receivedAmount) {
-    address[] memory _path = _getPath(_tokenIn, _tokenOut);
-    uint256 _minAmountOut = _getMinAmountOut(_amountIn, _maxSlippage, _path);
+    (address[] memory _path, uint256 _minAmountOut) = _getPathAndMinAmountOut(_tokenIn, _tokenOut, _amountIn, _maxSlippage);
     IERC20(_path[0]).safeApprove(UNISWAP_ROUTER, 0);
     IERC20(_path[0]).safeApprove(UNISWAP_ROUTER, _amountIn);
     _receivedAmount = IUniswapV2Router02(UNISWAP_ROUTER).swapExactTokensForTokens(
@@ -53,25 +52,54 @@ contract UniswapV2Swapper is IUniswapV2Swapper, Swapper {
     )[0];
   }
 
-  function _getMinAmountOut(
+  function _getPathAndMinAmountOut(
+    address _tokenIn,
+    address _tokenOut,
     uint256 _amountIn,
-    uint256 _maxSlippage,
-    address[] memory _path
-  ) internal view returns (uint256 _minAmountOut) {
-    uint256 _amountOut = IUniswapV2Router02(UNISWAP_ROUTER).getAmountsOut(_amountIn, _path)[0];
-    _minAmountOut = _amountOut - ((_amountOut * _maxSlippage) / SLIPPAGE_PRECISION / 100);
-  }
-
-  function _getPath(address _tokenIn, address _tokenOut) internal view returns (address[] memory _path) {
-    if (_tokenIn == WETH || _tokenOut == WETH || IUniswapV2Factory(UNISWAP_FACTORY).getPair(_tokenIn, _tokenOut) != address(0)) {
+    uint256 _maxSlippage
+  ) internal view returns (address[] memory _path, uint256 _minAmountOut) {
+    // if a token is WETH, use unique short path
+    if (_tokenIn == WETH || _tokenOut == WETH) {
       _path = new address[](2);
       _path[0] = _tokenIn;
       _path[1] = _tokenOut;
-    } else {
+      return (_path, _getMinAmountOut(_path, _amountIn, _maxSlippage));
+    }
+
+    // no pool has been found for direct token swap, use WETH as bridge
+    if (IUniswapV2Factory(UNISWAP_FACTORY).getPair(_tokenIn, _tokenOut) == address(0)) {
       _path = new address[](3);
       _path[0] = _tokenIn;
       _path[1] = WETH;
       _path[2] = _tokenOut;
+      return (_path, _getMinAmountOut(_path, _amountIn, _maxSlippage));
     }
+
+    // compare both WETH-bridged and direct swaps to get best amountOut
+    _path = new address[](3);
+    _path[0] = _tokenIn;
+    _path[1] = WETH;
+    _path[2] = _tokenOut;
+    _minAmountOut = _getMinAmountOut(_path, _amountIn, _maxSlippage);
+
+    address[] memory _pathDirect = new address[](2);
+    _path[0] = _tokenIn;
+    _path[1] = _tokenOut;
+    uint256 _minAmountOutDirect = _getMinAmountOut(_pathDirect, _amountIn, _maxSlippage);
+
+    if (_minAmountOutDirect >= _minAmountOut) {
+      return (_pathDirect, _minAmountOutDirect);
+    }
+
+    return (_path, _minAmountOut); // not really neccesary, but useful for readability
+  }
+
+  function _getMinAmountOut(
+    address[] memory _path,
+    uint256 _amountIn,
+    uint256 _maxSlippage
+  ) internal view returns (uint256 _minAmountOut) {
+    uint256 _amountOut = IUniswapV2Router02(UNISWAP_ROUTER).getAmountsOut(_amountIn, _path)[0];
+    return _amountOut - ((_amountOut * _maxSlippage) / SLIPPAGE_PRECISION / 100);
   }
 }

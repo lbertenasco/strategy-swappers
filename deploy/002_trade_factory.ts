@@ -2,9 +2,7 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { getChainId, shouldVerifyContracts } from '../utils/deploy';
 
-export const MECHANICS_REGISTRY: { [chainId: string]: string } = {
-  // Fork
-  '31337': '0xe8d5a85758fe98f7dce251cad552691d49b499bb',
+const MECHANICS_REGISTRY: { [chainId: string]: string } = {
   // Mainnet
   '1': '0xe8d5a85758fe98f7dce251cad552691d49b499bb',
   // Polygon

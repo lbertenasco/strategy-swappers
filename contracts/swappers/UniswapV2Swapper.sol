@@ -63,7 +63,7 @@ contract UniswapV2Swapper is IUniswapV2Swapper, Swapper {
   }
 
   function _getPath(address _tokenIn, address _tokenOut) internal view returns (address[] memory _path) {
-    if (_tokenIn == WETH || _tokenOut == WETH || IUniswapV2Factory(UNISWAP_FACTORY).getPair(_tokenIn, _tokenOut) != address(0)) {
+    if (_tokenIn == WETH || _tokenOut == WETH) {
       _path = new address[](2);
       _path[0] = _tokenIn;
       _path[1] = _tokenOut;

@@ -1,6 +1,6 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
-import { getRealChainIdOfFork, shouldVerifyContracts } from '../utils/deploy';
+import { getChainId, shouldVerifyContracts } from '../utils/deploy';
 
 export const MECHANICS_REGISTRY: { [chainId: string]: string } = {
   // Fork
@@ -16,7 +16,7 @@ const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnviro
 
   const swapperRegistry = await hre.deployments.get('SwapperRegistry');
 
-  const chainId = getRealChainIdOfFork(hre) || (await hre.getChainId());
+  const chainId = await getChainId(hre);
 
   const deploy = await hre.deployments.deploy('TradeFactory', {
     contract: 'contracts/TradeFactory/TradeFactory.sol:TradeFactory',

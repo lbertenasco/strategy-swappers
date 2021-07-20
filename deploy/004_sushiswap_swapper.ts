@@ -1,8 +1,8 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { abi as UNISWAP_V2_ROUTER_ABI } from '@uniswap/v2-periphery/build/UniswapV2Router02.json';
-import { ethers } from 'hardhat';
-import { getRealChainIdOfFork, shouldVerifyContracts } from '../utils/deploy';
+import { ethers, network } from 'hardhat';
+import { getChainId, shouldVerifyContracts } from '../utils/deploy';
 
 export const SUSHISWAP_FACTORY: { [chainId: string]: string } = {
   // Mainnet
@@ -21,7 +21,7 @@ export const SUSHISWAP_ROUTER: { [chainId: string]: string } = {
 const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployer, governor } = await hre.getNamedAccounts();
 
-  const chainId = getRealChainIdOfFork(hre) || (await hre.getChainId());
+  const chainId = await getChainId(hre);
 
   const sushiswapRouter = await ethers.getContractAt(UNISWAP_V2_ROUTER_ABI, SUSHISWAP_ROUTER[chainId]);
   const tradeFactory = await hre.deployments.get('TradeFactory');

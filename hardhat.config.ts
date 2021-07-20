@@ -16,7 +16,6 @@ const networks: NetworksUserConfig = process.env.TEST
           enabled: process.env.FORK ? true : false,
           url: process.env.MAINNET_HTTPS_URL as string,
         },
-        chainId: 137,
         // accounts: [{ privateKey: process.env.MAINNET_PRIVATE_KEY as string, balance: '0xfffffffffff' }],
       },
       localMainnet: {

@@ -1,7 +1,7 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
 
-const MECHANICS_REGISTRY: { [chainId: string]: string } = {
+export const MECHANICS_REGISTRY: { [chainId: string]: string } = {
   // Fork
   '31337': '0xe8d5a85758fe98f7dce251cad552691d49b499bb',
   // Mainnet
@@ -17,12 +17,19 @@ const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnviro
 
   const chainId = await hre.getChainId();
 
-  await hre.deployments.deploy('TradeFactory', {
+  const deploy = await hre.deployments.deploy('TradeFactory', {
     contract: 'contracts/TradeFactory/TradeFactory.sol:TradeFactory',
     from: deployer,
     args: [governor, MECHANICS_REGISTRY[chainId], swapperRegistry.address],
     log: true,
   });
+
+  if (!process.env.TEST) {
+    await hre.run('verify:verify', {
+      address: deploy.address,
+      constructorArguments: [governor, MECHANICS_REGISTRY[chainId], swapperRegistry.address],
+    });
+  }
 };
 deployFunction.dependencies = ['SwapperRegistry'];
 deployFunction.tags = ['TradeFactory'];

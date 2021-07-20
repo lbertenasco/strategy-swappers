@@ -21,6 +21,13 @@ const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnviro
   });
 
   await hre.deployments.execute('SwapperRegistry', { from: governor, gasLimit: 200000 }, 'addSwapper', 'uniswap-v2', deploy.address);
+
+  if (!process.env.TEST) {
+    await hre.run('verify:verify', {
+      address: deploy.address,
+      constructorArguments: [governor, tradeFactory.address, WETH, UNISWAP_V2_FACTORY, UNISWAP_V2_ROUTER],
+    });
+  }
 };
 deployFunction.dependencies = ['SwapperRegistry', 'TradeFactory'];
 deployFunction.tags = ['UniswapV2Swapper', 'Mainnet'];

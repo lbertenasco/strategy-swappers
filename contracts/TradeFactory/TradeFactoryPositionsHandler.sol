@@ -83,6 +83,7 @@ abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler,
 
   bytes32 public constant STRATEGY = keccak256('STRATEGY');
   bytes32 public constant STRATEGY_ADMIN = keccak256('STRATEGY_ADMIN');
+  bytes32 public constant MASTER_ADMIN = keccak256('MASTER_ADMIN');
 
   uint256 private _tradeCounter = 1;
 
@@ -99,7 +100,9 @@ abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler,
   constructor(address _swapperRegistry) {
     SWAPPER_REGISTRY = _swapperRegistry;
     _setRoleAdmin(STRATEGY, STRATEGY_ADMIN);
+    _setRoleAdmin(STRATEGY_ADMIN, MASTER_ADMIN);
     _setupRole(STRATEGY_ADMIN, governor);
+    _setupRole(MASTER_ADMIN, governor);
   }
 
   function pendingTradesIds() external view override returns (uint256[] memory _pendingIds) {

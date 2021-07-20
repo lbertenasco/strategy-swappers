@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.4;
 
+import 'hardhat/console.sol';
+
 import '@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol';
 import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
@@ -61,9 +63,10 @@ contract SushiswapPolygonSwapper is ISushiswapPolygonSwapper, Swapper {
   function _getMinAmountOut(
     uint256 _amountIn,
     uint256 _maxSlippage,
-    address[] memory _path
+    address[] memory _path,
+    uint256 _indexOfAmountOut
   ) internal view returns (uint256 _minAmountOut) {
-    uint256 _amountOut = IUniswapV2Router02(UNISWAP_ROUTER).getAmountsOut(_amountIn, _path)[0];
+    uint256 _amountOut = IUniswapV2Router02(UNISWAP_ROUTER).getAmountsOut(_amountIn, _path)[_indexOfAmountOut];
     _minAmountOut = _amountOut - ((_amountOut * _maxSlippage) / SLIPPAGE_PRECISION / 100);
   }
 
@@ -79,7 +82,7 @@ contract SushiswapPolygonSwapper is ISushiswapPolygonSwapper, Swapper {
       _directPath = new address[](2);
       _directPath[0] = _tokenIn;
       _directPath[1] = _tokenOut;
-      _minAmountByDirectPath = _getMinAmountOut(_amountIn, _maxSlippage, _directPath);
+      _minAmountByDirectPath = _getMinAmountOut(_amountIn, _maxSlippage, _directPath, 1);
     }
 
     uint256 _minAmountByWETHHopPath;
@@ -88,11 +91,11 @@ contract SushiswapPolygonSwapper is ISushiswapPolygonSwapper, Swapper {
       IUniswapV2Factory(UNISWAP_FACTORY).getPair(_tokenIn, WETH) != address(0) &&
       IUniswapV2Factory(UNISWAP_FACTORY).getPair(WETH, _tokenOut) != address(0)
     ) {
-      _directPath = new address[](2);
+      _WETHHopPath = new address[](3);
       _WETHHopPath[0] = _tokenIn;
       _WETHHopPath[1] = WETH;
       _WETHHopPath[2] = _tokenOut;
-      _minAmountByWETHHopPath = _getMinAmountOut(_amountIn, _maxSlippage, _WETHHopPath);
+      _minAmountByWETHHopPath = _getMinAmountOut(_amountIn, _maxSlippage, _WETHHopPath, 2);
     }
 
     uint256 _minAmountByWMATICHopPath;
@@ -101,11 +104,11 @@ contract SushiswapPolygonSwapper is ISushiswapPolygonSwapper, Swapper {
       IUniswapV2Factory(UNISWAP_FACTORY).getPair(_tokenIn, WMATIC) != address(0) &&
       IUniswapV2Factory(UNISWAP_FACTORY).getPair(WMATIC, _tokenOut) != address(0)
     ) {
-      _directPath = new address[](2);
+      _WMATICHopPath = new address[](3);
       _WMATICHopPath[0] = _tokenIn;
       _WMATICHopPath[1] = WMATIC;
       _WMATICHopPath[2] = _tokenOut;
-      _minAmountByWMATICHopPath = _getMinAmountOut(_amountIn, _maxSlippage, _WMATICHopPath);
+      _minAmountByWMATICHopPath = _getMinAmountOut(_amountIn, _maxSlippage, _WMATICHopPath, 2);
     }
 
     if (

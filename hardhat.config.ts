@@ -44,10 +44,10 @@ const config: HardhatUserConfig = {
   namedAccounts: {
     deployer: 0, // yMECH Alejo
     governor: 0, // yMECH Alejo
-    yMech: 0, // yMECH Alejo
+    // yMech: 0, // yMECH Alejo
     // deployer: '0xB82193725471dC7bfaAB1a3AB93c7b42963F3265', // yMECH Alejo
     // governor: '0xB82193725471dC7bfaAB1a3AB93c7b42963F3265', // yMECH Alejo
-    // ymech: '0xB82193725471dC7bfaAB1a3AB93c7b42963F3265', // yMECH Alejo
+    yMech: '0xB82193725471dC7bfaAB1a3AB93c7b42963F3265', // yMECH Alejo
   },
   networks,
   solidity: {

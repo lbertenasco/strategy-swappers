@@ -1,10 +1,8 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
-import { getRealChainIdOfFork, shouldVerifyContracts } from '../utils/deploy';
+import { getChainId, shouldVerifyContracts } from '../utils/deploy';
 
 const OTC_PROVIDER: { [chainId: string]: string } = {
-  // Fork
-  '31337': '0xfeb4acf3df3cdea7399794d0869ef76a6efaff52', // ychad.eth
   // Mainnet
   '1': '0xfeb4acf3df3cdea7399794d0869ef76a6efaff52', // ychad.eth
   // Polygon
@@ -16,7 +14,7 @@ const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnviro
 
   const swapperRegistry = await hre.deployments.get('SwapperRegistry');
 
-  const chainId = getRealChainIdOfFork(hre) || (await hre.getChainId());
+  const chainId = await getChainId(hre);
 
   const deploy = await hre.deployments.deploy('OTCPool', {
     contract: 'contracts/OTCPool/OTCPool.sol:OTCPool',

@@ -23,6 +23,6 @@ export const getRealChainIdOfFork = (hre: HardhatRuntimeEnvironment): number => 
 };
 
 export const shouldVerifyContract = async (hre: HardhatRuntimeEnvironment, contract: string): Promise<boolean> => {
-  const isDeployed = (await hre.deployments.getOrNull('SwapperRegistry')) != null;
+  const isDeployed = (await hre.deployments.getOrNull(contract)) != null;
   return !isDeployed && !process.env.FORK && !process.env.TEST;
 };

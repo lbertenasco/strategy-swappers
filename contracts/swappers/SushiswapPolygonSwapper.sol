@@ -48,44 +48,34 @@ contract SushiswapPolygonSwapper is ISushiswapPolygonSwapper, Swapper {
     uint256 _amountIn,
     uint256 _maxSlippage
   ) internal override returns (uint256 _receivedAmount) {
-    (address[] memory _path, uint256 _minAmountOut) = _getMinAmountOutAndPath(_tokenIn, _tokenOut, _amountIn, _maxSlippage);
+    (address[] memory _path, uint256 _amountOut) = _getPathAndAmountOut(_tokenIn, _tokenOut, _amountIn, _maxSlippage);
     IERC20(_path[0]).safeApprove(UNISWAP_ROUTER, 0);
     IERC20(_path[0]).safeApprove(UNISWAP_ROUTER, _amountIn);
     _receivedAmount = IUniswapV2Router02(UNISWAP_ROUTER).swapExactTokensForTokens(
       _amountIn,
-      _minAmountOut,
+      _amountOut - ((_amountOut * _maxSlippage) / SLIPPAGE_PRECISION / 100), // slippage calcs
       _path,
       _receiver,
       block.timestamp + 1800
     )[0];
   }
 
-  function _getMinAmountOut(
-    uint256 _amountIn,
-    uint256 _maxSlippage,
-    address[] memory _path,
-    uint256 _indexOfAmountOut
-  ) internal view returns (uint256 _minAmountOut) {
-    uint256 _amountOut = IUniswapV2Router02(UNISWAP_ROUTER).getAmountsOut(_amountIn, _path)[_indexOfAmountOut];
-    _minAmountOut = _amountOut - ((_amountOut * _maxSlippage) / SLIPPAGE_PRECISION / 100);
-  }
-
-  function _getMinAmountOutAndPath(
+  function _getPathAndAmountOut(
     address _tokenIn,
     address _tokenOut,
     uint256 _amountIn,
     uint256 _maxSlippage
-  ) internal view returns (address[] memory _path, uint256 _minAmountOut) {
-    uint256 _minAmountByDirectPath;
+  ) internal view returns (address[] memory _path, uint256 _amountOut) {
+    uint256 _amountOutByDirectPath;
     address[] memory _directPath;
     if (_tokenIn == WMATIC || _tokenOut == WMATIC || IUniswapV2Factory(UNISWAP_FACTORY).getPair(_tokenIn, _tokenOut) != address(0)) {
       _directPath = new address[](2);
       _directPath[0] = _tokenIn;
       _directPath[1] = _tokenOut;
-      _minAmountByDirectPath = _getMinAmountOut(_amountIn, _maxSlippage, _directPath, 1);
+      _amountOutByDirectPath = IUniswapV2Router02(UNISWAP_ROUTER).getAmountsOut(_amountIn, _directPath)[1];
     }
 
-    uint256 _minAmountByWETHHopPath;
+    uint256 _amountOutByWETHHopPath;
     address[] memory _WETHHopPath;
     if (
       IUniswapV2Factory(UNISWAP_FACTORY).getPair(_tokenIn, WETH) != address(0) &&
@@ -95,10 +85,10 @@ contract SushiswapPolygonSwapper is ISushiswapPolygonSwapper, Swapper {
       _WETHHopPath[0] = _tokenIn;
       _WETHHopPath[1] = WETH;
       _WETHHopPath[2] = _tokenOut;
-      _minAmountByWETHHopPath = _getMinAmountOut(_amountIn, _maxSlippage, _WETHHopPath, 2);
+      _amountOutByWETHHopPath = IUniswapV2Router02(UNISWAP_ROUTER).getAmountsOut(_amountIn, _WETHHopPath)[2];
     }
 
-    uint256 _minAmountByWMATICHopPath;
+    uint256 _amountOutByWMATICHopPath;
     address[] memory _WMATICHopPath;
     if (
       IUniswapV2Factory(UNISWAP_FACTORY).getPair(_tokenIn, WMATIC) != address(0) &&
@@ -108,20 +98,20 @@ contract SushiswapPolygonSwapper is ISushiswapPolygonSwapper, Swapper {
       _WMATICHopPath[0] = _tokenIn;
       _WMATICHopPath[1] = WMATIC;
       _WMATICHopPath[2] = _tokenOut;
-      _minAmountByWMATICHopPath = _getMinAmountOut(_amountIn, _maxSlippage, _WMATICHopPath, 2);
+      _amountOutByWMATICHopPath = IUniswapV2Router02(UNISWAP_ROUTER).getAmountsOut(_amountIn, _WMATICHopPath)[2];
     }
 
     if (
-      Math.max(Math.max(_minAmountByDirectPath, _minAmountByWETHHopPath), Math.max(_minAmountByDirectPath, _minAmountByWMATICHopPath)) ==
-      _minAmountByDirectPath
+      Math.max(Math.max(_amountOutByDirectPath, _amountOutByWETHHopPath), Math.max(_amountOutByDirectPath, _amountOutByWMATICHopPath)) ==
+      _amountOutByDirectPath
     ) {
-      return (_directPath, _minAmountByDirectPath);
+      return (_directPath, _amountOutByDirectPath);
     }
 
-    if (Math.max(_minAmountByWETHHopPath, _minAmountByWMATICHopPath) == _minAmountByWETHHopPath) {
-      return (_WETHHopPath, _minAmountByWETHHopPath);
+    if (Math.max(_amountOutByWETHHopPath, _amountOutByWMATICHopPath) == _amountOutByWETHHopPath) {
+      return (_WETHHopPath, _amountOutByWETHHopPath);
     }
 
-    return (_WMATICHopPath, _minAmountByWMATICHopPath);
+    return (_WMATICHopPath, _amountOutByWMATICHopPath);
   }
 }

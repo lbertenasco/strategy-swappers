@@ -13,7 +13,7 @@ import { setTestChainId } from '../../../utils/deploy';
 // We set a fixed block number so tests can cache blockchain state
 const FORK_BLOCK_NUMBER = 17080654;
 
-const MAX_SLIPPAGE = 20_000; // 1%
+const MAX_SLIPPAGE = 10_000; // 1%
 const AMOUNT_IN = utils.parseEther('10000');
 
 const CRV_ADDRESS = '0x172370d5cd63279efa6d502dab29171933a610af';

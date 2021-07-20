@@ -1,5 +1,4 @@
 import 'dotenv/config';
-import { HardhatNetworkUserConfig, HardhatRuntimeEnvironment } from 'hardhat/types';
 
 export function getNodeUrl(networkName: string): string {
   if (networkName) {
@@ -45,10 +44,4 @@ export function getMnemonic(networkName?: string): string {
 
 export function accounts(networkName?: string): { mnemonic: string } {
   return { mnemonic: getMnemonic(networkName) };
-}
-
-export function getRealChainIdOfFork(hre: HardhatRuntimeEnvironment): number | undefined {
-  const config = hre.network.config as HardhatNetworkUserConfig;
-  if (config.forking?.url.includes('mainnet')) return 1;
-  if (config.forking?.url.includes('polygon')) return 137;
 }

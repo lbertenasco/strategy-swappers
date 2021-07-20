@@ -2,7 +2,7 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { abi as UNISWAP_V2_ROUTER_ABI } from '@uniswap/v2-periphery/build/UniswapV2Router02.json';
 import { ethers } from 'hardhat';
-import { getRealChainIdOfFork } from '../utils/network';
+import { getRealChainIdOfFork, shouldVerifyContracts } from '../utils/deploy';
 
 export const SUSHISWAP_FACTORY: { [chainId: string]: string } = {
   // Mainnet
@@ -36,7 +36,7 @@ const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnviro
 
   await hre.deployments.execute('SwapperRegistry', { from: governor, gasLimit: 200000 }, 'addSwapper', 'sushiswap', deploy.address);
 
-  if (!process.env.TEST && !process.env.FORK) {
+  if (shouldVerifyContracts()) {
     await hre.run('verify:verify', {
       address: deploy.address,
       constructorArguments: [governor, tradeFactory.address, WETH, SUSHISWAP_FACTORY[chainId], SUSHISWAP_ROUTER[chainId]],

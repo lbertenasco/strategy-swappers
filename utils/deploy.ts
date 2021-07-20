@@ -22,6 +22,7 @@ export const getRealChainIdOfFork = (hre: HardhatRuntimeEnvironment): number => 
   throw new Error('Should specify chain id of fork');
 };
 
-export const shouldVerifyContracts = (): boolean => {
-  return !process.env.FORK && !process.env.TEST;
+export const shouldVerifyContract = async (hre: HardhatRuntimeEnvironment, contract: string): Promise<boolean> => {
+  const isDeployed = (await hre.deployments.getOrNull('SwapperRegistry')) != null;
+  return !isDeployed && !process.env.FORK && !process.env.TEST;
 };

@@ -45,7 +45,7 @@ contract UniswapV2Swapper is IUniswapV2Swapper, Swapper {
     IERC20(_path[0]).safeApprove(UNISWAP_ROUTER, _amountIn);
     _receivedAmount = IUniswapV2Router02(UNISWAP_ROUTER).swapExactTokensForTokens(
       _amountIn,
-      (_amountOut * _maxSlippage) / SLIPPAGE_PRECISION / 100, // calculate slippage
+      _amountOut - (_amountOut * _maxSlippage) / (SLIPPAGE_PRECISION * 100), // calculate slippage
       _path,
       _receiver,
       block.timestamp

@@ -1,5 +1,6 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
+import { getRealChainIdOfFork } from '../utils/network';
 
 const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployer, governor } = await hre.getNamedAccounts();
@@ -11,7 +12,7 @@ const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnviro
     log: true,
   });
 
-  if (!process.env.TEST) {
+  if (!process.env.TEST && !process.env.FORK) {
     await hre.run('verify:verify', {
       address: deploy.address,
       constructorArguments: [governor],

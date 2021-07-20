@@ -7,6 +7,7 @@ import 'hardhat-gas-reporter';
 import 'solidity-coverage';
 import 'hardhat-deploy';
 import { HardhatUserConfig, NetworksUserConfig } from 'hardhat/types';
+import { getNodeUrl } from './utils/network';
 
 const networks: NetworksUserConfig = process.env.TEST
   ? {}
@@ -14,22 +15,24 @@ const networks: NetworksUserConfig = process.env.TEST
       hardhat: {
         forking: {
           enabled: process.env.FORK ? true : false,
-          url: process.env.MAINNET_HTTPS_URL as string,
+          url: getNodeUrl('mainnet'),
         },
         // accounts: [{ privateKey: process.env.MAINNET_PRIVATE_KEY as string, balance: '0xfffffffffff' }],
       },
-      localMainnet: {
-        url: process.env.LOCAL_MAINNET_HTTPS_URL as string,
-        // accounts: [process.env.LOCAL_MAINNET_PRIVATE_KEY as string],
+      localhost: {
+        url: getNodeUrl('localhost'),
+        live: false,
+        accounts: [process.env.LOCAL_MAINNET_PRIVATE_KEY as string],
+        tags: ['local'],
       },
       mainnet: {
-        url: process.env.MAINNET_HTTPS_URL as string,
+        url: getNodeUrl('mainnet'),
         accounts: [process.env.MAINNET_PRIVATE_KEY as string],
         gasPrice: 'auto',
         tags: ['production'],
       },
       polygon: {
-        url: process.env.POLYGON_HTTPS_URL as string,
+        url: getNodeUrl('polygon'),
         accounts: [process.env.POLYGON_PRIVATE_KEY as string],
         gasPrice: 'auto',
         tags: ['production'],

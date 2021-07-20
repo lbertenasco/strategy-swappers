@@ -18,7 +18,7 @@ const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnviro
 
   await hre.deployments.execute('SwapperRegistry', { from: governor, gasLimit: 200000 }, 'addSwapper', 'one-inch', deploy.address);
 
-  if (!process.env.TEST) {
+  if (!process.env.TEST && !process.env.FORK) {
     await hre.run('verify:verify', {
       address: deploy.address,
       constructorArguments: [governor, tradeFactory.address, ONE_INCH, PARTS, FLAGS],

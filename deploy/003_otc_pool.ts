@@ -1,5 +1,6 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
+import { getRealChainIdOfFork } from '../utils/network';
 
 const OTC_PROVIDER: { [chainId: string]: string } = {
   // Fork
@@ -15,7 +16,7 @@ const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnviro
 
   const swapperRegistry = await hre.deployments.get('SwapperRegistry');
 
-  const chainId = await hre.getChainId();
+  const chainId = getRealChainIdOfFork(hre) || (await hre.getChainId());
 
   const deploy = await hre.deployments.deploy('OTCPool', {
     contract: 'contracts/OTCPool/OTCPool.sol:OTCPool',
@@ -24,7 +25,7 @@ const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnviro
     log: true,
   });
 
-  if (!process.env.TEST) {
+  if (!process.env.TEST && !process.env.FORK) {
     await hre.run('verify:verify', {
       address: deploy.address,
       constructorArguments: [governor, OTC_PROVIDER[chainId], swapperRegistry.address],

@@ -32,7 +32,13 @@ const advanceBlock = async () => {
 };
 
 const reset = async (forking?: { [key: string]: any }) => {
-  const params = forking ? [{ forking }] : [];
+  const params = forking
+    ? [
+        {
+          forking,
+        },
+      ]
+    : [];
   await network.provider.request({
     method: 'hardhat_reset',
     params,

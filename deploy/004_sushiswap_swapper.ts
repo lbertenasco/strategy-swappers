@@ -2,6 +2,7 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { abi as UNISWAP_V2_ROUTER_ABI } from '@uniswap/v2-periphery/build/UniswapV2Router02.json';
 import { ethers } from 'hardhat';
+import { getRealChainIdOfFork } from '../utils/network';
 
 export const SUSHISWAP_FACTORY: { [chainId: string]: string } = {
   // Mainnet
@@ -20,7 +21,8 @@ export const SUSHISWAP_ROUTER: { [chainId: string]: string } = {
 const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployer, governor } = await hre.getNamedAccounts();
 
-  const chainId = await hre.getChainId();
+  const chainId = getRealChainIdOfFork(hre) || (await hre.getChainId());
+
   const sushiswapRouter = await ethers.getContractAt(UNISWAP_V2_ROUTER_ABI, SUSHISWAP_ROUTER[chainId]);
   const tradeFactory = await hre.deployments.get('TradeFactory');
   const WETH = await sushiswapRouter.WETH();
@@ -34,7 +36,7 @@ const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnviro
 
   await hre.deployments.execute('SwapperRegistry', { from: governor, gasLimit: 200000 }, 'addSwapper', 'sushiswap', deploy.address);
 
-  if (!process.env.TEST) {
+  if (!process.env.TEST && !process.env.FORK) {
     await hre.run('verify:verify', {
       address: deploy.address,
       constructorArguments: [governor, tradeFactory.address, WETH, SUSHISWAP_FACTORY[chainId], SUSHISWAP_ROUTER[chainId]],

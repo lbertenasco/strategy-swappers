@@ -11,7 +11,7 @@ import { setTestChainId } from '../../../utils/deploy';
 import { getNodeUrl } from '../../../utils/network';
 
 // We set a fixed block number so tests can cache blockchain state
-const FORK_BLOCK_NUMBER = 12851228;
+const FORK_BLOCK_NUMBER = 12865115;
 
 describe('OneInchSwapper', function () {
   let deployer: JsonRpcSigner;
@@ -26,7 +26,7 @@ describe('OneInchSwapper', function () {
 
   const MAX_SLIPPAGE = 10_000; // 1%
 
-  when('on mainnet', () => {
+  context('on mainnet', () => {
     const CRV_ADDRESS = '0xD533a949740bb3306d119CC777fa900bA034cd52';
     const DAI_ADDRESS = '0x6b175474e89094c44da98b954eedeac495271d0f';
 
@@ -50,7 +50,7 @@ describe('OneInchSwapper', function () {
       governor = await wallet.impersonate(namedAccounts.governor);
       crvWhale = await wallet.impersonate(CRV_WHALE_ADDRESS);
       daiWhale = await wallet.impersonate(DAI_WHALE_ADDRESS);
-      yMech = await wallet.impersonate('0x1ea056c13f8ccc981e51c5f1cdf87476666d0a74');
+      yMech = await wallet.impersonate(namedAccounts.yMech);
       strategy = await wallet.generateRandom();
 
       await setTestChainId(1);

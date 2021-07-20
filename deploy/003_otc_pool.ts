@@ -3,8 +3,6 @@ import { DeployFunction } from 'hardhat-deploy/types';
 import { getChainId, shouldVerifyContracts } from '../utils/deploy';
 
 const OTC_PROVIDER: { [chainId: string]: string } = {
-  // Fork
-  '31337': '0xfeb4acf3df3cdea7399794d0869ef76a6efaff52', // ychad.eth
   // Mainnet
   '1': '0xfeb4acf3df3cdea7399794d0869ef76a6efaff52', // ychad.eth
   // Polygon

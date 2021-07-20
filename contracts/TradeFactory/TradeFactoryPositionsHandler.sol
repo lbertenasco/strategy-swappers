@@ -3,7 +3,9 @@ pragma solidity 0.8.4;
 
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
+import '@openzeppelin/contracts/access/AccessControl.sol';
 import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
+import '@lbertenasco/contract-utils/contracts/utils/Governable.sol';
 import '../SwapperRegistry.sol';
 
 interface ITradeFactoryPositionsHandler {
@@ -83,9 +85,13 @@ interface ITradeFactoryPositionsHandler {
   function changePendingTradesSwapper(string memory _swapper) external returns (uint256[] memory _changedSwapperIds);
 }
 
-abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler {
+abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler, AccessControl, Governable {
   using SafeERC20 for IERC20;
   using EnumerableSet for EnumerableSet.UintSet;
+
+  bytes32 public constant STRATEGY = keccak256('STRATEGY');
+  bytes32 public constant STRATEGY_ADMIN = keccak256('STRATEGY_ADMIN');
+  bytes32 public constant MASTER_ADMIN = keccak256('MASTER_ADMIN');
 
   uint256 private _tradeCounter = 1;
 
@@ -101,11 +107,10 @@ abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler 
 
   constructor(address _swapperRegistry) {
     SWAPPER_REGISTRY = _swapperRegistry;
-  }
-
-  modifier onlyStrategy {
-    require(msg.sender == msg.sender, 'TradeFactory: not a strategy'); // TODO:
-    _;
+    _setRoleAdmin(STRATEGY, STRATEGY_ADMIN);
+    _setRoleAdmin(STRATEGY_ADMIN, MASTER_ADMIN);
+    _setupRole(STRATEGY_ADMIN, governor);
+    _setupRole(MASTER_ADMIN, governor);
   }
 
   function pendingTradesIds() external view override returns (uint256[] memory _pendingIds) {
@@ -139,7 +144,7 @@ abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler 
     uint256 _amountIn,
     uint256 _maxSlippage,
     uint256 _deadline
-  ) external override onlyStrategy returns (uint256 _id) {
+  ) external override onlyRole(STRATEGY) returns (uint256 _id) {
     (bool _existsSwapper, address _swapperAddress, uint256 _swapperInitialization) = SwapperRegistry(SWAPPER_REGISTRY).isSwapper(_swapper);
     require(_existsSwapper, 'TradeFactory: invalid swapper');
     require(_swapperInitialization <= swapperSafetyCheckpoint[msg.sender], 'TradeFactory: initialization greater than checkpoint');
@@ -165,7 +170,7 @@ abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler 
     );
   }
 
-  function cancelPending(uint256 _id) external override onlyStrategy {
+  function cancelPending(uint256 _id) external override onlyRole(STRATEGY) {
     require(_pendingTradesIds.contains(_id), 'TradeFactory: trade not pending');
     require(pendingTradesById[_id]._strategy == msg.sender, 'TradeFactory: does not own trade');
     Trade memory _trade = pendingTradesById[_id];
@@ -173,7 +178,7 @@ abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler 
     emit TradeCanceled(msg.sender, _id);
   }
 
-  function cancelAllPending() external override onlyStrategy returns (uint256[] memory _canceledTradesIds) {
+  function cancelAllPending() external override onlyRole(STRATEGY) returns (uint256[] memory _canceledTradesIds) {
     require(_pendingTradesByOwner[msg.sender].length() > 0, 'TradeFactory: no trades pending from strategy');
     _canceledTradesIds = new uint256[](_pendingTradesByOwner[msg.sender].length());
     for (uint256 i; i < _pendingTradesByOwner[msg.sender].length(); i++) {
@@ -185,7 +190,12 @@ abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler 
     emit TradesCanceled(msg.sender, _canceledTradesIds);
   }
 
-  function changePendingTradesSwapper(string memory _swapper) external override onlyStrategy returns (uint256[] memory _changedSwapperIds) {
+  function changePendingTradesSwapper(string memory _swapper)
+    external
+    override
+    onlyRole(STRATEGY)
+    returns (uint256[] memory _changedSwapperIds)
+  {
     (bool _existsSwapper, address _swapperAddress, uint256 _swapperInitialization) = SwapperRegistry(SWAPPER_REGISTRY).isSwapper(_swapper);
     require(_existsSwapper, 'TradeFactory: invalid swapper');
     require(_swapperInitialization <= swapperSafetyCheckpoint[msg.sender], 'TradeFactory: initialization greater than checkpoint');
@@ -197,7 +207,7 @@ abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler 
     emit TradesSwapperChanged(msg.sender, _changedSwapperIds, _swapper);
   }
 
-  function setSwapperSafetyCheckpoint(uint256 _checkpoint) external override onlyStrategy {
+  function setSwapperSafetyCheckpoint(uint256 _checkpoint) external override onlyRole(STRATEGY) {
     require(_checkpoint <= block.timestamp, 'TradeFactory: invalid checkpoint');
     swapperSafetyCheckpoint[msg.sender] = _checkpoint;
   }

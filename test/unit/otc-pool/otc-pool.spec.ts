@@ -1,5 +1,5 @@
 import { Contract, ContractFactory } from '@ethersproject/contracts';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signers';
 import { TransactionResponse } from '@ethersproject/abstract-provider';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
@@ -20,14 +20,6 @@ contract('OTCPool', () => {
 
   beforeEach(async () => {
     OTCPool = await OTCPoolFactory.deploy(governor.address, OTCProvider.address, wallet.generateRandomAddress());
-  });
-
-  describe('setPendingGovernor', () => {
-    // TODO: Only governor
-  });
-
-  describe('acceptGovernor', () => {
-    // TODO: Only pending governor
   });
 
   describe('sendDust', () => {

@@ -31,33 +31,35 @@ const createPair = async ({ token0, token1 }: { token0: Contract; token1: Contra
 };
 
 const addLiquidity = async ({
-  owner,
+  liquidityProvider,
   token0,
   amountA,
   token1,
   amountB,
 }: {
-  owner: Signer;
+  liquidityProvider: Signer;
   token0: Contract;
   amountA: BigNumber;
   token1: Contract;
   amountB: BigNumber;
 }) => {
-  await token0.approve(uniswapV2Router02.address, amountA);
-  await token1.approve(uniswapV2Router02.address, amountB);
-  await uniswapV2Router02.addLiquidity(
-    token0.address,
-    token1.address,
-    amountA,
-    amountB,
-    amountA,
-    amountB,
-    await owner.getAddress(),
-    ethers.BigNumber.from('2').pow('256').sub('2'),
-    {
-      gasLimit: 9500000,
-    }
-  );
+  await token0.connect(liquidityProvider).approve(uniswapV2Router02.address, amountA);
+  await token1.connect(liquidityProvider).approve(uniswapV2Router02.address, amountB);
+  await uniswapV2Router02
+    .connect(liquidityProvider)
+    .addLiquidity(
+      token0.address,
+      token1.address,
+      amountA,
+      amountB,
+      amountA,
+      amountB,
+      await liquidityProvider.getAddress(),
+      ethers.BigNumber.from('2').pow('256').sub('2'),
+      {
+        gasLimit: 9500000,
+      }
+    );
 };
 
 const addLiquidityETH = async ({

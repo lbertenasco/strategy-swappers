@@ -1,7 +1,7 @@
 import { Contract } from '@ethersproject/contracts';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signers';
 import { abi as swapperRegistryABI } from '../../../artifacts/contracts/SwapperRegistry.sol/ISwapperRegistry.json';
-import { abi as machineryABI } from '../../../artifacts/contracts/utils/Machinery.sol/IMachinery.json';
+import { abi as machineryABI } from '@lbertenasco/contract-utils/artifacts/interfaces/utils/IMachinery.sol/IMachinery.json';
 import { abi as swapperABI } from '../../../artifacts/contracts/Swapper.sol/ISwapper.json';
 import { TransactionResponse } from '@ethersproject/abstract-provider';
 import { expect } from 'chai';
@@ -13,6 +13,7 @@ import { BigNumber, utils } from 'ethers';
 import moment from 'moment';
 
 contract('TradeFactoryExecutor', () => {
+  let governor: SignerWithAddress;
   let strategy: SignerWithAddress;
   let mechanic: SignerWithAddress;
   let swapperRegistry: MockContract;
@@ -23,8 +24,8 @@ contract('TradeFactoryExecutor', () => {
   let token: Contract;
 
   before(async () => {
-    [strategy, mechanic] = await ethers.getSigners();
-    executorFactory = await smoddit('contracts/mock/TradeFactory/TradeFactoryExecutor.sol:TradeFactoryExecutorMock');
+    [governor, strategy, mechanic] = await ethers.getSigners();
+    executorFactory = await smoddit('contracts/mock/TradeFactory/TradeFactoryExecutor.sol:TradeFactoryExecutorMock', mechanic);
   });
 
   beforeEach(async () => {
@@ -32,7 +33,7 @@ contract('TradeFactoryExecutor', () => {
     swapperRegistry = await smockit(swapperRegistryABI);
     machinery = await smockit(machineryABI);
     swapper = await smockit(swapperABI);
-    executor = await executorFactory.deploy(swapperRegistry.address, machinery.address);
+    executor = await executorFactory.deploy(governor.address, swapperRegistry.address, machinery.address);
     executor = executor.connect(mechanic);
     token = await erc20.deploy({
       symbol: 'TK',
@@ -40,6 +41,7 @@ contract('TradeFactoryExecutor', () => {
       initialAccount: strategy.address,
       initialAmount: utils.parseEther('10000'),
     });
+    await executor.connect(governor).grantRole(await executor.STRATEGY(), strategy.address);
     swapperRegistry.smocked['isSwapper(string)'].will.return.with([true, swapper.address, 0]);
     machinery.smocked.isMechanic.will.return.with(true);
     swapperRegistry.smocked.deprecatedByAddress.will.return.with(false);
@@ -207,7 +209,7 @@ contract('TradeFactoryExecutor', () => {
     maxSlippage: BigNumber | number;
     deadline: number;
   }): Promise<{ tx: TransactionResponse; id: BigNumber }> {
-    await token.approve(executor.address, amountIn);
+    await token.connect(strategy).approve(executor.address, amountIn);
     const tx = await executor.connect(strategy).create(swapper, tokenIn, tokenOut, amountIn, maxSlippage, deadline);
     const txReceipt = await tx.wait();
     const parsedEvent = executor.interface.parseLog(txReceipt.logs[0]);

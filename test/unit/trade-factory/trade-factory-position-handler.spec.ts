@@ -1,5 +1,5 @@
 import { Contract } from '@ethersproject/contracts';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signers';
 import { abi as swapperRegistryABI } from '../../../artifacts/contracts/SwapperRegistry.sol/ISwapperRegistry.json';
 import { TransactionResponse } from '@ethersproject/abstract-provider';
 import { expect } from 'chai';
@@ -7,26 +7,126 @@ import { ethers } from 'hardhat';
 import { contract, given, then, when } from '../../utils/bdd';
 import { smockit, smoddit, MockContract, ModifiableContractFactory, ModifiableContract } from '@eth-optimism/smock';
 import { constants, evm, wallet } from '../../utils';
-import { BigNumber, utils } from 'ethers';
+import { BigNumber, utils, Wallet } from 'ethers';
+import Web3 from 'web3';
 import moment from 'moment';
 
 contract('TradeFactoryPositionsHandler', () => {
-  let user: SignerWithAddress;
+  let deployer: SignerWithAddress;
+  let governor: SignerWithAddress;
+  let strategy: SignerWithAddress;
   let swapperRegistry: MockContract;
   let positionsHandlerFactory: ModifiableContractFactory;
   let positionsHandler: ModifiableContract;
 
+  const STRATEGY_ROLE = new Web3().utils.soliditySha3('STRATEGY');
+  const STRATEGY_ADMIN_ROLE = new Web3().utils.soliditySha3('STRATEGY_ADMIN');
+
   before(async () => {
-    [user] = await ethers.getSigners();
-    positionsHandlerFactory = await smoddit('contracts/mock/TradeFactory/TradeFactoryPositionsHandler.sol:TradeFactoryPositionsHandlerMock');
+    [deployer, governor, strategy] = await ethers.getSigners();
+    positionsHandlerFactory = await smoddit(
+      'contracts/mock/TradeFactory/TradeFactoryPositionsHandler.sol:TradeFactoryPositionsHandlerMock',
+      strategy
+    );
   });
 
   beforeEach(async () => {
     swapperRegistry = await smockit(swapperRegistryABI);
-    positionsHandler = await positionsHandlerFactory.deploy(swapperRegistry.address);
+    positionsHandler = await positionsHandlerFactory.deploy(governor.address, swapperRegistry.address);
+    await positionsHandler.connect(governor).grantRole(STRATEGY_ROLE, strategy.address);
   });
 
-  describe('constructor', () => {});
+  describe('constructor', () => {
+    // TODO: Make it better
+    when('all data is valid', () => {
+      then('governor is set correctly', async () => {
+        expect(await positionsHandler.governor()).to.equal(governor.address);
+      });
+      then('role admin of strategy is strategy admin', async () => {
+        expect(await positionsHandler.getRoleAdmin(STRATEGY_ROLE)).to.equal(STRATEGY_ADMIN_ROLE);
+      });
+      then('governor has strategy admin role', async () => {
+        expect(await positionsHandler.hasRole(STRATEGY_ADMIN_ROLE, governor.address)).to.be.true;
+      });
+    });
+  });
+
+  describe('grantRole', () => {
+    when('granting STRATEGY_ROLE', () => {
+      const randomStrategy = wallet.generateRandomAddress();
+      when('not called from governor', () => {
+        let grantRoleTx: Promise<TransactionResponse>;
+        given(() => {
+          grantRoleTx = positionsHandler.connect(deployer).grantRole(STRATEGY_ROLE, randomStrategy);
+        });
+        then('tx get reverted with reason', async () => {
+          await expect(grantRoleTx).to.be.reverted;
+        });
+      });
+      when('called from governor', () => {
+        given(async () => {
+          await positionsHandler.connect(governor).grantRole(STRATEGY_ROLE, randomStrategy);
+        });
+        then('role gets added to address', async () => {
+          expect(await positionsHandler.hasRole(STRATEGY_ROLE, randomStrategy)).to.be.true;
+        });
+      });
+    });
+    when('granting STRATEGY_ADMIN_ROLE', () => {
+      let randomGuy: Wallet;
+      beforeEach(async () => {
+        randomGuy = await wallet.generateRandom();
+      });
+      when('not called from governor', () => {
+        let grantRoleTx: Promise<TransactionResponse>;
+        given(() => {
+          grantRoleTx = positionsHandler.connect(deployer).grantRole(STRATEGY_ADMIN_ROLE, randomGuy.address);
+        });
+        then('tx get reverted with reason', async () => {
+          await expect(grantRoleTx).to.be.reverted;
+        });
+      });
+      when('called from governor', () => {
+        given(async () => {
+          await positionsHandler.connect(governor).grantRole(STRATEGY_ADMIN_ROLE, randomGuy.address);
+        });
+        then('role gets added to address', async () => {
+          expect(await positionsHandler.hasRole(STRATEGY_ADMIN_ROLE, randomGuy.address)).to.be.true;
+        });
+        then('new strategy admin can add strategies', async () => {
+          const randomStrategy = wallet.generateRandomAddress();
+          await positionsHandler.connect(randomGuy).grantRole(STRATEGY_ROLE, randomStrategy, { gasPrice: 0 });
+          expect(await positionsHandler.hasRole(STRATEGY_ROLE, randomStrategy)).to.be.true;
+        });
+      });
+    });
+  });
+
+  describe('revokeRole', () => {
+    const randomStrategy = wallet.generateRandomAddress();
+    when('revoking STRATEGY_ROLE', () => {
+      given(async () => {
+        await positionsHandler.connect(governor).grantRole(STRATEGY_ROLE, randomStrategy);
+      });
+      when('not called from governor', () => {
+        let grantRoleTx: Promise<TransactionResponse>;
+        given(() => {
+          grantRoleTx = positionsHandler.connect(deployer).revokeRole(STRATEGY_ROLE, randomStrategy);
+        });
+        then('tx get reverted with reason', async () => {
+          await expect(grantRoleTx).to.be.reverted;
+        });
+      });
+      when('called from governor', () => {
+        given(async () => {
+          await positionsHandler.connect(governor).revokeRole(STRATEGY_ROLE, randomStrategy);
+        });
+        then('role gets removed from address', async () => {
+          expect(await positionsHandler.hasRole(STRATEGY_ROLE, randomStrategy)).to.be.false;
+        });
+      });
+    });
+  });
 
   describe('pendingTradesIds()', () => {
     when('there are no pending trades', () => {
@@ -75,7 +175,7 @@ contract('TradeFactoryPositionsHandler', () => {
         tradeId = tx.id;
       });
       then('returns array of ids', async () => {
-        expect(await positionsHandler['pendingTradesIds(address)'](user.address)).to.eql([tradeId]);
+        expect(await positionsHandler['pendingTradesIds(address)'](strategy.address)).to.eql([tradeId]);
       });
     });
   });
@@ -102,7 +202,7 @@ contract('TradeFactoryPositionsHandler', () => {
     given(async () => {
       await positionsHandler.smodify.put({
         swapperSafetyCheckpoint: {
-          [user.address]: strategySafetyCheckpoint,
+          [strategy.address]: strategySafetyCheckpoint,
         },
       });
       swapperRegistry.smocked['isSwapper(string)'].will.return.with([true, swapperAddress, BigNumber.from(`${strategySafetyCheckpoint}`)]);
@@ -191,7 +291,7 @@ contract('TradeFactoryPositionsHandler', () => {
       then('trade gets added to pending trades', async () => {
         const pendingTrade = await positionsHandler.pendingTradesById(tradeId);
         expect(pendingTrade._id).to.equal(BigNumber.from('1'));
-        expect(pendingTrade._strategy).to.equal(user.address);
+        expect(pendingTrade._strategy).to.equal(strategy.address);
         expect(pendingTrade._swapper).to.equal(swapperAddress);
         expect(pendingTrade._tokenIn).to.equal(tokenIn);
         expect(pendingTrade._tokenOut).to.equal(tokenOut);
@@ -200,7 +300,7 @@ contract('TradeFactoryPositionsHandler', () => {
         expect(pendingTrade._deadline).to.equal(deadline);
       });
       then('trade id gets added to pending trades by strategy', async () => {
-        expect(await positionsHandler['pendingTradesIds(address)'](user.address)).to.eql([tradeId]);
+        expect(await positionsHandler['pendingTradesIds(address)'](strategy.address)).to.eql([tradeId]);
       });
       then('trade id gets added to pending trades ids', async () => {
         expect(await positionsHandler['pendingTradesIds()']()).to.eql([tradeId]);
@@ -213,7 +313,7 @@ contract('TradeFactoryPositionsHandler', () => {
       then('emits event', async () => {
         await expect(createTx)
           .to.emit(positionsHandler, 'TradeCreated')
-          .withArgs(tradeId, user.address, swapperAddress, tokenIn, tokenOut, amountIn, maxSlippage, deadline);
+          .withArgs(tradeId, strategy.address, swapperAddress, tokenIn, tokenOut, amountIn, maxSlippage, deadline);
       });
     });
   });
@@ -245,13 +345,13 @@ contract('TradeFactoryPositionsHandler', () => {
         expect((await positionsHandler.pendingTradesById(1))._id).to.equal(0);
       });
       then("removes trade from pending strategy's trade", async () => {
-        expect(await positionsHandler['pendingTradesIds(address)'](user.address)).to.be.empty;
+        expect(await positionsHandler['pendingTradesIds(address)'](strategy.address)).to.be.empty;
       });
       then('removes trade from pending trades ids', async () => {
         expect(await positionsHandler['pendingTradesIds()']()).to.be.empty;
       });
       then('emits event', async () => {
-        await expect(cancelTx).to.emit(positionsHandler, 'TradeCanceled').withArgs(user.address, 1);
+        await expect(cancelTx).to.emit(positionsHandler, 'TradeCanceled').withArgs(strategy.address, 1);
       });
     });
   });
@@ -301,13 +401,13 @@ contract('TradeFactoryPositionsHandler', () => {
         }
       });
       then("removes trades from pending strategy's trade", async () => {
-        expect(await positionsHandler['pendingTradesIds(address)'](user.address)).to.be.empty;
+        expect(await positionsHandler['pendingTradesIds(address)'](strategy.address)).to.be.empty;
       });
       then('removes trades from pending trades ids', async () => {
         expect(await positionsHandler['pendingTradesIds()']()).to.be.empty;
       });
       then('emits event', async () => {
-        await expect(cancellAllPendingTx).to.emit(positionsHandler, 'TradesCanceled').withArgs(user.address, tradeIds);
+        await expect(cancellAllPendingTx).to.emit(positionsHandler, 'TradesCanceled').withArgs(strategy.address, tradeIds);
       });
     });
   });
@@ -325,13 +425,13 @@ contract('TradeFactoryPositionsHandler', () => {
           maxSlippage: 1000,
           deadline: moment().add('30', 'minutes').unix(),
         }));
-        await positionsHandler.removePendingTrade(user.address, tradeId);
+        await positionsHandler.removePendingTrade(strategy.address, tradeId);
       });
       then('removes trade from trades', async () => {
         expect((await positionsHandler.pendingTradesById(tradeId))._id).to.equal(0);
       });
       then("removes trade from pending strategy's trade", async () => {
-        expect(await positionsHandler['pendingTradesIds(address)'](user.address)).to.be.empty;
+        expect(await positionsHandler['pendingTradesIds(address)'](strategy.address)).to.be.empty;
       });
       then('removes trade from pending trades ids', async () => {
         expect(await positionsHandler['pendingTradesIds()']()).to.be.empty;
@@ -386,7 +486,7 @@ contract('TradeFactoryPositionsHandler', () => {
       given(async () => {
         await positionsHandler.smodify.put({
           swapperSafetyCheckpoint: {
-            [user.address]: strategySafetyCheckpoint,
+            [strategy.address]: strategySafetyCheckpoint,
           },
         });
         swapperRegistry.smocked['isSwapper(string)'].will.return.with([
@@ -408,7 +508,7 @@ contract('TradeFactoryPositionsHandler', () => {
       given(async () => {
         await positionsHandler.smodify.put({
           swapperSafetyCheckpoint: {
-            [user.address]: strategySafetyCheckpoint,
+            [strategy.address]: strategySafetyCheckpoint,
           },
         });
         swapperRegistry.smocked['isSwapper(string)'].will.return.with([true, newSwapperAddress, 0]);
@@ -425,7 +525,9 @@ contract('TradeFactoryPositionsHandler', () => {
         }
       });
       then('emits event', async () => {
-        await expect(changePendingTradesSwapper).to.emit(positionsHandler, 'TradesSwapperChanged').withArgs(user.address, tradeIds, newSwapper);
+        await expect(changePendingTradesSwapper)
+          .to.emit(positionsHandler, 'TradesSwapperChanged')
+          .withArgs(strategy.address, tradeIds, newSwapper);
       });
     });
   });

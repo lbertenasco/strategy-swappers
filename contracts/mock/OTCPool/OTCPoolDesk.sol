@@ -18,12 +18,4 @@ contract OTCPoolDeskMock is OTCPoolDesk, CollectableDustWithTokensManagementMock
   ) external {
     availableFor[_offeredTokenToPool][_wantedTokenFromPool] = _amountToOffer;
   }
-
-   function setPendingGovernor(address _pendingGovernor) external override onlyGovernor {
-    _setPendingGovernor(_pendingGovernor);
-  }
-
-  function acceptGovernor() external override onlyPendingGovernor {
-    _acceptGovernor();
-  }
 }

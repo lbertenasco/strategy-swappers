@@ -5,28 +5,48 @@ import '@nomiclabs/hardhat-etherscan';
 import { removeConsoleLog } from 'hardhat-preprocessor';
 import 'hardhat-gas-reporter';
 import 'solidity-coverage';
+import 'hardhat-deploy';
+import { HardhatUserConfig, NetworksUserConfig } from 'hardhat/types';
 
-module.exports = {
-  defaultNetwork: 'hardhat',
-  networks: process.env.TEST
-    ? {}
-    : {
-        hardhat: {
-          forking: {
-            enabled: process.env.FORK ? true : false,
-            url: process.env.MAINNET_HTTPS_URL,
-          },
+const networks: NetworksUserConfig = process.env.TEST
+  ? {}
+  : {
+      hardhat: {
+        forking: {
+          enabled: process.env.FORK ? true : false,
+          url: process.env.MAINNET_HTTPS_URL as string,
         },
-        localMainnet: {
-          url: process.env.LOCAL_MAINNET_HTTPS_URL,
-          accounts: [process.env.LOCAL_MAINNET_PRIVATE_KEY],
-        },
-        mainnet: {
-          url: process.env.MAINNET_HTTPS_URL,
-          accounts: [process.env.MAINNET_PRIVATE_KEY],
-          gasPrice: 'auto',
-        },
+        // accounts: [{ privateKey: process.env.MAINNET_PRIVATE_KEY as string, balance: '0xfffffffffff' }],
       },
+      localMainnet: {
+        url: process.env.LOCAL_MAINNET_HTTPS_URL as string,
+        // accounts: [process.env.LOCAL_MAINNET_PRIVATE_KEY as string],
+      },
+      mainnet: {
+        url: process.env.MAINNET_HTTPS_URL as string,
+        accounts: [process.env.MAINNET_PRIVATE_KEY as string],
+        gasPrice: 'auto',
+        tags: ['production'],
+      },
+      polygon: {
+        url: process.env.POLYGON_HTTPS_URL as string,
+        accounts: [process.env.POLYGON_PRIVATE_KEY as string],
+        gasPrice: 'auto',
+        tags: ['production'],
+      },
+    };
+
+const config: HardhatUserConfig = {
+  defaultNetwork: 'hardhat',
+  namedAccounts: {
+    deployer: 0, // yMECH Alejo
+    governor: 0, // yMECH Alejo
+    yMech: 0, // yMECH Alejo
+    // deployer: '0xB82193725471dC7bfaAB1a3AB93c7b42963F3265', // yMECH Alejo
+    // governor: '0xB82193725471dC7bfaAB1a3AB93c7b42963F3265', // yMECH Alejo
+    // ymech: '0xB82193725471dC7bfaAB1a3AB93c7b42963F3265', // yMECH Alejo
+  },
+  networks,
   solidity: {
     compilers: [
       {
@@ -46,9 +66,9 @@ module.exports = {
     ],
   },
   gasReporter: {
-    enabled: process.env.REPORT_GAS ? true : false,
-    currency: process.env.COINMARKETCAP_DEFAULT_CURRENCY,
+    currency: process.env.COINMARKETCAP_DEFAULT_CURRENCY || 'USD',
     coinmarketcap: process.env.COINMARKETCAP_API_KEY,
+    enabled: process.env.REPORT_GAS ? true : false,
   },
   preprocess: {
     eachLine: removeConsoleLog((hre) => hre.network.name !== 'hardhat'),
@@ -57,3 +77,5 @@ module.exports = {
     apiKey: process.env.ETHERSCAN_API_KEY,
   },
 };
+
+export default config;

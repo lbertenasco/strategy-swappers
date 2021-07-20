@@ -4,9 +4,10 @@ pragma solidity 0.8.4;
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 
-import '../Swapper.sol';
-import '../utils/Machinery.sol';
+import '@lbertenasco/contract-utils/contracts/utils/Governable.sol';
+import '@lbertenasco/contract-utils/contracts/utils/Machinery.sol';
 
+import '../Swapper.sol';
 import './TradeFactoryPositionsHandler.sol';
 
 interface ITradeFactoryExecutor {
@@ -23,7 +24,7 @@ interface ITradeFactoryExecutor {
   function expire(uint256 _id) external returns (uint256 _freedAmount);
 }
 
-abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPositionsHandler, Machinery {
+abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, Governable, TradeFactoryPositionsHandler, Machinery {
   using SafeERC20 for IERC20;
   using EnumerableSet for EnumerableSet.UintSet;
   using EnumerableSet for EnumerableSet.AddressSet;
@@ -37,6 +38,11 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPos
     for (uint256 i = 0; i < _approvedTokensBySwappers[_swapper].length(); i++) {
       _tokens[i] = _approvedTokensBySwappers[_swapper].at(i);
     }
+  }
+
+  // Machinery
+  function setMechanicsRegistry(address _mechanicsRegistry) external virtual override onlyGovernor {
+    _setMechanicsRegistry(_mechanicsRegistry);
   }
 
   // TradeFactoryExecutor

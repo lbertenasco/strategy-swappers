@@ -7,6 +7,7 @@ import { deployments, ethers, getNamedAccounts } from 'hardhat';
 import { evm, wallet } from '../../utils';
 import { then, when } from '../../utils/bdd';
 import moment from 'moment';
+import { setTestChainId } from '../../../utils/deploy';
 
 // We set a fixed block number so tests can cache blockchain state
 const FORK_BLOCK_NUMBER = 12851228;
@@ -51,6 +52,7 @@ describe('OneInchSwapper', function () {
       yMech = await wallet.impersonate('0x1ea056c13f8ccc981e51c5f1cdf87476666d0a74');
       strategy = await wallet.generateRandom();
 
+      await setTestChainId(1);
       await deployments.fixture('OneInchSwapper');
 
       CRV = await ethers.getContractAt(IERC20_ABI, CRV_ADDRESS);
@@ -73,7 +75,7 @@ describe('OneInchSwapper', function () {
 
     describe('swap', () => {
       beforeEach(async () => {
-        const tx: TransactionResponse = await tradeFactory.connect(yMech).execute(1, { gasPrice: 0 });
+        await tradeFactory.connect(yMech).execute(1, { gasPrice: 0 });
       });
 
       then('CRV gets taken from strategy', async () => {

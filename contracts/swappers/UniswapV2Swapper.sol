@@ -82,8 +82,8 @@ contract UniswapV2Swapper is IUniswapV2Swapper, Swapper {
     _amountOut = IUniswapV2Router02(UNISWAP_ROUTER).getAmountsOut(_amountIn, _path)[0];
 
     address[] memory _pathDirect = new address[](2);
-    _path[0] = _tokenIn;
-    _path[1] = _tokenOut;
+    _pathDirect[0] = _tokenIn;
+    _pathDirect[1] = _tokenOut;
     uint256 _amountOutDirect = IUniswapV2Router02(UNISWAP_ROUTER).getAmountsOut(_amountIn, _pathDirect)[0];
 
     if (_amountOutDirect >= _amountOut) {

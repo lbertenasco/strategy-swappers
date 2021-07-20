@@ -62,7 +62,7 @@ contract UniswapV2Swapper is IUniswapV2Swapper, Swapper {
       _path = new address[](2);
       _path[0] = _tokenIn;
       _path[1] = _tokenOut;
-      return (_path, IUniswapV2Router02(UNISWAP_ROUTER).getAmountsOut(_amountIn, _path)[0]);
+      return (_path, IUniswapV2Router02(UNISWAP_ROUTER).getAmountsOut(_amountIn, _path)[1]);
     }
 
     // no pool has been found for direct token swap, use WETH as bridge
@@ -71,7 +71,7 @@ contract UniswapV2Swapper is IUniswapV2Swapper, Swapper {
       _path[0] = _tokenIn;
       _path[1] = WETH;
       _path[2] = _tokenOut;
-      return (_path, IUniswapV2Router02(UNISWAP_ROUTER).getAmountsOut(_amountIn, _path)[0]);
+      return (_path, IUniswapV2Router02(UNISWAP_ROUTER).getAmountsOut(_amountIn, _path)[2]);
     }
 
     // compare both WETH-bridged and direct swaps to get best amountOut
@@ -79,12 +79,12 @@ contract UniswapV2Swapper is IUniswapV2Swapper, Swapper {
     _path[0] = _tokenIn;
     _path[1] = WETH;
     _path[2] = _tokenOut;
-    _amountOut = IUniswapV2Router02(UNISWAP_ROUTER).getAmountsOut(_amountIn, _path)[0];
+    _amountOut = IUniswapV2Router02(UNISWAP_ROUTER).getAmountsOut(_amountIn, _path)[2];
 
     address[] memory _pathDirect = new address[](2);
     _pathDirect[0] = _tokenIn;
     _pathDirect[1] = _tokenOut;
-    uint256 _amountOutDirect = IUniswapV2Router02(UNISWAP_ROUTER).getAmountsOut(_amountIn, _pathDirect)[0];
+    uint256 _amountOutDirect = IUniswapV2Router02(UNISWAP_ROUTER).getAmountsOut(_amountIn, _pathDirect)[1];
 
     if (_amountOutDirect >= _amountOut) {
       return (_pathDirect, _amountOutDirect);

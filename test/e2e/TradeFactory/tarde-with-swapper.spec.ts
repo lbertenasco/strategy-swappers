@@ -3,12 +3,12 @@ import { TransactionResponse } from '@ethersproject/abstract-provider';
 import { BigNumber, constants, Contract, utils, Wallet } from 'ethers';
 import { ethers } from 'hardhat';
 import moment from 'moment';
-import { erc20, evm, fixtures, uniswap } from '../../utils';
+import { contracts, erc20, evm, fixtures, uniswap } from '../../utils';
 import { contract, given, then, when } from '../../utils/bdd';
 import { expect } from 'chai';
 
 // Unil sushiswap swapper mainnet is sepparated from polygon one
-contract.skip('TradeFactory', () => {
+contract('TradeFactory', () => {
   let governor: SignerWithAddress;
   let mechanic: SignerWithAddress;
   let strategy: SignerWithAddress;
@@ -30,6 +30,7 @@ contract.skip('TradeFactory', () => {
   const amountIn = utils.parseEther('10');
   const maxSlippage = 10_000; // 1%
   const INITIAL_LIQUIDITY = utils.parseEther('100000');
+  const data = contracts.encodeParameters([], []);
 
   before('create fixture loader', async () => {
     [governor, mechanic, strategy, hodler] = await ethers.getSigners();
@@ -82,9 +83,9 @@ contract.skip('TradeFactory', () => {
     let executeTx: TransactionResponse;
     let minAmountOut: BigNumber;
     given(async () => {
-      const amountOut = BigNumber.from(`${(await uniswapV2Router02.getAmountsOut(amountIn, [tokenIn.address, tokenOut.address]))[0]}`);
-      minAmountOut = amountOut.sub(amountOut.mul(maxSlippage).div(10000 / 100));
-      executeTx = await tradeFactory.connect(mechanic).execute(1);
+      // We can do this since ratio is 1 = 1
+      minAmountOut = amountIn.sub(amountIn.mul(maxSlippage).div(10000 / 100));
+      executeTx = await tradeFactory.connect(mechanic).execute(1, data);
     });
     then('tokens in gets taken from strategy', async () => {
       expect(await tokenIn.balanceOf(strategy.address)).to.equal(0);

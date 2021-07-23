@@ -8,7 +8,15 @@ import '@lbertenasco/contract-utils/contracts/utils/Governable.sol';
 import '@lbertenasco/contract-utils/contracts/utils/CollectableDust.sol';
 
 interface ISwapper {
-  event Swapped(address _receiver, address _tokenIn, address _tokenOut, uint256 _amountIn, uint256 _maxSlippage, uint256 _receivedAmount);
+  event Swapped(
+    address _receiver,
+    address _tokenIn,
+    address _tokenOut,
+    uint256 _amountIn,
+    uint256 _maxSlippage,
+    uint256 _receivedAmount,
+    bytes _data
+  );
 
   function SLIPPAGE_PRECISION() external view returns (uint256);
 
@@ -73,7 +81,7 @@ abstract contract Swapper is ISwapper, Governable, CollectableDust {
     _assertPreSwap(_receiver, _tokenIn, _tokenOut, _amountIn, _maxSlippage);
     IERC20(_tokenIn).safeTransferFrom(TRADE_FACTORY, address(this), _amountIn);
     _receivedAmount = _executeSwap(_receiver, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _data);
-    emit Swapped(_receiver, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _receivedAmount);
+    emit Swapped(_receiver, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _receivedAmount, _data);
   }
 
   function sendDust(

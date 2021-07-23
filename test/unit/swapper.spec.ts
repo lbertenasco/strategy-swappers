@@ -72,19 +72,21 @@ contract('Swapper', () => {
     behaviours.shouldBeCheckPreAssetSwap({
       contract: () => swapper,
       func: 'assertPreSwap',
+      withData: false,
     });
   });
 
   describe('swap', () => {
     behaviours.shouldBeExecutableOnlyByTradeFactory({
       contract: () => swapper,
-      funcAndSignature: 'swap(address,address,address,uint256,uint256)',
-      params: [constants.ZERO_ADDRESS, constants.ZERO_ADDRESS, constants.ZERO_ADDRESS, constants.ZERO, constants.ZERO],
+      funcAndSignature: 'swap(address,address,address,uint256,uint256,bytes)',
+      params: [constants.ZERO_ADDRESS, constants.ZERO_ADDRESS, constants.ZERO_ADDRESS, constants.ZERO, constants.ZERO, '0x'],
       tradeFactory: () => tradeFactory,
     });
     behaviours.shouldBeCheckPreAssetSwap({
       contract: () => swapper.connect(tradeFactory),
       func: 'swap',
+      withData: true,
     });
     when('everything is valid', () => {
       let tokenIn: Contract;
@@ -93,6 +95,7 @@ contract('Swapper', () => {
       let tokenOut: string;
       const amount = utils.parseEther('10');
       const maxSlippage = BigNumber.from('1000');
+      const data = contracts.encodeParameters(['uint256'], [constants.MAX_UINT_256]);
       given(async () => {
         receiver = await wallet.generateRandomAddress();
         tokenOut = await wallet.generateRandomAddress();
@@ -103,7 +106,7 @@ contract('Swapper', () => {
           symbol: 'TI',
         });
         await tokenIn.connect(tradeFactory).approve(swapper.address, amount);
-        swapTx = await swapper.connect(tradeFactory).swap(receiver, tokenIn.address, tokenOut, amount, maxSlippage);
+        swapTx = await swapper.connect(tradeFactory).swap(receiver, tokenIn.address, tokenOut, amount, maxSlippage, data);
       });
       then('takes tokens from caller', async () => {
         expect(await tokenIn.balanceOf(tradeFactory.address)).to.equal(0);
@@ -111,11 +114,14 @@ contract('Swapper', () => {
       then('sends tokens to swapper', async () => {
         expect(await tokenIn.balanceOf(swapper.address)).to.equal(amount);
       });
+      then('can decode data correctly', async () => {
+        await expect(swapTx).to.emit(swapper, 'DecodedData').withArgs(constants.MAX_UINT_256);
+      });
       then('executes internal swap', async () => {
-        await expect(swapTx).to.emit(swapper, 'MyInternalExecuteSwap').withArgs(receiver, tokenIn.address, tokenOut, amount, maxSlippage);
+        await expect(swapTx).to.emit(swapper, 'MyInternalExecuteSwap').withArgs(receiver, tokenIn.address, tokenOut, amount, maxSlippage, data);
       });
       then('emits event with correct information', async () => {
-        await expect(swapTx).to.emit(swapper, 'Swapped').withArgs(receiver, tokenIn.address, tokenOut, amount, maxSlippage, 1000);
+        await expect(swapTx).to.emit(swapper, 'Swapped').withArgs(receiver, tokenIn.address, tokenOut, amount, maxSlippage, 1000, data);
       });
     });
   });

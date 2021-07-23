@@ -4,7 +4,7 @@ import { JsonRpcSigner } from '@ethersproject/providers';
 import { TransactionResponse } from '@ethersproject/abstract-provider';
 import { Contract, utils, Wallet } from 'ethers';
 import { deployments, ethers, getNamedAccounts } from 'hardhat';
-import { evm, wallet } from '../../utils';
+import { contracts, evm, wallet } from '../../utils';
 import { then, when } from '../../utils/bdd';
 import moment from 'moment';
 import { setTestChainId } from '../../../utils/deploy';
@@ -37,6 +37,7 @@ describe('OneInchSwapper', function () {
     let DAI: Contract;
 
     const AMOUNT_IN = utils.parseEther('10000');
+    const data = contracts.encodeParameters([], []);
 
     beforeEach(async () => {
       await evm.reset({
@@ -76,7 +77,7 @@ describe('OneInchSwapper', function () {
 
     describe('swap', () => {
       beforeEach(async () => {
-        await tradeFactory.connect(yMech).execute(1, { gasPrice: 0 });
+        await tradeFactory.connect(yMech).execute(1, data, { gasPrice: 0 });
       });
 
       then('CRV gets taken from strategy', async () => {

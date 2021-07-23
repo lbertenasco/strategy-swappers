@@ -4,7 +4,7 @@ import { JsonRpcSigner } from '@ethersproject/providers';
 import { TransactionResponse } from '@ethersproject/abstract-provider';
 import { Contract, utils, Wallet } from 'ethers';
 import { deployments, ethers, getNamedAccounts } from 'hardhat';
-import { evm, wallet } from '../../utils';
+import { contracts, evm, wallet } from '../../utils';
 import { then, when } from '../../utils/bdd';
 import moment from 'moment';
 import { getNodeUrl } from '../../../utils/network';
@@ -15,6 +15,7 @@ const FORK_BLOCK_NUMBER = 17080654;
 
 const MAX_SLIPPAGE = 10_000; // 1%
 const AMOUNT_IN = utils.parseEther('10000');
+const data = contracts.encodeParameters([], []);
 
 const CRV_ADDRESS = '0x172370d5cd63279efa6d502dab29171933a610af';
 const DAI_ADDRESS = '0x8f3cf7ad23cd3cadbd9735aff958023239c6a063';
@@ -73,7 +74,7 @@ describe('SushiswapPolygonSwapper', function () {
 
   describe('swap', () => {
     beforeEach(async () => {
-      await tradeFactory.connect(yMech).execute(1, { gasPrice: 0 });
+      await tradeFactory.connect(yMech).execute(1, data, { gasPrice: 0 });
     });
 
     then('CRV gets taken from strategy', async () => {

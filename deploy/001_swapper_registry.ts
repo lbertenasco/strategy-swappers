@@ -1,6 +1,6 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
-import { shouldVerifyContracts } from '../utils/deploy';
+import { shouldVerifyContract } from '../utils/deploy';
 
 const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployer, governor } = await hre.getNamedAccounts();
@@ -12,7 +12,7 @@ const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnviro
     log: true,
   });
 
-  if (shouldVerifyContracts()) {
+  if (await shouldVerifyContract(hre, 'SwapperRegistry')) {
     await hre.run('verify:verify', {
       address: deploy.address,
       constructorArguments: [governor],

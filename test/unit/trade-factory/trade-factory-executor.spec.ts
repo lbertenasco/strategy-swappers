@@ -8,7 +8,7 @@ import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { contract, given, then, when } from '../../utils/bdd';
 import { smockit, smoddit, MockContract, ModifiableContractFactory } from '@eth-optimism/smock';
-import { constants, erc20, evm, wallet } from '../../utils';
+import { constants, erc20, evm, wallet, contracts } from '../../utils';
 import { BigNumber, utils } from 'ethers';
 import moment from 'moment';
 
@@ -55,6 +55,7 @@ contract('TradeFactoryExecutor', () => {
     const deadline = moment().add('30', 'minutes').unix();
     const tokenOut = wallet.generateRandomAddress();
     const maxSlippage = BigNumber.from('1000');
+    const data = contracts.encodeParameters([], []);
     given(async () => {
       ({ id: tradeId } = await create({
         swapper: 'my-swapper',
@@ -68,7 +69,7 @@ contract('TradeFactoryExecutor', () => {
     // TODO: Only mechanic
     when('executing a trade thats not pending', () => {
       then('tx is reverted with reason', async () => {
-        await expect(executor.execute(tradeId.add(1))).to.be.revertedWith('TradeFactory: trade not pending');
+        await expect(executor.execute(tradeId.add(1), data)).to.be.revertedWith('TradeFactory: trade not pending');
       });
     });
     when('trade has expired', () => {
@@ -76,14 +77,14 @@ contract('TradeFactoryExecutor', () => {
         await evm.advanceToTimeAndBlock(deadline + 1);
       });
       then('tx is reverted with reason', async () => {
-        await expect(executor.execute(tradeId)).to.be.revertedWith('TradeFactory: trade has expired');
+        await expect(executor.execute(tradeId, data)).to.be.revertedWith('TradeFactory: trade has expired');
       });
     });
     when('swapper has been deprecated', () => {
       let executeTx: Promise<TransactionResponse>;
       given(async () => {
         swapperRegistry.smocked.deprecatedByAddress.will.return.with(true);
-        executeTx = executor.execute(tradeId);
+        executeTx = executor.execute(tradeId, data);
       });
       then('tx is reverted with reason', async () => {
         await expect(executeTx).to.be.revertedWith('TradeFactory: deprecated swapper');
@@ -98,7 +99,7 @@ contract('TradeFactoryExecutor', () => {
         swapper.smocked.swap.will.return.with(receivedAmount);
         initialStrategyBalance = await token.balanceOf(strategy.address);
         initialExecutorBalance = await token.balanceOf(executor.address);
-        executeTx = await executor.execute(tradeId);
+        executeTx = await executor.execute(tradeId, data);
       });
       then('token gets enabled for swapper and token', async () => {
         expect(await token.allowance(executor.address, swapper.address)).to.be.equal(constants.MAX_UINT_256);
@@ -111,7 +112,7 @@ contract('TradeFactoryExecutor', () => {
         expect(swapperRegistry.smocked.deprecatedByAddress.calls[0][0]).to.be.equal(swapper.address);
       });
       then('calls swapper swap with correct data', () => {
-        expect(swapper.smocked.swap.calls[0]).to.be.eql([strategy.address, token.address, tokenOut, amountIn, maxSlippage]);
+        expect(swapper.smocked.swap.calls[0]).to.be.eql([strategy.address, token.address, tokenOut, amountIn, maxSlippage, data]);
       });
       then('removes trades from trades', async () => {
         expect((await executor.pendingTradesById(tradeId))._id).to.equal(0);
@@ -216,3 +217,6 @@ contract('TradeFactoryExecutor', () => {
     return { tx, id: parsedEvent.args._id };
   }
 });
+function encodeParameters(arg0: never[], arg1: never[]) {
+  throw new Error('Function not implemented.');
+}

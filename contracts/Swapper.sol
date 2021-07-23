@@ -8,7 +8,15 @@ import '@lbertenasco/contract-utils/contracts/utils/Governable.sol';
 import '@lbertenasco/contract-utils/contracts/utils/CollectableDust.sol';
 
 interface ISwapper {
-  event Swapped(address _receiver, address _tokenIn, address _tokenOut, uint256 _amountIn, uint256 _maxSlippage, uint256 _receivedAmount);
+  event Swapped(
+    address _receiver,
+    address _tokenIn,
+    address _tokenOut,
+    uint256 _amountIn,
+    uint256 _maxSlippage,
+    uint256 _receivedAmount,
+    bytes _data
+  );
 
   function SLIPPAGE_PRECISION() external view returns (uint256);
 
@@ -19,7 +27,8 @@ interface ISwapper {
     address _tokenIn,
     address _tokenOut,
     uint256 _amountIn,
-    uint256 _maxSlippage
+    uint256 _maxSlippage,
+    bytes calldata _data
   ) external returns (uint256 _receivedAmount);
 }
 
@@ -57,7 +66,8 @@ abstract contract Swapper is ISwapper, Governable, CollectableDust {
     address _tokenIn,
     address _tokenOut,
     uint256 _amountIn,
-    uint256 _maxSlippage
+    uint256 _maxSlippage,
+    bytes calldata _data
   ) internal virtual returns (uint256 _receivedAmount);
 
   function swap(
@@ -65,12 +75,13 @@ abstract contract Swapper is ISwapper, Governable, CollectableDust {
     address _tokenIn,
     address _tokenOut,
     uint256 _amountIn,
-    uint256 _maxSlippage
+    uint256 _maxSlippage,
+    bytes calldata _data
   ) external virtual override onlyTradeFactory returns (uint256 _receivedAmount) {
     _assertPreSwap(_receiver, _tokenIn, _tokenOut, _amountIn, _maxSlippage);
     IERC20(_tokenIn).safeTransferFrom(TRADE_FACTORY, address(this), _amountIn);
-    _receivedAmount = _executeSwap(_receiver, _tokenIn, _tokenOut, _amountIn, _maxSlippage);
-    emit Swapped(_receiver, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _receivedAmount);
+    _receivedAmount = _executeSwap(_receiver, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _data);
+    emit Swapped(_receiver, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _receivedAmount, _data);
   }
 
   function sendDust(

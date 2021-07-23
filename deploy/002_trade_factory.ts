@@ -1,6 +1,6 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
-import { getChainId, shouldVerifyContracts } from '../utils/deploy';
+import { getChainId, shouldVerifyContract } from '../utils/deploy';
 
 const MECHANICS_REGISTRY: { [chainId: string]: string } = {
   // Mainnet
@@ -23,7 +23,7 @@ const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnviro
     log: true,
   });
 
-  if (shouldVerifyContracts()) {
+  if (await shouldVerifyContract(hre, 'TradeFactory')) {
     await hre.run('verify:verify', {
       address: deploy.address,
       constructorArguments: [governor, MECHANICS_REGISTRY[chainId], swapperRegistry.address],

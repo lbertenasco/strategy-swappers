@@ -1,6 +1,6 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
-import { shouldVerifyContracts } from '../../utils/deploy';
+import { shouldVerifyContract } from '../../utils/deploy';
 
 const SUSHISWAP_FACTORY = '0xc35DADB65012eC5796536bD9864eD8773aBc74C4';
 const SUSHISWAP_ROUTER = '0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506';
@@ -21,7 +21,7 @@ const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnviro
 
   await hre.deployments.execute('SwapperRegistry', { from: governor, gasLimit: 200000 }, 'addSwapper', 'sushiswap-polygon', deploy.address);
 
-  if (shouldVerifyContracts()) {
+  if (await shouldVerifyContract(hre, 'SushiswapPolygonSwapper')) {
     await hre.run('verify:verify', {
       address: deploy.address,
       constructorArguments: [governor, tradeFactory.address, WETH, WMATIC, SUSHISWAP_FACTORY, SUSHISWAP_ROUTER],

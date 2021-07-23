@@ -2,6 +2,7 @@ import { Contract, ContractFactory } from '@ethersproject/contracts';
 import { TransactionResponse } from '@ethersproject/abstract-provider';
 import { ContractInterface, Signer } from 'ethers';
 import { getStatic } from 'ethers/lib/utils';
+import { ethers } from 'hardhat';
 
 const deploy = async (contract: ContractFactory, args: any[]): Promise<{ tx: TransactionResponse; contract: Contract }> => {
   const deploymentTransactionRequest = await contract.getDeployTransaction(...args);
@@ -17,6 +18,12 @@ const deploy = async (contract: ContractFactory, args: any[]): Promise<{ tx: Tra
   };
 };
 
+const encodeParameters = (types: string[], values: any[]): string => {
+  const abi = new ethers.utils.AbiCoder();
+  return abi.encode(types, values);
+};
+
 export default {
   deploy,
+  encodeParameters,
 };

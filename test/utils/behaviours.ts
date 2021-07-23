@@ -217,11 +217,13 @@ const shouldBeExecutableOnlyByTradeFactory = ({
   });
 };
 
-const shouldBeCheckPreAssetSwap = ({ contract, func }: { contract: () => Contract; func: string }) => {
+const shouldBeCheckPreAssetSwap = ({ contract, func, withData }: { contract: () => Contract; func: string; withData: boolean }) => {
   when('receiver is zero address', () => {
     let tx: Promise<TransactionResponse>;
     given(async () => {
-      tx = contract()[func](constants.ZERO_ADDRESS, constants.NOT_ZERO_ADDRESS, constants.NOT_ZERO_ADDRESS, constants.ONE, constants.ONE);
+      const args = [constants.ZERO_ADDRESS, constants.NOT_ZERO_ADDRESS, constants.NOT_ZERO_ADDRESS, constants.ONE, constants.ONE];
+      if (withData) args.push('0x');
+      tx = contract()[func](...args);
     });
     then('tx is reverted with reason', async () => {
       await expect(tx).to.be.revertedWith('Swapper: zero address');
@@ -230,7 +232,9 @@ const shouldBeCheckPreAssetSwap = ({ contract, func }: { contract: () => Contrac
   when('token in is zero address', () => {
     let tx: Promise<TransactionResponse>;
     given(async () => {
-      tx = contract()[func](constants.NOT_ZERO_ADDRESS, constants.ZERO_ADDRESS, constants.NOT_ZERO_ADDRESS, constants.ONE, constants.ONE);
+      const args = [constants.NOT_ZERO_ADDRESS, constants.ZERO_ADDRESS, constants.NOT_ZERO_ADDRESS, constants.ONE, constants.ONE];
+      if (withData) args.push('0x');
+      tx = contract()[func](...args);
     });
     then('tx is reverted with reason', async () => {
       await expect(tx).to.be.revertedWith('Swapper: zero address');
@@ -239,7 +243,9 @@ const shouldBeCheckPreAssetSwap = ({ contract, func }: { contract: () => Contrac
   when('token out is zero address', () => {
     let tx: Promise<TransactionResponse>;
     given(async () => {
-      tx = contract()[func](constants.NOT_ZERO_ADDRESS, constants.NOT_ZERO_ADDRESS, constants.ZERO_ADDRESS, constants.ONE, constants.ONE);
+      const args = [constants.NOT_ZERO_ADDRESS, constants.NOT_ZERO_ADDRESS, constants.ZERO_ADDRESS, constants.ONE, constants.ONE];
+      if (withData) args.push('0x');
+      tx = contract()[func](...args);
     });
     then('tx is reverted with reason', async () => {
       await expect(tx).to.be.revertedWith('Swapper: zero address');
@@ -248,7 +254,9 @@ const shouldBeCheckPreAssetSwap = ({ contract, func }: { contract: () => Contrac
   when('amount is zero', () => {
     let tx: Promise<TransactionResponse>;
     given(async () => {
-      tx = contract()[func](constants.NOT_ZERO_ADDRESS, constants.NOT_ZERO_ADDRESS, constants.NOT_ZERO_ADDRESS, constants.ZERO, constants.ONE);
+      const args = [constants.NOT_ZERO_ADDRESS, constants.NOT_ZERO_ADDRESS, constants.NOT_ZERO_ADDRESS, constants.ZERO, constants.ONE];
+      if (withData) args.push('0x');
+      tx = contract()[func](...args);
     });
     then('tx is reverted with reason', async () => {
       await expect(tx).to.be.revertedWith('Swapper: zero amount');
@@ -257,7 +265,9 @@ const shouldBeCheckPreAssetSwap = ({ contract, func }: { contract: () => Contrac
   when('max slippage is zero', () => {
     let tx: Promise<TransactionResponse>;
     given(async () => {
-      tx = contract()[func](constants.NOT_ZERO_ADDRESS, constants.NOT_ZERO_ADDRESS, constants.NOT_ZERO_ADDRESS, constants.ONE, constants.ZERO);
+      const args = [constants.NOT_ZERO_ADDRESS, constants.NOT_ZERO_ADDRESS, constants.NOT_ZERO_ADDRESS, constants.ONE, constants.ZERO];
+      if (withData) args.push('0x');
+      tx = contract()[func](...args);
     });
     then('tx is reverted with reason', async () => {
       await expect(tx).to.be.revertedWith('Swapper: zero slippage');

@@ -19,7 +19,7 @@ interface ITradeFactoryExecutor {
 
   function approvedTokensBySwappers(address _swapper) external view returns (address[] memory _tokens);
 
-  function execute(uint256 _id) external returns (uint256 _receivedAmount);
+  function execute(uint256 _id, bytes calldata _data) external returns (uint256 _receivedAmount);
 
   function expire(uint256 _id) external returns (uint256 _freedAmount);
 }
@@ -47,7 +47,7 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, Governable, Tra
 
   // TradeFactoryExecutor
 
-  function execute(uint256 _id) external override onlyMechanic returns (uint256 _receivedAmount) {
+  function execute(uint256 _id, bytes calldata _data) external override onlyMechanic returns (uint256 _receivedAmount) {
     require(_pendingTradesIds.contains(_id), 'TradeFactory: trade not pending');
     Trade memory _trade = pendingTradesById[_id];
     require(block.timestamp <= _trade._deadline, 'TradeFactory: trade has expired');
@@ -56,7 +56,14 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, Governable, Tra
       _enableSwapperToken(_trade._swapper, _trade._tokenIn);
     }
     IERC20(_trade._tokenIn).safeTransferFrom(_trade._strategy, address(this), _trade._amountIn);
-    _receivedAmount = ISwapper(_trade._swapper).swap(_trade._strategy, _trade._tokenIn, _trade._tokenOut, _trade._amountIn, _trade._maxSlippage);
+    _receivedAmount = ISwapper(_trade._swapper).swap(
+      _trade._strategy,
+      _trade._tokenIn,
+      _trade._tokenOut,
+      _trade._amountIn,
+      _trade._maxSlippage,
+      _data
+    );
     _removePendingTrade(_trade._strategy, _id);
     emit TradeExecuted(_id, _receivedAmount);
   }

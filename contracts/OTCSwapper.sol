@@ -43,11 +43,12 @@ abstract contract OTCSwapper is IOTCSwapper, Swapper {
     address _tokenIn,
     address _tokenOut,
     uint256 _amountIn,
-    uint256 _maxSlippage
+    uint256 _maxSlippage,
+    bytes calldata _data
   ) external override(ISwapper, Swapper) onlyTradeFactory returns (uint256 _receivedAmount) {
     _assertPreSwap(_receiver, _tokenIn, _tokenOut, _amountIn, _maxSlippage);
     IERC20(_tokenIn).safeTransferFrom(TRADE_FACTORY, address(this), _amountIn);
-    _receivedAmount = _executeOTCSwap(_receiver, _tokenIn, _tokenOut, _amountIn, _maxSlippage);
+    _receivedAmount = _executeOTCSwap(_receiver, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _data);
     emit Swapped(_receiver, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _receivedAmount);
   }
 
@@ -56,7 +57,8 @@ abstract contract OTCSwapper is IOTCSwapper, Swapper {
     address _tokenIn,
     address _tokenOut,
     uint256 _amountIn,
-    uint256 _maxSlippage
+    uint256 _maxSlippage,
+    bytes calldata _data
   ) internal returns (uint256 _receivedAmount) {
     uint256 _usedBySwapper;
 
@@ -66,7 +68,7 @@ abstract contract OTCSwapper is IOTCSwapper, Swapper {
     if (_usedBySwapper < _amountIn) {
       uint256 _toBuyFromFallbackSwapper = _amountIn - _usedBySwapper;
 
-      _receivedAmount += _executeSwap(_receiver, _tokenIn, _tokenOut, _toBuyFromFallbackSwapper, _maxSlippage);
+      _receivedAmount += _executeSwap(_receiver, _tokenIn, _tokenOut, _toBuyFromFallbackSwapper, _maxSlippage, _data);
     }
   }
 }

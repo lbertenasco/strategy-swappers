@@ -38,7 +38,8 @@ contract UniswapV2Swapper is IUniswapV2Swapper, Swapper {
     address _tokenIn,
     address _tokenOut,
     uint256 _amountIn,
-    uint256 _maxSlippage
+    uint256 _maxSlippage,
+    bytes calldata
   ) internal override returns (uint256 _receivedAmount) {
     (address[] memory _path, uint256 _amountOut) = _getPathAndAmountOut(_tokenIn, _tokenOut, _amountIn);
     IERC20(_path[0]).safeApprove(UNISWAP_ROUTER, 0);

@@ -104,7 +104,8 @@ contract OneInchSwapper is IOneInchSwapper, Swapper {
     address _tokenIn,
     address _tokenOut,
     uint256 _amountIn,
-    uint256 _maxSlippage
+    uint256 _maxSlippage,
+    bytes calldata
   ) internal override returns (uint256 _receivedAmount) {
     (uint256 _minAmountOut, uint256[] memory _distribution) = _getMinAmountOut(_tokenIn, _tokenOut, _amountIn, _maxSlippage);
     IERC20(_tokenIn).safeApprove(ONE_INCH, 0);

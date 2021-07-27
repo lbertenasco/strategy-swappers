@@ -1,12 +1,9 @@
 import { BigNumber } from '@ethersproject/bignumber';
-import { TransactionResponse, TransactionReceipt } from '@ethersproject/abstract-provider';
 import axios from 'axios';
 import axiosRetry from 'axios-retry';
 import { utils } from 'ethers';
 import { ethers } from 'hardhat';
 import { abi as IERC20_ABI } from '@openzeppelin/contracts/build/contracts/IERC20.json';
-import { Log } from 'hardhat-deploy/dist/types';
-import wallet from '../../test/utils/wallet';
 
 axiosRetry(axios, { retries: 3, retryDelay: axiosRetry.exponentialDelay });
 
@@ -64,59 +61,28 @@ export type SwapResponse = {
   };
 };
 
-export const swap = async (chainId: number, swapParams: SwapParams): Promise<void> => {
-  const [ymech] = await ethers.getSigners();
-  const dai = await ethers.getContractAt(IERC20_ABI, '0x6b175474e89094c44da98b954eedeac495271d0f');
-  const oneinch = await ethers.getContractAt(
-    'contracts/swappers/OneInchV2Swapper.sol:IOneInchExchange',
-    '0x11111112542D85B3EF69AE05771c2dCCff4fAa26'
-  );
+export const swap = async (chainId: number, swapParams: SwapParams): Promise<SwapResponse> => {
   let rawAxiosResponse;
   try {
     rawAxiosResponse = await axios.get(
       `https://api.1inch.exchange/v3.0/${chainId}/swap?fromTokenAddress=${swapParams.tokenIn}&toTokenAddress=${
         swapParams.tokenOut
-      }&amount=${swapParams.amountIn.toString()}&fromAddress=${swapParams.fromAddress}&slippage=${swapParams.slippage}&disableEstimate=${
-        swapParams.disableEstimate
-      }`
+      }&destReceiver=${swapParams.receiver}&amount=${swapParams.amountIn.toString()}&fromAddress=${swapParams.fromAddress}&slippage=${
+        swapParams.slippage
+      }&disableEstimate=${swapParams.disableEstimate}&allowPartialFill=${swapParams.allowPartialFill}`
     );
   } catch (err) {
     throw new Error(`Status code: ${err.response.data.statusCode}. Message: ${err.response.data.message}`);
   }
-  const repsonseData = rawAxiosResponse.data as SwapResponse;
-  const parsedTx = await oneinch.interface.parseTransaction(repsonseData.tx);
-  console.log('args', utils.formatEther(parsedTx.args.desc.minReturnAmount));
-  const initialBalance = await ethers.provider.getBalance(ymech.address);
-  await dai.approve(repsonseData.tx.to, utils.parseEther('100'));
-  const tx = await ymech.sendTransaction({ to: repsonseData.tx.to, data: repsonseData.tx.data, value: BigNumber.from(repsonseData.tx.value) });
-  const finalBalance = await ethers.provider.getBalance(ymech.address);
-  console.log('delta balance:', utils.formatEther(finalBalance.sub(initialBalance)), 'eth');
+  // const oneinch = await ethers.getContractAt(
+  //   'contracts/swappers/OneInchV2Swapper.sol:IOneInchExchange',
+  //   '0x11111112542D85B3EF69AE05771c2dCCff4fAa26'
+  // );
+  // const parsedTx = await oneinch.interface.parseTransaction(rawAxiosResponse.data.tx);
+  // console.log('args', utils.formatEther(parsedTx.args.desc.minReturnAmount));
+  return rawAxiosResponse.data as SwapResponse;
 };
 
-export const main = async () => {
-  const [ymech] = await ethers.getSigners();
-  console.log('ymech addr', ymech.address);
-  // await swap(1, {
-  //   tokenIn: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
-  //   tokenOut: '0x6b175474e89094c44da98b954eedeac495271d0f',
-  //   amountIn: utils.parseEther('0.001'),
-  //   fromAddress: ymech.address,
-  //   slippage: 0.1,
-  // });
-
-  await swap(1, {
-    tokenIn: '0x6b175474e89094c44da98b954eedeac495271d0f',
-    tokenOut: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
-    amountIn: utils.parseEther('100'),
-    fromAddress: ymech.address,
-    slippage: 50,
-    disableEstimate: true,
-  });
+export default {
+  swap,
 };
-
-main()
-  .then(() => process.exit(0))
-  .catch((error) => {
-    console.error(error);
-    process.exit(1);
-  });

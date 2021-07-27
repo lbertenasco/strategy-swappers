@@ -7,6 +7,8 @@ import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 
 interface ITradeFactorySwapperHandler {
   event StrategySwapperSet(address _strategy, address _swapper);
+  event SwapperAdded(address _swapper);
+  event SwapperRemoved(address _swapper);
 
   function strategySwapper(address _strategy) external view returns (address _swapper);
 
@@ -21,6 +23,10 @@ interface ITradeFactorySwapperHandler {
     address _swapper,
     bool _migrateSwaps
   ) external returns (uint256[] memory _changedSwapperIds);
+
+  function addSwapper(address _swapper) external;
+
+  function removeSwapper(address _swapper) external;
 }
 
 abstract contract TradeFactorySwapperHandler is ITradeFactorySwapperHandler, AccessControl, Governable {
@@ -64,5 +70,15 @@ abstract contract TradeFactorySwapperHandler is ITradeFactorySwapperHandler, Acc
     require(_swappers.contains(_swapper), 'TradeFactory: invalid swapper');
     strategySwapper[_strategy] = _swapper;
     emit StrategySwapperSet(_strategy, _swapper);
+  }
+
+  function addSwapper(address _swapper) external override onlyRole(SWAPPER_SETTER) {
+    require(_swappers.add(_swapper), 'TF: swapper already added');
+    emit SwapperAdded(_swapper);
+  }
+
+  function removeSwapper(address _swapper) external override onlyRole(SWAPPER_SETTER) {
+    require(_swappers.remove(_swapper), 'TF: swapper not added');
+    emit SwapperRemoved(_swapper);
   }
 }

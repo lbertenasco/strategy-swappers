@@ -3,17 +3,8 @@ pragma solidity 0.8.4;
 
 import '../Swapper.sol';
 
-interface IOneInchCaller {
-  struct CallDescription {
-    uint256 targetWithMandatory;
-    uint256 gasLimit;
-    uint256 value;
-    bytes data;
-  }
-
-  function makeCall(CallDescription memory desc) external;
-
-  function makeCalls(CallDescription[] memory desc) external payable;
+interface IAggregationExecutor {
+  function callBytes(bytes calldata data) external payable; // 0xd9c45357
 }
 
 interface IOneInchExchange {
@@ -24,26 +15,50 @@ interface IOneInchExchange {
     address dstReceiver;
     uint256 amount;
     uint256 minReturnAmount;
-    uint256 guaranteedAmount;
     uint256 flags;
-    address referrer;
     bytes permit;
   }
 
-  function discountedSwap(
-    IOneInchCaller caller,
-    SwapDescription calldata desc,
-    IOneInchCaller.CallDescription[] calldata calls
+  event Swapped(address sender, IERC20 srcToken, IERC20 dstToken, address dstReceiver, uint256 spentAmount, uint256 returnAmount);
+
+  receive() external payable;
+
+  function unoswapWithPermit(
+    IERC20 srcToken,
+    uint256 amount,
+    uint256 minReturn,
+    bytes32[] calldata pools,
+    bytes calldata permit
   ) external payable returns (uint256 returnAmount);
+
+  function unoswap(
+    IERC20 srcToken,
+    uint256 amount,
+    uint256 minReturn,
+    bytes32[] calldata
+  ) external payable returns (uint256 returnAmount);
+
+  function discountedSwap(
+    IAggregationExecutor caller,
+    SwapDescription calldata desc,
+    bytes calldata data
+  )
+    external
+    payable
+    returns (
+      uint256 returnAmount,
+      uint256 gasLeft,
+      uint256 chiSpent
+    );
 
   function swap(
-    IOneInchCaller caller,
+    IAggregationExecutor caller,
     SwapDescription calldata desc,
-    IOneInchCaller.CallDescription[] calldata calls
-  ) external payable returns (uint256 returnAmount);
+    bytes calldata data
+  ) external payable returns (uint256 returnAmount, uint256 gasLeft);
 }
 
-interface IOneInchSwapper is IOneInchCaller, ISwapper {
+interface IOneInchSwapper is IAggregationExecutor, ISwapper {
   function AGGREGATION_ROUTER_V3() external view returns (address);
 
   function parts() external view returns (uint256);
@@ -93,9 +108,7 @@ contract OneInchV2Swapper is IOneInchSwapper, Swapper {
     return 1;
   }
 
-  function makeCall(CallDescription memory desc) external override {}
-
-  function makeCalls(CallDescription[] memory desc) external payable override {}
+  function callBytes(bytes calldata data) external payable override {}
 
   function _executeSwap(
     address _receiver,
@@ -117,7 +130,7 @@ contract OneInchV2Swapper is IOneInchSwapper, Swapper {
     //     dstToken: IERC20(_tokenOut),
     //     srcReceiver: address(0),
     //     dstReceiver: _receiver,
-    //     amount: _minAmountOut,
+    //     amount: _amountIn,
     //     minReturnAmount: _minAmountOut,
     //     guaranteedAmount: 0,
     //     flags: 0,

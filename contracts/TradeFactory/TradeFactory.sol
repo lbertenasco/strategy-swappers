@@ -18,11 +18,11 @@ contract TradeFactory is Governable, TradeFactoryPositionsHandler, TradeFactoryE
   using EnumerableSet for EnumerableSet.UintSet;
   using EnumerableSet for EnumerableSet.AddressSet;
 
-  constructor(
-    address _governor,
-    address _mechanicsRegistry,
-    address _swapperRegistry
-  ) Governable(_governor) TradeFactoryExecutor(_mechanicsRegistry) TradeFactoryPositionsHandler(_swapperRegistry) {}
+  constructor(address _governor, address _mechanicsRegistry)
+    Governable(_governor)
+    TradeFactoryExecutor(_mechanicsRegistry)
+    TradeFactoryPositionsHandler()
+  {}
 
   // Collectable Dust
   function sendDust(

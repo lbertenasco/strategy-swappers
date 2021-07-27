@@ -51,7 +51,7 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, Governable, Tra
     require(_pendingTradesIds.contains(_id), 'TradeFactory: trade not pending');
     Trade memory _trade = pendingTradesById[_id];
     require(block.timestamp <= _trade._deadline, 'TradeFactory: trade has expired');
-    require(!ISwapperRegistry(SWAPPER_REGISTRY).deprecatedByAddress(_trade._swapper), 'TradeFactory: deprecated swapper');
+    require(_swappers.contains(_trade._swapper), 'TradeFactory: invalid swapper');
     if (!_approvedTokensBySwappers[_trade._swapper].contains(_trade._tokenIn)) {
       _enableSwapperToken(_trade._swapper, _trade._tokenIn);
     }

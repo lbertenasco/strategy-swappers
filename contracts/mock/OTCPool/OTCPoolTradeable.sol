@@ -10,7 +10,7 @@ contract OTCPoolTradeableMock is OTCPoolTradeable, OTCPoolDeskMock {
   uint256 tookFromPool;
   uint256 tookFromSwapper;
 
-  constructor(address _OTCProvider, address _swapperRegistry) OTCPoolTradeable(_swapperRegistry) OTCPoolDeskMock(_OTCProvider) {}
+  constructor(address _OTCProvider, address _tradeFactory) OTCPoolTradeable(_tradeFactory) OTCPoolDeskMock(_OTCProvider) {}
 
   function onlyRegisteredSwapperModifier() external onlyRegisteredSwapper {}
 

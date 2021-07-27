@@ -6,9 +6,9 @@ import '../../TradeFactory/TradeFactoryExecutor.sol';
 import './TradeFactoryPositionsHandler.sol';
 
 contract TradeFactoryExecutorMock is Governable, TradeFactoryPositionsHandler, TradeFactoryExecutor {
-  constructor(address _governor, address _swapperRegistry, address _mechanicsRegistry) 
+  constructor(address _governor, address _mechanicsRegistry) 
     Governable(_governor) 
-    TradeFactoryPositionsHandler(_swapperRegistry) 
+    TradeFactoryPositionsHandler() 
     TradeFactoryExecutor(_mechanicsRegistry) {}
 
   function enableSwapperToken(address _swapper, address _token) external {

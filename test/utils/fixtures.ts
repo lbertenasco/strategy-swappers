@@ -32,26 +32,14 @@ export const machineryFixture = async (mechanic: string): Promise<MachineryFixtu
   return { mechanicsRegistry, machinery };
 };
 
-interface SwapperRegistryFixture {
-  swapperRegistry: Contract;
-}
-
-export const swapperRegistryFixture = async (governor: string): Promise<SwapperRegistryFixture> => {
-  const swapperRegistryFactory = await ethers.getContractFactory('contracts/SwapperRegistry.sol:SwapperRegistry');
-  const swapperRegistry = await swapperRegistryFactory.deploy(governor);
-  return { swapperRegistry };
-};
-
-interface TradeFactoryFixture extends SwapperRegistryFixture {
+interface TradeFactoryFixture {
   tradeFactory: Contract;
 }
 
 export const tradeFactoryFixture = async (governor: string, mechanicsRegistry: string): Promise<TradeFactoryFixture> => {
-  const { swapperRegistry } = await swapperRegistryFixture(governor);
   const tradeFactoryFactory = await ethers.getContractFactory('contracts/TradeFactory/TradeFactory.sol:TradeFactory');
-  const tradeFactory = await tradeFactoryFactory.deploy(governor, mechanicsRegistry, swapperRegistry.address);
+  const tradeFactory = await tradeFactoryFactory.deploy(governor, mechanicsRegistry);
   return {
-    swapperRegistry,
     tradeFactory,
   };
 };
@@ -64,7 +52,7 @@ interface UniswapV2SwapperFixture extends TradeFactoryFixture {
 }
 
 export const uniswapV2SwapperFixture = async (governor: string, mechanicsRegistry: string): Promise<UniswapV2SwapperFixture> => {
-  const { swapperRegistry, tradeFactory } = await tradeFactoryFixture(governor, mechanicsRegistry);
+  const { tradeFactory } = await tradeFactoryFixture(governor, mechanicsRegistry);
   const uniswapV2SwapperFactory = await ethers.getContractFactory('contracts/swappers/UniswapV2Swapper.sol:UniswapV2Swapper');
   const owner = await wallet.generateRandom();
   await ethers.provider.send('hardhat_setBalance', [owner.address, utils.parseEther('10').toHexString()]);
@@ -76,9 +64,8 @@ export const uniswapV2SwapperFixture = async (governor: string, mechanicsRegistr
     uniswapDeployment.uniswapV2Factory.address,
     uniswapDeployment.uniswapV2Router02.address
   );
-  await swapperRegistry.addSwapper('uniswap-v2', uniswapV2Swapper.address);
+  await tradeFactory.addSwapper('uniswap-v2', uniswapV2Swapper.address);
   return {
-    swapperRegistry,
     tradeFactory,
     uniswapV2Swapper,
     ...uniswapDeployment,

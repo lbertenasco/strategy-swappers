@@ -19,8 +19,6 @@ contract('TradeFactory', () => {
 
   let mechanicsRegistry: Contract;
   let machinery: Contract;
-
-  let swapperRegistry: Contract;
   let tradeFactory: Contract;
 
   let uniswapV2Factory: Contract;
@@ -39,7 +37,7 @@ contract('TradeFactory', () => {
   beforeEach(async () => {
     ({ mechanicsRegistry, machinery } = await fixtures.machineryFixture(mechanic.address));
 
-    ({ swapperRegistry, tradeFactory, uniswapV2Router02, uniswapV2Factory } = await fixtures.uniswapV2SwapperFixture(
+    ({ tradeFactory, uniswapV2Router02, uniswapV2Factory } = await fixtures.uniswapV2SwapperFixture(
       governor.address,
       mechanicsRegistry.address
     ));
@@ -72,8 +70,6 @@ contract('TradeFactory', () => {
 
     await tokenIn.connect(hodler).transfer(strategy.address, amountIn);
     await tokenIn.connect(strategy).approve(tradeFactory.address, amountIn);
-    const { _initialization } = await swapperRegistry['isSwapper(string)']('uniswap-v2');
-    await tradeFactory.connect(strategy).setSwapperSafetyCheckpoint(_initialization);
     await tradeFactory
       .connect(strategy)
       .create('uniswap-v2', tokenIn.address, tokenOut.address, amountIn, maxSlippage, moment().add('30', 'minutes').unix());

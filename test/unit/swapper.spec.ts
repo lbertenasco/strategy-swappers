@@ -97,8 +97,8 @@ contract('Swapper', () => {
       const maxSlippage = BigNumber.from('1000');
       const data = contracts.encodeParameters(['uint256'], [constants.MAX_UINT_256]);
       given(async () => {
-        receiver = await wallet.generateRandomAddress();
-        tokenOut = await wallet.generateRandomAddress();
+        receiver = wallet.generateRandomAddress();
+        tokenOut = wallet.generateRandomAddress();
         tokenIn = await erc20.deploy({
           initialAccount: tradeFactory.address,
           initialAmount: amount,

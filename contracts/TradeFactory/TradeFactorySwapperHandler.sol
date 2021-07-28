@@ -26,12 +26,17 @@ interface ITradeFactorySwapperHandler {
 
   function addSwapper(address _swapper) external;
 
+  function addSwappers(address[] memory __swappers) external;
+
   function removeSwapper(address _swapper) external;
+
+  function removeSwappers(address[] memory __swappers) external;
 }
 
 abstract contract TradeFactorySwapperHandler is ITradeFactorySwapperHandler, AccessControl, Governable {
   using EnumerableSet for EnumerableSet.AddressSet;
 
+  bytes32 public constant SWAPPER_ADDER = keccak256('SWAPPER_ADDER');
   bytes32 public constant SWAPPER_SETTER = keccak256('SWAPPER_SETTER');
   bytes32 public constant MASTER_ADMIN = keccak256('MASTER_ADMIN');
 
@@ -42,8 +47,10 @@ abstract contract TradeFactorySwapperHandler is ITradeFactorySwapperHandler, Acc
   // strategy -> swapper
   mapping(address => address) public override strategySwapper;
 
-  constructor() {
+  constructor(address _governor) Governable(_governor) {
+    _setRoleAdmin(SWAPPER_ADDER, MASTER_ADMIN);
     _setRoleAdmin(SWAPPER_SETTER, MASTER_ADMIN);
+    _setupRole(SWAPPER_ADDER, governor);
     _setupRole(SWAPPER_SETTER, governor);
     _setupRole(MASTER_ADMIN, governor);
   }
@@ -72,13 +79,34 @@ abstract contract TradeFactorySwapperHandler is ITradeFactorySwapperHandler, Acc
     emit StrategySwapperSet(_strategy, _swapper);
   }
 
-  function addSwapper(address _swapper) external override onlyRole(SWAPPER_SETTER) {
+  function _addSwapper(address _swapper) internal {
+    require(_swapper != address(0), 'TF: zero address');
     require(_swappers.add(_swapper), 'TF: swapper already added');
     emit SwapperAdded(_swapper);
   }
 
-  function removeSwapper(address _swapper) external override onlyRole(SWAPPER_SETTER) {
+  function addSwapper(address _swapper) external override onlyRole(SWAPPER_ADDER) {
+    _addSwapper(_swapper);
+  }
+
+  function addSwappers(address[] memory __swappers) external override onlyRole(SWAPPER_ADDER) {
+    for (uint256 i = 0; i < __swappers.length; i++) {
+      _addSwapper(__swappers[i]);
+    }
+  }
+
+  function _removeSwapper(address _swapper) internal {
     require(_swappers.remove(_swapper), 'TF: swapper not added');
     emit SwapperRemoved(_swapper);
+  }
+
+  function removeSwapper(address _swapper) external override onlyRole(SWAPPER_ADDER) {
+    _removeSwapper(_swapper);
+  }
+
+  function removeSwappers(address[] memory __swappers) external override onlyRole(SWAPPER_ADDER) {
+    for (uint256 i = 0; i < __swappers.length; i++) {
+      _removeSwapper(__swappers[i]);
+    }
   }
 }

@@ -65,7 +65,7 @@ interface ITradeFactoryPositionsHandler {
 
   function cancelAllPending() external returns (uint256[] memory _canceledTradesIds);
 
-  function changePendingTradesSwapper(address _strategy, address _swapper) external returns (uint256[] memory _changedSwapperIds);
+  function changeStrategyPendingTradesSwapper(address _strategy, address _swapper) external returns (uint256[] memory _changedSwapperIds);
 }
 
 abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler, TradeFactorySwapperHandler {
@@ -84,7 +84,7 @@ abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler,
 
   mapping(address => EnumerableSet.UintSet) internal _pendingTradesByOwner;
 
-  constructor() {
+  constructor(address _governor) TradeFactorySwapperHandler(_governor) {
     _setRoleAdmin(STRATEGY, STRATEGY_ADMIN);
     _setRoleAdmin(STRATEGY_ADMIN, MASTER_ADMIN);
     _setupRole(STRATEGY_ADMIN, governor);
@@ -161,21 +161,21 @@ abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler,
   ) external override returns (uint256[] memory _changedSwapperIds) {
     _setStrategySwapper(_strategy, _swapper);
     if (_migrateSwaps) {
-      return _changePendingTradesSwapper(_strategy, _swapper);
+      return _changeStrategyPendingTradesSwapper(_strategy, _swapper);
     }
   }
 
-  function changePendingTradesSwapper(address _strategy, address _swapper)
+  function changeStrategyPendingTradesSwapper(address _strategy, address _swapper)
     external
     override
     onlyRole(SWAPPER_SETTER)
     returns (uint256[] memory _changedSwapperIds)
   {
     require(_swappers.contains(_swapper), 'TradeFactory: invalid swapper');
-    return _changePendingTradesSwapper(_strategy, _swapper);
+    return _changeStrategyPendingTradesSwapper(_strategy, _swapper);
   }
 
-  function _changePendingTradesSwapper(address _strategy, address _swapper) internal returns (uint256[] memory _changedSwapperIds) {
+  function _changeStrategyPendingTradesSwapper(address _strategy, address _swapper) internal returns (uint256[] memory _changedSwapperIds) {
     _changedSwapperIds = new uint256[](_pendingTradesByOwner[_strategy].length());
     for (uint256 i; i < _pendingTradesByOwner[_strategy].length(); i++) {
       pendingTradesById[_pendingTradesByOwner[_strategy].at(i)]._swapper = _swapper;

@@ -12,24 +12,22 @@ const OTC_PROVIDER: { [chainId: string]: string } = {
 const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployer, governor, yMech } = await hre.getNamedAccounts();
 
-  const swapperRegistry = await hre.deployments.get('SwapperRegistry');
-
   const chainId = await getChainId(hre);
 
   const deploy = await hre.deployments.deploy('OTCPool', {
     contract: 'contracts/OTCPool/OTCPool.sol:OTCPool',
     from: deployer,
-    args: [governor, OTC_PROVIDER[chainId], swapperRegistry.address],
+    args: [governor, OTC_PROVIDER[chainId]],
     log: true,
   });
 
   if (await shouldVerifyContract(hre, 'OTCPool')) {
     await hre.run('verify:verify', {
       address: deploy.address,
-      constructorArguments: [governor, OTC_PROVIDER[chainId], swapperRegistry.address],
+      constructorArguments: [governor, OTC_PROVIDER[chainId]],
     });
   }
 };
-deployFunction.dependencies = ['SwapperRegistry'];
+deployFunction.dependencies = [];
 deployFunction.tags = ['OTCPool'];
 export default deployFunction;

@@ -1,6 +1,6 @@
 import { Contract } from '@ethersproject/contracts';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signers';
-import { abi as swapperRegistryABI } from '../../../artifacts/contracts/SwapperRegistry.sol/ISwapperRegistry.json';
+import { abi as tradeFactoryABI } from '../../../artifacts/contracts/TradeFactory/TradeFactory.sol/ITradeFactory.json';
 import { abi as machineryABI } from '@lbertenasco/contract-utils/artifacts/interfaces/utils/IMachinery.sol/IMachinery.json';
 import { abi as swapperABI } from '../../../artifacts/contracts/Swapper.sol/ISwapper.json';
 import { TransactionResponse } from '@ethersproject/abstract-provider';
@@ -16,7 +16,7 @@ contract('TradeFactoryExecutor', () => {
   let governor: SignerWithAddress;
   let strategy: SignerWithAddress;
   let mechanic: SignerWithAddress;
-  let swapperRegistry: MockContract;
+  let tradeFactory: MockContract;
   let machinery: MockContract;
   let swapper: MockContract;
   let executorFactory: ModifiableContractFactory;
@@ -30,10 +30,10 @@ contract('TradeFactoryExecutor', () => {
 
   beforeEach(async () => {
     await evm.reset();
-    swapperRegistry = await smockit(swapperRegistryABI);
+    tradeFactory = await smockit(tradeFactoryABI);
     machinery = await smockit(machineryABI);
     swapper = await smockit(swapperABI);
-    executor = await executorFactory.deploy(governor.address, swapperRegistry.address, machinery.address);
+    executor = await executorFactory.deploy(governor.address, machinery.address);
     executor = executor.connect(mechanic);
     token = await erc20.deploy({
       symbol: 'TK',
@@ -42,9 +42,8 @@ contract('TradeFactoryExecutor', () => {
       initialAmount: utils.parseEther('10000'),
     });
     await executor.connect(governor).grantRole(await executor.STRATEGY(), strategy.address);
-    swapperRegistry.smocked['isSwapper(string)'].will.return.with([true, swapper.address, 0]);
+    tradeFactory.smocked['isSwapper(address)'].will.return.with(true);
     machinery.smocked.isMechanic.will.return.with(true);
-    swapperRegistry.smocked.deprecatedByAddress.will.return.with(false);
   });
 
   describe('constructor', () => {});
@@ -83,7 +82,6 @@ contract('TradeFactoryExecutor', () => {
     when('swapper has been deprecated', () => {
       let executeTx: Promise<TransactionResponse>;
       given(async () => {
-        swapperRegistry.smocked.deprecatedByAddress.will.return.with(true);
         executeTx = executor.execute(tradeId, data);
       });
       then('tx is reverted with reason', async () => {
@@ -107,9 +105,6 @@ contract('TradeFactoryExecutor', () => {
       then('moves funds from strategy to trade factory', async () => {
         expect(await token.balanceOf(strategy.address)).to.equal(initialStrategyBalance.sub(amountIn));
         expect(await token.balanceOf(executor.address)).to.equal(initialExecutorBalance.add(amountIn));
-      });
-      then('calls swapper to check swapper deprecation', async () => {
-        expect(swapperRegistry.smocked.deprecatedByAddress.calls[0][0]).to.be.equal(swapper.address);
       });
       then('calls swapper swap with correct data', () => {
         expect(swapper.smocked.swap.calls[0]).to.be.eql([strategy.address, token.address, tokenOut, amountIn, maxSlippage, data]);

@@ -79,7 +79,6 @@ describe('OneInchAggregatorSwapper', function () {
       crvWhale = await wallet.impersonate(CRV_WHALE_ADDRESS);
       daiWhale = await wallet.impersonate(DAI_WHALE_ADDRESS);
       yMech = await wallet.impersonate(namedAccounts.yMech);
-      strategy = await wallet.generateRandom();
 
       await setTestChainId(CHAIN_ID);
       await deployments.fixture('OneInchAggregatorSwapper');

@@ -23,7 +23,7 @@ export type SwapParams = {
   connectorTokens?: string;
   allowPartialFill?: boolean;
   disableEstimate?: boolean;
-  gasLimit?: BigNumber;
+  gasLimit?: number;
   parts?: number;
   mainRouteParts?: number;
 };
@@ -69,7 +69,9 @@ export const swap = async (chainId: number, swapParams: SwapParams): Promise<Swa
         swapParams.tokenOut
       }&destReceiver=${swapParams.receiver}&amount=${swapParams.amountIn.toString()}&fromAddress=${swapParams.fromAddress}&slippage=${
         swapParams.slippage
-      }&disableEstimate=${swapParams.disableEstimate}&allowPartialFill=${swapParams.allowPartialFill}`
+      }&disableEstimate=${swapParams.disableEstimate}&allowPartialFill=${swapParams.allowPartialFill}&fee=${swapParams.fee}&gasLimit=${
+        swapParams.gasLimit
+      }`
     );
   } catch (err) {
     throw new Error(`Status code: ${err.response.data.statusCode}. Message: ${err.response.data.message}`);

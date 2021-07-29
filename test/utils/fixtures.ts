@@ -64,7 +64,7 @@ export const uniswapV2SwapperFixture = async (governor: string, mechanicsRegistr
     uniswapDeployment.uniswapV2Factory.address,
     uniswapDeployment.uniswapV2Router02.address
   );
-  await tradeFactory.addSwapper('uniswap-v2', uniswapV2Swapper.address);
+  await tradeFactory.addSwapper(uniswapV2Swapper.address);
   return {
     tradeFactory,
     uniswapV2Swapper,

@@ -14,16 +14,18 @@ contract('TradeFactoryPositionsHandler', () => {
   let deployer: SignerWithAddress;
   let governor: SignerWithAddress;
   let strategy: SignerWithAddress;
+  let swapperSetter: SignerWithAddress;
   let tradeFactory: MockContract;
   let positionsHandlerFactory: ModifiableContractFactory;
   let positionsHandler: ModifiableContract;
   let defaultSwapperAddress: string;
 
-  const STRATEGY_ROLE = new Web3().utils.soliditySha3('STRATEGY');
-  const STRATEGY_ADMIN_ROLE = new Web3().utils.soliditySha3('STRATEGY_ADMIN');
+  const STRATEGY_ROLE: string = new Web3().utils.soliditySha3('STRATEGY') as string;
+  const STRATEGY_ADMIN_ROLE: string = new Web3().utils.soliditySha3('STRATEGY_ADMIN') as string;
+  const SWAPPER_SETTER_ROLE: string = new Web3().utils.soliditySha3('SWAPPER_SETTER') as string;
 
   before(async () => {
-    [deployer, governor, strategy] = await ethers.getSigners();
+    [deployer, governor, strategy, swapperSetter] = await ethers.getSigners();
     positionsHandlerFactory = await smoddit(
       'contracts/mock/TradeFactory/TradeFactoryPositionsHandler.sol:TradeFactoryPositionsHandlerMock',
       strategy
@@ -35,6 +37,7 @@ contract('TradeFactoryPositionsHandler', () => {
     positionsHandler = await positionsHandlerFactory.deploy(governor.address);
     defaultSwapperAddress = wallet.generateRandomAddress();
     await positionsHandler.connect(governor).grantRole(STRATEGY_ROLE, strategy.address);
+    await positionsHandler.connect(governor).grantRole(SWAPPER_SETTER_ROLE, swapperSetter.address);
     await positionsHandler.connect(governor).addSwapper(defaultSwapperAddress);
     await positionsHandler.connect(governor).setStrategySwapper(strategy.address, defaultSwapperAddress, false);
   });
@@ -198,72 +201,63 @@ contract('TradeFactoryPositionsHandler', () => {
     const amountIn = utils.parseEther('100');
     const maxSlippage = 1000;
     const deadline = moment().add('30', 'minutes').unix();
-    const strategySafetyCheckpoint = moment().unix();
     given(async () => {
-      await positionsHandler.smodify.put({
-        swapperSafetyCheckpoint: {
-          [strategy.address]: strategySafetyCheckpoint,
-        },
-      });
-      tradeFactory.smocked['isSwapper(address)'].will.return.with(true);
+      await positionsHandler.connect(governor).addSwapper(swapper);
+      await positionsHandler.connect(governor).setStrategySwapper(strategy.address, swapper, false);
     });
-    // TODO: only strategy
-    when('swapper is not registered', () => {
-      given(async () => {
-        tradeFactory.smocked['isSwapper(address)'].will.return.with(false);
-      });
+    when('strategy is not registered', () => {
       then('tx is reverted with reason', async () => {
-        await expect(positionsHandler.create(swapper, tokenIn, tokenOut, amountIn, maxSlippage, deadline)).to.be.revertedWith(
-          'TradeFactory: invalid swapper'
+        await expect(positionsHandler.connect(deployer).create(tokenIn, tokenOut, amountIn, maxSlippage, deadline)).to.be.revertedWith(
+          `AccessControl: account ${deployer.address.toLowerCase()} is missing role ${STRATEGY_ROLE.toLowerCase()}`
         );
       });
     });
-    when('swapper was initiated later than strategy safety checkpoint', () => {
+    when('swapper is not registered', () => {
       given(async () => {
-        tradeFactory.smocked['isSwapper(address)'].will.return.with(true);
+        await positionsHandler.connect(governor).grantRole(STRATEGY_ROLE, deployer.address);
       });
       then('tx is reverted with reason', async () => {
-        await expect(positionsHandler.create(swapper, tokenIn, tokenOut, amountIn, maxSlippage, deadline)).to.be.revertedWith(
-          'TradeFactory: initialization greater than checkpoint'
+        await expect(positionsHandler.connect(deployer).create(tokenIn, tokenOut, amountIn, maxSlippage, deadline)).to.be.revertedWith(
+          'TF: no strategy swapper'
         );
       });
     });
     when('token in is zero address', () => {
       then('tx is reverted with reason', async () => {
-        await expect(positionsHandler.create(swapper, constants.ZERO_ADDRESS, tokenOut, amountIn, maxSlippage, deadline)).to.be.revertedWith(
+        await expect(positionsHandler.create(constants.ZERO_ADDRESS, tokenOut, amountIn, maxSlippage, deadline)).to.be.revertedWith(
           'TradeFactory: zero address'
         );
       });
     });
     when('token out is zero address', () => {
       then('tx is reverted with reason', async () => {
-        await expect(positionsHandler.create(swapper, tokenIn, constants.ZERO_ADDRESS, amountIn, maxSlippage, deadline)).to.be.revertedWith(
+        await expect(positionsHandler.create(tokenIn, constants.ZERO_ADDRESS, amountIn, maxSlippage, deadline)).to.be.revertedWith(
           'TradeFactory: zero address'
         );
       });
     });
     when('amount in is zero', () => {
       then('tx is reverted with reason', async () => {
-        await expect(positionsHandler.create(swapper, tokenIn, tokenOut, constants.ZERO, maxSlippage, deadline)).to.be.revertedWith(
+        await expect(positionsHandler.create(tokenIn, tokenOut, constants.ZERO, maxSlippage, deadline)).to.be.revertedWith(
           'TradeFactory: zero amount'
         );
       });
     });
     when('max slippage is set to zero', () => {
       then('tx is reverted with reason', async () => {
-        await expect(positionsHandler.create(swapper, tokenIn, tokenOut, amountIn, constants.ZERO, deadline)).to.be.revertedWith(
+        await expect(positionsHandler.create(tokenIn, tokenOut, amountIn, constants.ZERO, deadline)).to.be.revertedWith(
           'TradeFactory: zero slippage'
         );
       });
     });
     when('deadline is equal or less than current timestamp', () => {
       then('tx is reverted with reason', async () => {
-        await expect(positionsHandler.create(swapper, tokenIn, tokenOut, amountIn, maxSlippage, constants.ZERO_ADDRESS)).to.be.revertedWith(
+        await expect(positionsHandler.create(tokenIn, tokenOut, amountIn, maxSlippage, constants.ZERO_ADDRESS)).to.be.revertedWith(
           'TradeFactory: deadline too soon'
         );
-        const staticDeadline = moment().unix() + 100;
-        await evm.advanceToTime(staticDeadline);
-        await expect(positionsHandler.create(swapper, tokenIn, tokenOut, amountIn, maxSlippage, staticDeadline)).to.be.revertedWith(
+        const staticDeadline = moment().unix() + 200;
+        await evm.advanceToTimeAndBlock(staticDeadline);
+        await expect(positionsHandler.create(tokenIn, tokenOut, amountIn, maxSlippage, staticDeadline)).to.be.revertedWith(
           'TradeFactory: deadline too soon'
         );
       });
@@ -279,9 +273,6 @@ contract('TradeFactoryPositionsHandler', () => {
           maxSlippage,
           deadline,
         }));
-      });
-      then('consults swapper with tradeFactory', async () => {
-        expect(tradeFactory.smocked['isSwapper(address)'].calls[0]._swapper).to.be.equal(swapper);
       });
       then('trade gets added to pending trades', async () => {
         const pendingTrade = await positionsHandler.pendingTradesById(tradeId);
@@ -301,9 +292,7 @@ contract('TradeFactoryPositionsHandler', () => {
         expect(await positionsHandler['pendingTradesIds()']()).to.eql([tradeId]);
       });
       then('trade counter gets increased', async () => {
-        expect(await positionsHandler.callStatic.create(swapper, tokenIn, tokenOut, amountIn, maxSlippage, deadline)).to.be.equal(
-          tradeId.add(1)
-        );
+        expect(await positionsHandler.callStatic.create(tokenIn, tokenOut, amountIn, maxSlippage, deadline)).to.be.equal(tradeId.add(1));
       });
       then('emits event', async () => {
         await expect(createTx)
@@ -458,50 +447,26 @@ contract('TradeFactoryPositionsHandler', () => {
         ).id
       );
     });
-    // TODO: only strategy
+    // TODO: only SWAPPER_SETTER
     when('swapper is not registered', () => {
       let changeStrategyPendingTradesSwapper: Promise<TransactionResponse>;
       given(async () => {
-        tradeFactory.smocked['isSwapper(address)'].will.return.with(false);
-        changeStrategyPendingTradesSwapper = positionsHandler.changeStrategyPendingTradesSwapper(wallet.generateRandomAddress());
+        changeStrategyPendingTradesSwapper = positionsHandler
+          .connect(swapperSetter)
+          .changeStrategyPendingTradesSwapper(strategy.address, wallet.generateRandomAddress());
       });
       then('tx is reverted with reason', async () => {
         await expect(changeStrategyPendingTradesSwapper).to.be.revertedWith('TradeFactory: invalid swapper');
       });
     });
-    when('swapper was initiated later than strategy safety checkpoint', () => {
-      let changeStrategyPendingTradesSwapper: Promise<TransactionResponse>;
-      const strategySafetyCheckpoint = moment().unix();
-      given(async () => {
-        await positionsHandler.smodify.put({
-          swapperSafetyCheckpoint: {
-            [strategy.address]: strategySafetyCheckpoint,
-          },
-        });
-        tradeFactory.smocked['isSwapper(address)'].will.return.with(true);
-        changeStrategyPendingTradesSwapper = positionsHandler.changeStrategyPendingTradesSwapper(wallet.generateRandomAddress());
-      });
-      then('tx is reverted with reason', async () => {
-        await expect(changeStrategyPendingTradesSwapper).to.be.revertedWith('TradeFactory: initialization greater than checkpoint');
-      });
-    });
     when('swapper is valid', () => {
       let changeStrategyPendingTradesSwapper: TransactionResponse;
       const newSwapper = wallet.generateRandomAddress();
-      const strategySafetyCheckpoint = moment().unix();
       given(async () => {
-        await positionsHandler.smodify.put({
-          swapperSafetyCheckpoint: {
-            [strategy.address]: strategySafetyCheckpoint,
-          },
-        });
-        tradeFactory.smocked['isSwapper(address)'].will.return.with(true);
-        changeStrategyPendingTradesSwapper = await positionsHandler.changeStrategyPendingTradesSwapper(newSwapper);
-      });
-      then('consults swapper with tradeFactory', async () => {
-        expect(
-          tradeFactory.smocked['isSwapper(address)'].calls[tradeFactory.smocked['isSwapper(address)'].calls.length - 1]._swapper
-        ).to.be.equal(newSwapper);
+        await positionsHandler.connect(governor).addSwapper(newSwapper);
+        changeStrategyPendingTradesSwapper = await positionsHandler
+          .connect(swapperSetter)
+          .changeStrategyPendingTradesSwapper(strategy.address, newSwapper);
       });
       then("changes all pending trade's swapper", async () => {
         for (let i = 0; i < tradeIds.length; i++) {

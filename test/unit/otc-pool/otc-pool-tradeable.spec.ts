@@ -2,34 +2,40 @@ import { Contract } from '@ethersproject/contracts';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signers';
 import { TransactionResponse } from '@ethersproject/abstract-provider';
 import { abi as OTCSwapperABI } from '../../../artifacts/contracts/OTCSwapper.sol/IOTCSwapper.json';
-import { abi as tradeFactoryABI } from '../../../artifacts/contracts/TradeFactory/TradeFactory.sol/TradeFactory.json';
+import { abi as machineryABI } from '@lbertenasco/contract-utils/artifacts/interfaces/utils/IMachinery.sol/IMachinery.json';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { behaviours, bn, constants, contracts, erc20, wallet } from '../../utils';
 import { contract, given, then, when } from '../../utils/bdd';
 import { BigNumber } from '@ethersproject/bignumber';
-import { utils, Wallet } from 'ethers';
+import { ContractFactory, utils, Wallet } from 'ethers';
 import { expectNoEventWithName } from '../../utils/event-utils';
 import { MockContract, ModifiableContract, ModifiableContractFactory, smockit, smoddit } from '@eth-optimism/smock';
 
 contract('OTCPoolTradeable', () => {
+  let governor: SignerWithAddress;
   let OTCProvider: SignerWithAddress;
   let swapper: SignerWithAddress;
   let OTCPoolTradeableFactory: ModifiableContractFactory;
-  let OTCPoolTradeable: ModifiableContract;
-  let tradeFactory: MockContract;
+  let tradeFactoryFactory: ContractFactory;
+  let machinery: MockContract;
   let otcSwapper: MockContract;
+  let tradeFactory: Contract;
+  let OTCPoolTradeable: ModifiableContract;
 
   before(async () => {
-    [OTCProvider, swapper] = await ethers.getSigners();
+    [governor, OTCProvider, swapper] = await ethers.getSigners();
     OTCPoolTradeableFactory = await smoddit('contracts/mock/OTCPool/OTCPoolTradeable.sol:OTCPoolTradeableMock');
+    tradeFactoryFactory = await ethers.getContractFactory('contracts/TradeFactory/TradeFactory.sol:TradeFactory');
   });
 
   beforeEach(async () => {
     otcSwapper = await smockit(OTCSwapperABI);
-    tradeFactory = await smockit(tradeFactoryABI);
+    machinery = await smockit(machineryABI);
+    tradeFactory = await tradeFactoryFactory.deploy(governor.address, machinery.address);
     OTCPoolTradeable = await OTCPoolTradeableFactory.deploy(OTCProvider.address, tradeFactory.address);
-    tradeFactory.smocked['isSwapper(address)'].will.return.with(true);
+    await tradeFactory.connect(governor).addSwapper(swapper.address);
+    machinery.smocked.isMechanic.will.return.with(true);
   });
 
   describe('constructor', () => {
@@ -93,7 +99,7 @@ contract('OTCPoolTradeable', () => {
     when('token is zero address', () => {
       let claimTx: Promise<TransactionResponse>;
       given(async () => {
-        claimTx = OTCPoolTradeable.claim(constants.ZERO_ADDRESS, 1);
+        claimTx = OTCPoolTradeable.connect(OTCProvider).claim(constants.ZERO_ADDRESS, 1);
       });
       then('tx is reverted with reason', async () => {
         await expect(claimTx).to.be.revertedWith('OTCPool: zero address');
@@ -102,7 +108,7 @@ contract('OTCPoolTradeable', () => {
     when('amount to claim is more than available', () => {
       let claimTx: Promise<TransactionResponse>;
       given(async () => {
-        claimTx = OTCPoolTradeable.claim(constants.NOT_ZERO_ADDRESS, 1);
+        claimTx = OTCPoolTradeable.connect(OTCProvider).claim(constants.NOT_ZERO_ADDRESS, 1);
       });
       then('tx is reverted with reason', async () => {
         await expect(claimTx).to.be.revertedWith('OTCPool: zero claim');
@@ -126,7 +132,7 @@ contract('OTCPoolTradeable', () => {
           },
         });
         await OTCPoolTradeable.setSwappedAvailable(token.address, available);
-        claimTx = await OTCPoolTradeable.claim(token.address, toClaim);
+        claimTx = await OTCPoolTradeable.connect(OTCProvider).claim(token.address, toClaim);
       });
       then('swapped available of token is reduced', async () => {
         expect(await OTCPoolTradeable.swappedAvailable(token.address)).to.equal(available.sub(toClaim));

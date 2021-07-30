@@ -28,6 +28,6 @@ const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnviro
     });
   }
 };
-deployFunction.dependencies = [];
+deployFunction.dependencies = ['TradeFactory'];
 deployFunction.tags = ['OTCPool'];
 export default deployFunction;

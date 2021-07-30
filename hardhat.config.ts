@@ -8,6 +8,7 @@ import 'solidity-coverage';
 import 'hardhat-deploy';
 import { HardhatUserConfig, NetworksUserConfig } from 'hardhat/types';
 import { getNodeUrl } from './utils/network';
+import { utils } from 'ethers';
 
 const networks: NetworksUserConfig = process.env.TEST
   ? {}
@@ -17,12 +18,12 @@ const networks: NetworksUserConfig = process.env.TEST
           enabled: process.env.FORK ? true : false,
           url: getNodeUrl('mainnet'),
         },
-        // accounts: [{ privateKey: process.env.MAINNET_PRIVATE_KEY as string, balance: '0xfffffffffff' }],
+        // accounts: [{ privateKey: process.env.POLYGON_PRIVATE_KEY as string, balance: utils.parseEther('1000000').toString() }],
       },
       localhost: {
         url: getNodeUrl('localhost'),
         live: false,
-        accounts: [process.env.LOCAL_MAINNET_PRIVATE_KEY as string],
+        // accounts: [process.env.LOCAL_MAINNET_PRIVATE_KEY as string],
         tags: ['local'],
       },
       mainnet: {
@@ -34,7 +35,6 @@ const networks: NetworksUserConfig = process.env.TEST
       polygon: {
         url: getNodeUrl('polygon'),
         accounts: [process.env.POLYGON_PRIVATE_KEY as string],
-        gasPrice: 'auto',
         tags: ['production'],
       },
     };

@@ -60,11 +60,17 @@ describe('SushiswapPolygonSwapper', function () {
     tradeFactory = await ethers.getContract('TradeFactory');
     swapperRegistry = await ethers.getContract('SwapperRegistry');
 
-    await CRV.connect(crvWhale).transfer(strategy.address, AMOUNT_IN, { gasPrice: 0 });
+    await CRV.connect(crvWhale).transfer(strategy.address, AMOUNT_IN, {
+      gasPrice: 0,
+    });
 
-    await tradeFactory.connect(governor).grantRole(await tradeFactory.STRATEGY(), strategy.address, { gasPrice: 0 });
+    await tradeFactory.connect(governor).grantRole(await tradeFactory.STRATEGY(), strategy.address, {
+      gasPrice: 0,
+    });
 
-    await CRV.connect(strategy).approve(tradeFactory.address, AMOUNT_IN, { gasPrice: 0 });
+    await CRV.connect(strategy).approve(tradeFactory.address, AMOUNT_IN, {
+      gasPrice: 0,
+    });
     const { _initialization } = await swapperRegistry['isSwapper(string)']('sushiswap-polygon');
     await tradeFactory.connect(strategy).setSwapperSafetyCheckpoint(_initialization, { gasPrice: 0 });
     await tradeFactory

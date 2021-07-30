@@ -90,11 +90,17 @@ describe('OneInchAggregatorSwapper', function () {
       swapperRegistry = await ethers.getContract('SwapperRegistry');
       oneInchAggregatorSwapper = await ethers.getContract('OneInchAggregatorSwapper');
 
-      await CRV.connect(crvWhale).transfer(strategy.address, AMOUNT_IN, { gasPrice: 0 });
+      await CRV.connect(crvWhale).transfer(strategy.address, AMOUNT_IN, {
+        gasPrice: 0,
+      });
 
-      await tradeFactory.connect(governor).grantRole(await tradeFactory.STRATEGY(), strategy.address, { gasPrice: 0 });
+      await tradeFactory.connect(governor).grantRole(await tradeFactory.STRATEGY(), strategy.address, {
+        gasPrice: 0,
+      });
 
-      await CRV.connect(strategy).approve(tradeFactory.address, AMOUNT_IN, { gasPrice: 0 });
+      await CRV.connect(strategy).approve(tradeFactory.address, AMOUNT_IN, {
+        gasPrice: 0,
+      });
       const { _initialization } = await swapperRegistry['isSwapper(string)']('one-inch-aggregator');
       await tradeFactory.connect(strategy).setSwapperSafetyCheckpoint(_initialization, { gasPrice: 0 });
       await tradeFactory
@@ -104,7 +110,10 @@ describe('OneInchAggregatorSwapper', function () {
 
     describe('swap', () => {
       beforeEach(async () => {
-        await tradeFactory.connect(yMech).execute(1, oneInchApiResponse.tx.data, { gasPrice: 0, gasLimit: GAS_LIMIT + GAS_LIMIT * 0.25 });
+        await tradeFactory.connect(yMech).execute(1, oneInchApiResponse.tx.data, {
+          gasPrice: 0,
+          gasLimit: GAS_LIMIT + GAS_LIMIT * 0.25,
+        });
       });
 
       then('CRV gets taken from strategy', async () => {
@@ -182,11 +191,17 @@ describe('OneInchAggregatorSwapper', function () {
       swapperRegistry = await ethers.getContract('SwapperRegistry');
       oneInchAggregatorSwapper = await ethers.getContract('OneInchAggregatorSwapper');
 
-      await WMATIC.connect(crvWhale).transfer(strategy.address, AMOUNT_IN, { gasPrice: 0 });
+      await WMATIC.connect(crvWhale).transfer(strategy.address, AMOUNT_IN, {
+        gasPrice: 0,
+      });
 
-      await tradeFactory.connect(governor).grantRole(await tradeFactory.STRATEGY(), strategy.address, { gasPrice: 0 });
+      await tradeFactory.connect(governor).grantRole(await tradeFactory.STRATEGY(), strategy.address, {
+        gasPrice: 0,
+      });
 
-      await WMATIC.connect(strategy).approve(tradeFactory.address, AMOUNT_IN, { gasPrice: 0 });
+      await WMATIC.connect(strategy).approve(tradeFactory.address, AMOUNT_IN, {
+        gasPrice: 0,
+      });
       const { _initialization } = await swapperRegistry['isSwapper(string)']('one-inch-aggregator');
       await tradeFactory.connect(strategy).setSwapperSafetyCheckpoint(_initialization, { gasPrice: 0 });
       await tradeFactory
@@ -198,7 +213,10 @@ describe('OneInchAggregatorSwapper', function () {
 
     describe('swap', () => {
       beforeEach(async () => {
-        await tradeFactory.connect(yMech).execute(1, oneInchApiResponse.tx.data, { gasPrice: 0, gasLimit: GAS_LIMIT + GAS_LIMIT * 0.25 });
+        await tradeFactory.connect(yMech).execute(1, oneInchApiResponse.tx.data, {
+          gasPrice: 0,
+          gasLimit: GAS_LIMIT + GAS_LIMIT * 0.25,
+        });
       });
 
       then('WMATIC gets taken from strategy and DAI gets airdropped to strategy', async () => {

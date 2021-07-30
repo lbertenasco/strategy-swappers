@@ -19,7 +19,6 @@ describe('OneInchAggregatorSwapper', function () {
   let strategy: Wallet;
 
   let tradeFactory: Contract;
-  let swapperRegistry: Contract;
   let oneInchAggregatorSwapper: Contract;
 
   const MAX_SLIPPAGE = 10_000; // 1%
@@ -87,19 +86,17 @@ describe('OneInchAggregatorSwapper', function () {
       DAI = await ethers.getContractAt(IERC20_ABI, DAI_ADDRESS);
 
       tradeFactory = await ethers.getContract('TradeFactory');
-      swapperRegistry = await ethers.getContract('SwapperRegistry');
       oneInchAggregatorSwapper = await ethers.getContract('OneInchAggregatorSwapper');
 
       await CRV.connect(crvWhale).transfer(strategy.address, AMOUNT_IN, { gasPrice: 0 });
 
       await tradeFactory.connect(governor).grantRole(await tradeFactory.STRATEGY(), strategy.address, { gasPrice: 0 });
+      await tradeFactory.connect(governor).setStrategySwapper(strategy.address, oneInchAggregatorSwapper.address, false);
 
       await CRV.connect(strategy).approve(tradeFactory.address, AMOUNT_IN, { gasPrice: 0 });
-      const { _initialization } = await swapperRegistry['isSwapper(string)']('one-inch-aggregator');
-      await tradeFactory.connect(strategy).setSwapperSafetyCheckpoint(_initialization, { gasPrice: 0 });
       await tradeFactory
         .connect(strategy)
-        .create('one-inch-aggregator', CRV_ADDRESS, DAI_ADDRESS, AMOUNT_IN, MAX_SLIPPAGE, moment().add('30', 'minutes').unix(), { gasPrice: 0 });
+        .create(CRV_ADDRESS, DAI_ADDRESS, AMOUNT_IN, MAX_SLIPPAGE, moment().add('30', 'minutes').unix(), { gasPrice: 0 });
     });
 
     describe('swap', () => {
@@ -172,28 +169,25 @@ describe('OneInchAggregatorSwapper', function () {
       daiWhale = await wallet.impersonate(DAI_WHALE_ADDRESS);
       yMech = await wallet.impersonate(namedAccounts.yMech);
 
-      await setTestChainId(CHAIN_ID);
+      setTestChainId(CHAIN_ID);
       await deployments.fixture('OneInchAggregatorSwapper');
 
       WMATIC = await ethers.getContractAt(IERC20_ABI, WMATIC_ADDRESS);
       DAI = await ethers.getContractAt(IERC20_ABI, DAI_ADDRESS);
 
       tradeFactory = await ethers.getContract('TradeFactory');
-      swapperRegistry = await ethers.getContract('SwapperRegistry');
       oneInchAggregatorSwapper = await ethers.getContract('OneInchAggregatorSwapper');
 
       await WMATIC.connect(crvWhale).transfer(strategy.address, AMOUNT_IN, { gasPrice: 0 });
 
       await tradeFactory.connect(governor).grantRole(await tradeFactory.STRATEGY(), strategy.address, { gasPrice: 0 });
+      await tradeFactory.connect(governor).setStrategySwapper(strategy.address, oneInchAggregatorSwapper.address, false);
 
       await WMATIC.connect(strategy).approve(tradeFactory.address, AMOUNT_IN, { gasPrice: 0 });
-      const { _initialization } = await swapperRegistry['isSwapper(string)']('one-inch-aggregator');
-      await tradeFactory.connect(strategy).setSwapperSafetyCheckpoint(_initialization, { gasPrice: 0 });
-      await tradeFactory
-        .connect(strategy)
-        .create('one-inch-aggregator', WMATIC_ADDRESS, DAI_ADDRESS, AMOUNT_IN, MAX_SLIPPAGE, moment().add('30', 'minutes').unix(), {
-          gasPrice: 0,
-        });
+
+      await tradeFactory.connect(strategy).create(WMATIC_ADDRESS, DAI_ADDRESS, AMOUNT_IN, MAX_SLIPPAGE, moment().add('30', 'minutes').unix(), {
+        gasPrice: 0,
+      });
     });
 
     describe('swap', () => {

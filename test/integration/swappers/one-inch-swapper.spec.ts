@@ -22,7 +22,7 @@ describe('OneInchSwapper', function () {
   let strategy: Wallet;
 
   let tradeFactory: Contract;
-  let swapperRegistry: Contract;
+  let oneInchSwapper: Contract;
 
   const MAX_SLIPPAGE = 10_000; // 1%
 
@@ -61,18 +61,17 @@ describe('OneInchSwapper', function () {
       DAI = await ethers.getContractAt(IERC20_ABI, DAI_ADDRESS);
 
       tradeFactory = await ethers.getContract('TradeFactory');
-      swapperRegistry = await ethers.getContract('SwapperRegistry');
+      oneInchSwapper = await ethers.getContract('OneInchSwapper');
 
       await CRV.connect(crvWhale).transfer(strategy.address, AMOUNT_IN, { gasPrice: 0 });
 
       await tradeFactory.connect(governor).grantRole(await tradeFactory.STRATEGY(), strategy.address, { gasPrice: 0 });
+      await tradeFactory.connect(governor).setStrategySwapper(strategy.address, oneInchSwapper.address, false);
 
       await CRV.connect(strategy).approve(tradeFactory.address, AMOUNT_IN, { gasPrice: 0 });
-      const { _initialization } = await swapperRegistry['isSwapper(string)']('one-inch');
-      await tradeFactory.connect(strategy).setSwapperSafetyCheckpoint(_initialization, { gasPrice: 0 });
       await tradeFactory
         .connect(strategy)
-        .create('one-inch', CRV_ADDRESS, DAI_ADDRESS, AMOUNT_IN, MAX_SLIPPAGE, moment().add('30', 'minutes').unix(), { gasPrice: 0 });
+        .create(CRV_ADDRESS, DAI_ADDRESS, AMOUNT_IN, MAX_SLIPPAGE, moment().add('30', 'minutes').unix(), { gasPrice: 0 });
     });
 
     describe('swap', () => {

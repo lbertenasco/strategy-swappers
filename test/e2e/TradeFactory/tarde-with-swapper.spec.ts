@@ -13,18 +13,17 @@ contract('TradeFactory', () => {
   let mechanic: SignerWithAddress;
   let strategy: SignerWithAddress;
   let hodler: SignerWithAddress;
+  let swapperSetter: SignerWithAddress;
 
   let tokenIn: Contract;
   let tokenOut: Contract;
 
   let mechanicsRegistry: Contract;
   let machinery: Contract;
-
-  let swapperRegistry: Contract;
   let tradeFactory: Contract;
 
   let uniswapV2Factory: Contract;
-  let uniswapV2Router02: Contract;
+  let uniswapV2Swapper: Contract;
   let uniswapPairAddress: string;
 
   const amountIn = utils.parseEther('10');
@@ -33,18 +32,18 @@ contract('TradeFactory', () => {
   const data = contracts.encodeParameters([], []);
 
   before('create fixture loader', async () => {
-    [governor, mechanic, strategy, hodler] = await ethers.getSigners();
+    [governor, mechanic, strategy, hodler, swapperSetter] = await ethers.getSigners();
   });
 
   beforeEach(async () => {
     ({ mechanicsRegistry, machinery } = await fixtures.machineryFixture(mechanic.address));
 
-    ({ swapperRegistry, tradeFactory, uniswapV2Router02, uniswapV2Factory } = await fixtures.uniswapV2SwapperFixture(
-      governor.address,
-      mechanicsRegistry.address
-    ));
+    ({ tradeFactory, uniswapV2Swapper, uniswapV2Factory } = await fixtures.uniswapV2SwapperFixture(governor.address, mechanicsRegistry.address));
 
     await tradeFactory.grantRole(await tradeFactory.STRATEGY(), strategy.address);
+    await tradeFactory.connect(governor).grantRole(await tradeFactory.STRATEGY(), strategy.address);
+    await tradeFactory.connect(governor).grantRole(await tradeFactory.SWAPPER_SETTER(), swapperSetter.address);
+    await tradeFactory.connect(governor).setStrategySwapper(strategy.address, uniswapV2Swapper.address, false);
 
     tokenIn = await erc20.deploy({
       name: 'TA',
@@ -72,11 +71,7 @@ contract('TradeFactory', () => {
 
     await tokenIn.connect(hodler).transfer(strategy.address, amountIn);
     await tokenIn.connect(strategy).approve(tradeFactory.address, amountIn);
-    const { _initialization } = await swapperRegistry['isSwapper(string)']('uniswap-v2');
-    await tradeFactory.connect(strategy).setSwapperSafetyCheckpoint(_initialization);
-    await tradeFactory
-      .connect(strategy)
-      .create('uniswap-v2', tokenIn.address, tokenOut.address, amountIn, maxSlippage, moment().add('30', 'minutes').unix());
+    await tradeFactory.connect(strategy).create(tokenIn.address, tokenOut.address, amountIn, maxSlippage, moment().add('30', 'minutes').unix());
   });
 
   describe('trade executed with swapper', () => {

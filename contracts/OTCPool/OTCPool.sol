@@ -11,8 +11,8 @@ contract OTCPool is IOTCPool, CollectableDustWithTokensManagement, Governable, O
   constructor(
     address _governor,
     address _OTCProvider,
-    address _swapperRegistry
-  ) Governable(_governor) OTCPoolDesk(_OTCProvider) OTCPoolTradeable(_swapperRegistry) {}
+    address _tradeFactory
+  ) Governable(_governor) OTCPoolDesk(_OTCProvider) OTCPoolTradeable(_tradeFactory) {}
 
   // CollectableDustWithTokenManagement
   function sendDust(

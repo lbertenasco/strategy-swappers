@@ -100,31 +100,6 @@ contract('TradeFactorySwapperHandler', () => {
     });
   });
 
-  describe('isSwapper(address)', () => {
-    let swapper: string;
-    let isSwapper: boolean;
-    let swapperAddress: string;
-    when('is not a swapper', () => {
-      given(async () => {
-        swapper = wallet.generateRandomAddress();
-        isSwapper = await tradeFactory['isSwapper(address)'](swapper);
-      });
-      then('returns false', () => {
-        expect(isSwapper).to.be.false;
-      });
-    });
-    when('is a swapper', () => {
-      given(async () => {
-        swapper = wallet.generateRandomAddress();
-        await tradeFactory.addSwappers([swapper]);
-        isSwapper = await tradeFactory['isSwapper(address)'](swapper);
-      });
-      then('returns true', async () => {
-        expect(isSwapper).to.be.true;
-      });
-    });
-  });
-
   describe('addSwapper', () => {
     // only governor
   });

@@ -75,7 +75,12 @@ abstract contract TradeFactorySwapperHandler is ITradeFactorySwapperHandler, Acc
 
   function _setStrategySwapper(address _strategy, address _swapper) internal {
     require(_swappers.contains(_swapper), 'TradeFactory: invalid swapper');
+    // remove strategy from previous swapper if any
+    if (strategySwapper[_strategy] != address(0)) _swapperStrategies[strategySwapper[_strategy]].remove(_strategy);
+    // set new strategy's swapper
     strategySwapper[_strategy] = _swapper;
+    // add strategy into new swapper
+    _swapperStrategies[_swapper].add(_strategy);
     emit StrategySwapperSet(_strategy, _swapper);
   }
 

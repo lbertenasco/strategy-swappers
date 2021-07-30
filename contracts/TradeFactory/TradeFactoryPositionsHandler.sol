@@ -158,7 +158,7 @@ abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler,
     address _strategy,
     address _swapper,
     bool _migrateSwaps
-  ) external override returns (uint256[] memory _changedSwapperIds) {
+  ) external override onlyRole(SWAPPER_SETTER) returns (uint256[] memory _changedSwapperIds) {
     _setStrategySwapper(_strategy, _swapper);
     if (_migrateSwaps) {
       return _changeStrategyPendingTradesSwapper(_strategy, _swapper);

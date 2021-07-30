@@ -1,6 +1,5 @@
 import { Contract } from '@ethersproject/contracts';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signers';
-import { abi as tradeFactoryABI } from '../../../artifacts/contracts/TradeFactory/TradeFactory.sol/ITradeFactory.json';
 import { abi as machineryABI } from '@lbertenasco/contract-utils/artifacts/interfaces/utils/IMachinery.sol/IMachinery.json';
 import { abi as swapperABI } from '../../../artifacts/contracts/Swapper.sol/ISwapper.json';
 import { TransactionResponse } from '@ethersproject/abstract-provider';
@@ -18,7 +17,6 @@ contract('TradeFactoryExecutor', () => {
   let strategy: SignerWithAddress;
   let mechanic: SignerWithAddress;
   let swapperSetter: SignerWithAddress;
-  let tradeFactory: MockContract;
   let machinery: MockContract;
   let swapper: MockContract;
   let executorFactory: ModifiableContractFactory;
@@ -32,7 +30,6 @@ contract('TradeFactoryExecutor', () => {
 
   beforeEach(async () => {
     await evm.reset();
-    tradeFactory = await smockit(tradeFactoryABI);
     machinery = await smockit(machineryABI);
     swapper = await smockit(swapperABI);
     executor = await executorFactory.deploy(governor.address, machinery.address);

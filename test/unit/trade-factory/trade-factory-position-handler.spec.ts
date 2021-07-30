@@ -1,5 +1,4 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signers';
-import { abi as tradeFactoryABI } from '../../../artifacts/contracts/TradeFactory/TradeFactory.sol/TradeFactory.json';
 import { TransactionResponse } from '@ethersproject/abstract-provider';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
@@ -15,7 +14,6 @@ contract('TradeFactoryPositionsHandler', () => {
   let governor: SignerWithAddress;
   let strategy: SignerWithAddress;
   let swapperSetter: SignerWithAddress;
-  let tradeFactory: MockContract;
   let positionsHandlerFactory: ModifiableContractFactory;
   let positionsHandler: ModifiableContract;
   let defaultSwapperAddress: string;
@@ -33,7 +31,6 @@ contract('TradeFactoryPositionsHandler', () => {
   });
 
   beforeEach(async () => {
-    tradeFactory = await smockit(tradeFactoryABI);
     positionsHandler = await positionsHandlerFactory.deploy(governor.address);
     defaultSwapperAddress = wallet.generateRandomAddress();
     await positionsHandler.connect(governor).grantRole(STRATEGY_ROLE, strategy.address);
@@ -143,7 +140,6 @@ contract('TradeFactoryPositionsHandler', () => {
     when('there are pending trades', () => {
       let tradeId: BigNumber;
       given(async () => {
-        tradeFactory.smocked['isSwapper(address)'].will.return.with(true);
         const tx = await create({
           tokenIn: wallet.generateRandomAddress(),
           tokenOut: wallet.generateRandomAddress(),
@@ -168,7 +164,6 @@ contract('TradeFactoryPositionsHandler', () => {
     when('strategy has pending trades', () => {
       let tradeId: BigNumber;
       given(async () => {
-        tradeFactory.smocked['isSwapper(address)'].will.return.with(true);
         const tx = await create({
           tokenIn: wallet.generateRandomAddress(),
           tokenOut: wallet.generateRandomAddress(),
@@ -304,7 +299,6 @@ contract('TradeFactoryPositionsHandler', () => {
 
   describe('cancelPending', () => {
     given(async () => {
-      tradeFactory.smocked['isSwapper(address)'].will.return.with(true);
       await positionsHandler.create(
         wallet.generateRandomAddress(),
         wallet.generateRandomAddress(),
@@ -351,7 +345,6 @@ contract('TradeFactoryPositionsHandler', () => {
       let cancellAllPendingTx: TransactionResponse;
       given(async () => {
         tradeIds = [];
-        tradeFactory.smocked['isSwapper(address)'].will.return.with(true);
         tradeIds.push(
           (
             await create({
@@ -397,7 +390,6 @@ contract('TradeFactoryPositionsHandler', () => {
     when('pending trade exists', () => {
       let tradeId: BigNumber;
       given(async () => {
-        tradeFactory.smocked['isSwapper(address)'].will.return.with(true);
         ({ id: tradeId } = await create({
           tokenIn: wallet.generateRandomAddress(),
           tokenOut: wallet.generateRandomAddress(),
@@ -423,7 +415,6 @@ contract('TradeFactoryPositionsHandler', () => {
     let tradeIds: BigNumber[];
     given(async () => {
       tradeIds = [];
-      tradeFactory.smocked['isSwapper(address)'].will.return.with(true);
       tradeIds.push(
         (
           await create({

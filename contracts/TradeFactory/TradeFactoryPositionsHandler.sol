@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.4;
 
-import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
-import './TradeFactorySwapperHandler.sol';
+import './TradeFactoryFeesHandler.sol';
 
 interface ITradeFactoryPositionsHandler {
   struct Trade {
@@ -68,8 +66,7 @@ interface ITradeFactoryPositionsHandler {
   function changeStrategyPendingTradesSwapper(address _strategy, address _swapper) external returns (uint256[] memory _changedSwapperIds);
 }
 
-abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler, TradeFactorySwapperHandler {
-  using SafeERC20 for IERC20;
+abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler, TradeFactoryFeesHandler {
   using EnumerableSet for EnumerableSet.UintSet;
   using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -84,7 +81,7 @@ abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler,
 
   mapping(address => EnumerableSet.UintSet) internal _pendingTradesByOwner;
 
-  constructor(address _governor) TradeFactorySwapperHandler(_governor) {
+  constructor(address _governor) TradeFactoryFeesHandler(_governor) {
     _setRoleAdmin(STRATEGY, STRATEGY_ADMIN);
     _setRoleAdmin(STRATEGY_ADMIN, MASTER_ADMIN);
     _setupRole(STRATEGY_ADMIN, governor);

@@ -55,14 +55,18 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPos
       _enableSwapperToken(_trade._swapper, _trade._tokenIn);
     }
     IERC20(_trade._tokenIn).safeTransferFrom(_trade._strategy, address(this), _trade._amountIn);
+
+    uint256 _feeAmount = _processFees(_trade._swapper, _trade._tokenIn, _trade._amountIn);
+
     _receivedAmount = ISwapper(_trade._swapper).swap(
       _trade._strategy,
       _trade._tokenIn,
       _trade._tokenOut,
-      _trade._amountIn,
+      _trade._amountIn - _feeAmount,
       _trade._maxSlippage,
       _data
     );
+
     _removePendingTrade(_trade._strategy, _id);
     emit TradeExecuted(_id, _receivedAmount);
   }

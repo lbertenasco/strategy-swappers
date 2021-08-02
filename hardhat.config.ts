@@ -17,7 +17,7 @@ const networks: NetworksUserConfig = process.env.TEST
           enabled: process.env.FORK ? true : false,
           url: getNodeUrl('mainnet'),
         },
-        // accounts: [{ privateKey: process.env.MAINNET_PRIVATE_KEY as string, balance: '0xfffffffffff' }],
+        // accounts: [{ privateKey: process.env.POLYGON_PRIVATE_KEY as string, balance: utils.parseEther('1000000').toString() }],
       },
       localhost: {
         url: getNodeUrl('localhost'),

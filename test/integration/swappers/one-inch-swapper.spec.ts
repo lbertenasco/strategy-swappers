@@ -63,7 +63,9 @@ describe('OneInchSwapper', function () {
       tradeFactory = await ethers.getContract('TradeFactory');
       oneInchSwapper = await ethers.getContract('OneInchSwapper');
 
-      await CRV.connect(crvWhale).transfer(strategy.address, AMOUNT_IN, { gasPrice: 0 });
+      await CRV.connect(crvWhale).transfer(strategy.address, AMOUNT_IN, {
+        gasPrice: 0,
+      });
 
       await tradeFactory.connect(governor).grantRole(await tradeFactory.STRATEGY(), strategy.address, { gasPrice: 0 });
       await tradeFactory.connect(governor).setStrategySwapper(strategy.address, oneInchSwapper.address, false);

@@ -1,9 +1,6 @@
 import { BigNumber } from '@ethersproject/bignumber';
 import axios from 'axios';
 import axiosRetry from 'axios-retry';
-import { utils } from 'ethers';
-import { ethers } from 'hardhat';
-import { abi as IERC20_ABI } from '@openzeppelin/contracts/build/contracts/IERC20.json';
 
 axiosRetry(axios, { retries: 3, retryDelay: axiosRetry.exponentialDelay });
 

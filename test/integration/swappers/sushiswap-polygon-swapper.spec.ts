@@ -60,7 +60,9 @@ describe('SushiswapPolygonSwapper', function () {
     tradeFactory = await ethers.getContract('TradeFactory');
     sushiswapPolygonSwapper = await ethers.getContract('SushiswapPolygonSwapper');
 
-    await CRV.connect(crvWhale).transfer(strategy.address, AMOUNT_IN, { gasPrice: 0 });
+    await CRV.connect(crvWhale).transfer(strategy.address, AMOUNT_IN, {
+      gasPrice: 0,
+    });
 
     await tradeFactory.connect(governor).grantRole(await tradeFactory.STRATEGY(), strategy.address, { gasPrice: 0 });
     await tradeFactory.connect(governor).setStrategySwapper(strategy.address, sushiswapPolygonSwapper.address, false);

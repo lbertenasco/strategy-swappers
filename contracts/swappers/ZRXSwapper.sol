@@ -46,6 +46,5 @@ contract ZRXSwapper is IZRXSwapper, Swapper {
     (bool success, ) = ZRX.call{value: 0}(_data);
     require(success, 'Swapper: ZRX trade reverted');
     IERC20(_tokenOut).safeTransfer(_receiver, IERC20(_tokenOut).balanceOf(address(this)));
-    // require(_postBalance - _preBalance > minOutputAmount, 'Swapper: Not complying with slippage');
   }
 }

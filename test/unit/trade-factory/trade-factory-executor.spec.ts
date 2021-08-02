@@ -180,6 +180,9 @@ contract('TradeFactoryExecutor', () => {
     });
   });
 
+  // TODO process fees checks
+  describe.skip('processFees', () => {});
+
   async function create({
     tokenIn,
     tokenOut,

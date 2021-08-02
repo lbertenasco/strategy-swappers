@@ -42,6 +42,7 @@ export function getMnemonic(networkName?: string): string {
   return mnemonic;
 }
 
+export const DEFAULT_ACCOUNT = '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
 export function accounts(networkName?: string): { mnemonic: string } {
   return { mnemonic: getMnemonic(networkName) };
 }

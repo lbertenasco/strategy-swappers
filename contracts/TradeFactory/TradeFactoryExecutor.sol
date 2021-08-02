@@ -4,7 +4,6 @@ pragma solidity 0.8.4;
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 
-import '@lbertenasco/contract-utils/contracts/utils/Governable.sol';
 import '@lbertenasco/contract-utils/contracts/utils/Machinery.sol';
 
 import '../Swapper.sol';
@@ -24,12 +23,12 @@ interface ITradeFactoryExecutor {
   function expire(uint256 _id) external returns (uint256 _freedAmount);
 }
 
-abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, Governable, TradeFactoryPositionsHandler, Machinery {
+abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPositionsHandler, Machinery {
   using SafeERC20 for IERC20;
   using EnumerableSet for EnumerableSet.UintSet;
   using EnumerableSet for EnumerableSet.AddressSet;
 
-  constructor(address _mechanicsRegistry) Machinery(_mechanicsRegistry) {}
+  constructor(address _governor, address _mechanicsRegistry) TradeFactoryPositionsHandler(_governor) Machinery(_mechanicsRegistry) {}
 
   mapping(address => EnumerableSet.AddressSet) internal _approvedTokensBySwappers;
 
@@ -51,7 +50,7 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, Governable, Tra
     require(_pendingTradesIds.contains(_id), 'TradeFactory: trade not pending');
     Trade memory _trade = pendingTradesById[_id];
     require(block.timestamp <= _trade._deadline, 'TradeFactory: trade has expired');
-    require(!ISwapperRegistry(SWAPPER_REGISTRY).deprecatedByAddress(_trade._swapper), 'TradeFactory: deprecated swapper');
+    require(_swappers.contains(_trade._swapper), 'TradeFactory: invalid swapper');
     if (!_approvedTokensBySwappers[_trade._swapper].contains(_trade._tokenIn)) {
       _enableSwapperToken(_trade._swapper, _trade._tokenIn);
     }

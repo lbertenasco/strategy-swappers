@@ -19,7 +19,7 @@ const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnviro
     log: true,
   });
 
-  await hre.deployments.execute('SwapperRegistry', { from: governor, gasLimit: 200000 }, 'addSwapper', 'sushiswap-polygon', deploy.address);
+  await hre.deployments.execute('TradeFactory', { from: governor, gasLimit: 200000 }, 'addSwapper', deploy.address);
 
   if (await shouldVerifyContract(hre, 'SushiswapPolygonSwapper')) {
     await hre.run('verify:verify', {
@@ -28,6 +28,6 @@ const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnviro
     });
   }
 };
-deployFunction.dependencies = ['SwapperRegistry', 'TradeFactory'];
+deployFunction.dependencies = ['TradeFactory'];
 deployFunction.tags = ['SushiswapPolygonSwapper', 'Polygon'];
 export default deployFunction;

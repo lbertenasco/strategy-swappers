@@ -38,7 +38,6 @@ abstract contract SwapperEnabled is ISwapperEnabled {
   using SafeERC20 for IERC20;
 
   address public override tradeFactory;
-  string public override swapper;
 
   constructor(address _tradeFactory) {
     _setTradeFactory(_tradeFactory);
@@ -50,15 +49,6 @@ abstract contract SwapperEnabled is ISwapperEnabled {
     emit TradeFactorySet(_tradeFactory);
   }
 
-  // onlyStrategist or multisig:
-  function _setSwapper(string calldata _swapper, bool _migrateSwaps) internal {
-    swapper = _swapper;
-    if (_migrateSwaps) {
-      ITradeFactoryPositionsHandler(tradeFactory).changePendingTradesSwapper(_swapper);
-    }
-    emit SwapperSet(_swapper);
-  }
-
   // onlyMultisig or internal use:
   function _createTrade(
     address _tokenIn,
@@ -67,24 +57,8 @@ abstract contract SwapperEnabled is ISwapperEnabled {
     uint256 _maxSlippage,
     uint256 _deadline
   ) internal returns (uint256 _id) {
-    return _createTrade(swapper, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _deadline);
-  }
-
-  function _createTrade(
-    string memory _swapper,
-    address _tokenIn,
-    address _tokenOut,
-    uint256 _amountIn,
-    uint256 _maxSlippage,
-    uint256 _deadline
-  ) internal returns (uint256 _id) {
     IERC20(_tokenIn).safeIncreaseAllowance(tradeFactory, _amountIn);
-    return ITradeFactoryPositionsHandler(tradeFactory).create(_swapper, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _deadline);
-  }
-
-  // onlyMultisig:
-  function _setSwapperCheckpoint(uint256 _checkpoint) internal {
-    ITradeFactoryPositionsHandler(tradeFactory).setSwapperSafetyCheckpoint(_checkpoint);
+    return ITradeFactoryPositionsHandler(tradeFactory).create(_tokenIn, _tokenOut, _amountIn, _maxSlippage, _deadline);
   }
 
   // onlyStrategist or multisig:

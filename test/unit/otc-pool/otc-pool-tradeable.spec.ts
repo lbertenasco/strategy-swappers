@@ -2,38 +2,44 @@ import { Contract } from '@ethersproject/contracts';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signers';
 import { TransactionResponse } from '@ethersproject/abstract-provider';
 import { abi as OTCSwapperABI } from '../../../artifacts/contracts/OTCSwapper.sol/IOTCSwapper.json';
-import { abi as swapperRegistryABI } from '../../../artifacts/contracts/SwapperRegistry.sol/ISwapperRegistry.json';
+import { abi as machineryABI } from '@lbertenasco/contract-utils/artifacts/interfaces/utils/IMachinery.sol/IMachinery.json';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { behaviours, bn, constants, contracts, erc20, wallet } from '../../utils';
 import { contract, given, then, when } from '../../utils/bdd';
 import { BigNumber } from '@ethersproject/bignumber';
-import { utils, Wallet } from 'ethers';
+import { ContractFactory, utils, Wallet } from 'ethers';
 import { expectNoEventWithName } from '../../utils/event-utils';
 import { MockContract, ModifiableContract, ModifiableContractFactory, smockit, smoddit } from '@eth-optimism/smock';
 
 contract('OTCPoolTradeable', () => {
+  let governor: SignerWithAddress;
   let OTCProvider: SignerWithAddress;
   let swapper: SignerWithAddress;
   let OTCPoolTradeableFactory: ModifiableContractFactory;
-  let OTCPoolTradeable: ModifiableContract;
-  let swapperRegistry: MockContract;
+  let tradeFactoryFactory: ContractFactory;
+  let machinery: MockContract;
   let otcSwapper: MockContract;
+  let tradeFactory: Contract;
+  let OTCPoolTradeable: ModifiableContract;
 
   before(async () => {
-    [OTCProvider, swapper] = await ethers.getSigners();
+    [governor, OTCProvider, swapper] = await ethers.getSigners();
     OTCPoolTradeableFactory = await smoddit('contracts/mock/OTCPool/OTCPoolTradeable.sol:OTCPoolTradeableMock');
+    tradeFactoryFactory = await ethers.getContractFactory('contracts/TradeFactory/TradeFactory.sol:TradeFactory');
   });
 
   beforeEach(async () => {
     otcSwapper = await smockit(OTCSwapperABI);
-    swapperRegistry = await smockit(swapperRegistryABI);
-    OTCPoolTradeable = await OTCPoolTradeableFactory.deploy(OTCProvider.address, swapperRegistry.address);
-    swapperRegistry.smocked['isSwapper(address)'].will.return.with(true);
+    machinery = await smockit(machineryABI);
+    tradeFactory = await tradeFactoryFactory.deploy(governor.address, machinery.address);
+    OTCPoolTradeable = await OTCPoolTradeableFactory.deploy(OTCProvider.address, tradeFactory.address);
+    await tradeFactory.connect(governor).addSwapper(swapper.address);
+    machinery.smocked.isMechanic.will.return.with(true);
   });
 
   describe('constructor', () => {
-    when('swapper registry is zero address', () => {
+    when('tradeFactory is zero address', () => {
       then('tx is reverted with reason', async () => {
         await behaviours.deployShouldRevertWithZeroAddress({
           contract: OTCPoolTradeableFactory,
@@ -44,36 +50,36 @@ contract('OTCPoolTradeable', () => {
     when('all parameters are valid', () => {
       let deployedContract: Contract;
       given(async () => {
-        const deployment = await contracts.deploy(OTCPoolTradeableFactory, [OTCProvider.address, swapperRegistry.address]);
+        const deployment = await contracts.deploy(OTCPoolTradeableFactory, [OTCProvider.address, tradeFactory.address]);
         deployedContract = deployment.contract;
       });
-      then('swapper registry is set', async () => {
-        expect(await deployedContract.swapperRegistry()).to.equal(swapperRegistry.address);
+      then('tradeFactory is set', async () => {
+        expect(await deployedContract.tradeFactory()).to.equal(tradeFactory.address);
       });
     });
   });
 
-  describe('setSwapperRegistry', () => {
+  describe('setTradeFactory', () => {
     // TODO: Only governor
-    when('swapper registry is zero address', () => {
+    when('tradeFactory is zero address', () => {
       let setSwapperTx: Promise<TransactionResponse>;
       given(async () => {
-        setSwapperTx = OTCPoolTradeable.setSwapperRegistry(constants.ZERO_ADDRESS);
+        setSwapperTx = OTCPoolTradeable.setTradeFactory(constants.ZERO_ADDRESS);
       });
       then('tx is reverted with reason', async () => {
         await expect(setSwapperTx).to.be.revertedWith('OTCPool: zero address');
       });
     });
-    when('swapper registry is not zero address', () => {
+    when('tradeFactory is not zero address', () => {
       let setSwapperTx: TransactionResponse;
       given(async () => {
-        setSwapperTx = OTCPoolTradeable.setSwapperRegistry(constants.NOT_ZERO_ADDRESS);
+        setSwapperTx = OTCPoolTradeable.setTradeFactory(constants.NOT_ZERO_ADDRESS);
       });
-      then('swapper registry is set', async () => {
-        expect(await OTCPoolTradeable.swapperRegistry()).to.equal(constants.NOT_ZERO_ADDRESS);
+      then('tradeFactory is set', async () => {
+        expect(await OTCPoolTradeable.tradeFactory()).to.equal(constants.NOT_ZERO_ADDRESS);
       });
       then('event is emitted', async () => {
-        await expect(setSwapperTx).to.emit(OTCPoolTradeable, 'SwapperRegistrySet').withArgs(constants.NOT_ZERO_ADDRESS);
+        await expect(setSwapperTx).to.emit(OTCPoolTradeable, 'TradeFactorySet').withArgs(constants.NOT_ZERO_ADDRESS);
       });
     });
   });
@@ -83,7 +89,7 @@ contract('OTCPoolTradeable', () => {
       then('tx is reverted with reason');
     });
     when('being called registered swapper', () => {
-      then('swapper registry registry is consulted');
+      then('tradeFactory registry is consulted');
       then('tx is not reverted');
     });
   });
@@ -93,7 +99,7 @@ contract('OTCPoolTradeable', () => {
     when('token is zero address', () => {
       let claimTx: Promise<TransactionResponse>;
       given(async () => {
-        claimTx = OTCPoolTradeable.claim(constants.ZERO_ADDRESS, 1);
+        claimTx = OTCPoolTradeable.connect(OTCProvider).claim(constants.ZERO_ADDRESS, 1);
       });
       then('tx is reverted with reason', async () => {
         await expect(claimTx).to.be.revertedWith('OTCPool: zero address');
@@ -102,7 +108,7 @@ contract('OTCPoolTradeable', () => {
     when('amount to claim is more than available', () => {
       let claimTx: Promise<TransactionResponse>;
       given(async () => {
-        claimTx = OTCPoolTradeable.claim(constants.NOT_ZERO_ADDRESS, 1);
+        claimTx = OTCPoolTradeable.connect(OTCProvider).claim(constants.NOT_ZERO_ADDRESS, 1);
       });
       then('tx is reverted with reason', async () => {
         await expect(claimTx).to.be.revertedWith('OTCPool: zero claim');
@@ -126,7 +132,7 @@ contract('OTCPoolTradeable', () => {
           },
         });
         await OTCPoolTradeable.setSwappedAvailable(token.address, available);
-        claimTx = await OTCPoolTradeable.claim(token.address, toClaim);
+        claimTx = await OTCPoolTradeable.connect(OTCProvider).claim(token.address, toClaim);
       });
       then('swapped available of token is reduced', async () => {
         expect(await OTCPoolTradeable.swappedAvailable(token.address)).to.equal(available.sub(toClaim));
@@ -155,8 +161,8 @@ contract('OTCPoolTradeable', () => {
     let wanted: string;
     let offered: string;
     given(async () => {
-      wanted = await wallet.generateRandomAddress();
-      offered = await wallet.generateRandomAddress();
+      wanted = wallet.generateRandomAddress();
+      offered = wallet.generateRandomAddress();
     });
     when(title, () => {
       let tookFromPool: BigNumber;
@@ -286,13 +292,13 @@ contract('OTCPoolTradeable', () => {
       token0 = await erc20.deploy({
         symbol: 'T0',
         name: 'T0',
-        initialAccount: await wallet.generateRandomAddress(),
+        initialAccount: wallet.generateRandomAddress(),
         initialAmount: utils.parseEther('0'),
       });
       token1 = await erc20.deploy({
         symbol: 'T1',
         name: 'T1',
-        initialAccount: await wallet.generateRandomAddress(),
+        initialAccount: wallet.generateRandomAddress(),
         initialAmount: utils.parseEther('0'),
       });
     });

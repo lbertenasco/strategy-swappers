@@ -5,13 +5,12 @@ import '@openzeppelin/contracts/utils/math/Math.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 
-import '../SwapperRegistry.sol';
+import '../TradeFactory/TradeFactorySwapperHandler.sol';
 import '../OTCSwapper.sol';
-
 import './OTCPoolDesk.sol';
 
 interface IOTCPoolTradeable {
-  event SwapperRegistrySet(address indexed _swapperRegistry);
+  event TradeFactorySet(address indexed _tradeFactory);
   event Claimed(address indexed _receiver, address _claimedToken, uint256 _amountClaimed);
   event TradePerformed(
     address indexed _swapper,
@@ -21,11 +20,11 @@ interface IOTCPoolTradeable {
     uint256 _tookFromSwapper
   );
 
-  function swapperRegistry() external view returns (address);
+  function tradeFactory() external view returns (address _tradeFactory);
 
   function swappedAvailable(address _swappedToken) external view returns (uint256 _swappedAmount);
 
-  function setSwapperRegistry(address _swapperRegistry) external;
+  function setTradeFactory(address _tradeFactory) external;
 
   function claim(address _token, uint256 _amount) external;
 
@@ -39,26 +38,27 @@ interface IOTCPoolTradeable {
 abstract contract OTCPoolTradeable is IOTCPoolTradeable, OTCPoolDesk {
   using SafeERC20 for IERC20;
 
-  address public override swapperRegistry;
+  address public override tradeFactory;
   mapping(address => uint256) public override swappedAvailable;
 
-  constructor(address _swapperRegistry) {
-    _setSwapperRegistry(_swapperRegistry);
+  constructor(address _tradeFactory) {
+    _setTradeFactory(_tradeFactory);
   }
 
+  // this modifier allows any registered swapper to utilize OTC funds, this is not an idial design. TODO change.
   modifier onlyRegisteredSwapper {
-    require(SwapperRegistry(swapperRegistry).isSwapper(msg.sender), 'OTCPool: unregistered swapper');
+    require(ITradeFactorySwapperHandler(tradeFactory).isSwapper(msg.sender), 'OTCPool: unregistered swapper');
     _;
   }
 
-  function setSwapperRegistry(address _swapperRegistry) external override onlyGovernor {
-    _setSwapperRegistry(_swapperRegistry);
+  function setTradeFactory(address _tradeFactory) external override onlyGovernor {
+    _setTradeFactory(_tradeFactory);
   }
 
-  function _setSwapperRegistry(address _swapperRegistry) internal {
-    require(_swapperRegistry != address(0), 'OTCPool: zero address');
-    swapperRegistry = _swapperRegistry;
-    emit SwapperRegistrySet(_swapperRegistry);
+  function _setTradeFactory(address _tradeFactory) internal {
+    require(_tradeFactory != address(0), 'OTCPool: zero address');
+    tradeFactory = _tradeFactory;
+    emit TradeFactorySet(_tradeFactory);
   }
 
   function claim(address _token, uint256 _amountToClaim) external override onlyOTCProvider {

@@ -250,7 +250,7 @@ contract('TradeFactoryPositionsHandler', () => {
         await expect(positionsHandler.create(tokenIn, tokenOut, amountIn, maxSlippage, constants.ZERO_ADDRESS)).to.be.revertedWith(
           'TradeFactory: deadline too soon'
         );
-        const staticDeadline = moment().unix() + 200;
+        const staticDeadline = moment().unix() + 1000;
         await evm.advanceToTimeAndBlock(staticDeadline);
         await expect(positionsHandler.create(tokenIn, tokenOut, amountIn, maxSlippage, staticDeadline)).to.be.revertedWith(
           'TradeFactory: deadline too soon'

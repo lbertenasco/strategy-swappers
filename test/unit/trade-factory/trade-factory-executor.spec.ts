@@ -180,8 +180,58 @@ contract('TradeFactoryExecutor', () => {
     });
   });
 
-  // TODO process fees checks
-  describe.skip('processFees', () => {});
+  describe('processFees', () => {
+    let tradeId: BigNumber;
+    const amountIn = utils.parseEther('100');
+    const deadline = moment().add('30', 'minutes').unix();
+    const tokenOut = wallet.generateRandomAddress();
+    const maxSlippage = BigNumber.from('1000');
+    const data = contracts.encodeParameters([], []);
+    let fee: BigNumber;
+    let PRECISION: BigNumber;
+    beforeEach(async () => {
+      ({ id: tradeId } = await create({
+        tokenIn: token.address,
+        tokenOut,
+        amountIn,
+        maxSlippage,
+        deadline,
+      }));
+      fee = await executor.maxFee();
+      PRECISION = await executor.PRECISION();
+    });
+    when('executing a trade with 0 fees', () => {
+      given(async () => {
+        await executor.connect(governor).setSwapperFee(swapper.address, 0);
+        await executor.execute(tradeId, data);
+      });
+      then('feeReceiver has no balance', async () => {
+        expect(await token.balanceOf(await executor.feeReceiver())).to.be.equal(0);
+      });
+    });
+    when('executing a trade with fees', () => {
+      let executeTx: TransactionResponse;
+      let initialStrategyBalance: BigNumber;
+      let initialExecutorBalance: BigNumber;
+      const receivedAmount = utils.parseEther('92356');
+      given(async () => {
+        await executor.connect(governor).setSwapperFee(swapper.address, fee);
+        swapper.smocked.swap.will.return.with(receivedAmount);
+        initialStrategyBalance = await token.balanceOf(strategy.address);
+        initialExecutorBalance = await token.balanceOf(executor.address);
+        executeTx = await executor.execute(tradeId, data);
+      });
+      then('token gets enabled for swapper and token', async () => {
+        expect(await token.allowance(executor.address, swapper.address)).to.be.equal(constants.MAX_UINT_256);
+      });
+      then('moves funds around', async () => {
+        const feeAmount = amountIn.mul(fee).div(PRECISION.mul(100));
+        expect(await token.balanceOf(await executor.feeReceiver())).to.equal(feeAmount);
+        expect(await token.balanceOf(executor.address)).to.equal(initialExecutorBalance.add(amountIn).sub(feeAmount));
+        expect(await token.balanceOf(strategy.address)).to.equal(initialStrategyBalance.sub(amountIn));
+      });
+    });
+  });
 
   async function create({
     tokenIn,

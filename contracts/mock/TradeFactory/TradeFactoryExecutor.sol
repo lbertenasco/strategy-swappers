@@ -3,9 +3,7 @@ pragma solidity 0.8.4;
 
 import '../../TradeFactory/TradeFactoryExecutor.sol';
 
-import './TradeFactoryPositionsHandler.sol';
-
-contract TradeFactoryExecutorMock is TradeFactoryPositionsHandler, TradeFactoryExecutor {
+contract TradeFactoryExecutorMock is TradeFactoryExecutor {
   constructor(address _governor, address _mechanicsRegistry) 
     TradeFactoryExecutor(_governor, _mechanicsRegistry) {}
 

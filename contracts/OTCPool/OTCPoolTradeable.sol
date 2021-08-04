@@ -46,7 +46,7 @@ abstract contract OTCPoolTradeable is IOTCPoolTradeable, OTCPoolDesk {
   }
 
   // this modifier allows any registered swapper to utilize OTC funds, this is not an idial design. TODO change.
-  modifier onlyRegisteredSwapper {
+  modifier onlyRegisteredSwapper() {
     require(ITradeFactorySwapperHandler(tradeFactory).isSwapper(msg.sender), 'OTCPool: unregistered swapper');
     _;
   }

@@ -115,7 +115,6 @@ describe('ZRXSwapper', function () {
     const DAI_ADDRESS = '0x8f3cf7ad23cd3cadbd9735aff958023239c6a063';
 
     const WMATIC_WHALE_ADDRESS = '0xadbf1854e5883eb8aa7baf50705338739e558e5b';
-    const DAI_WHALE_ADDRESS = '0x27f8d03b3a2196956ed754badc28d73be8830a6e';
 
     let WMATIC: Contract;
     let DAI: Contract;
@@ -140,7 +139,7 @@ describe('ZRXSwapper', function () {
         sellToken: WMATIC_ADDRESS,
         buyToken: DAI_ADDRESS,
         sellAmount: AMOUNT_IN,
-        sippagePercentage: 0.1,
+        sippagePercentage: 0.5,
       });
 
       forkBlockNumber = await ethers.provider.getBlockNumber();

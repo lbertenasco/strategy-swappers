@@ -61,6 +61,10 @@ export type SwapResponse = {
 export const swap = async (chainId: number, swapParams: SwapParams): Promise<SwapResponse> => {
   let rawAxiosResponse;
   try {
+    const axiosProtocolResponse = await axios.get(`https://api.1inch.exchange/v3.0/${chainId}/protocols`);
+    const protocols = (axiosProtocolResponse.data.protocols as string[]).filter((protocol) => {
+      return protocol.includes('ONE_INCH_LIMIT_ORDER') == false;
+    });
     rawAxiosResponse = await axios.get(
       `https://api.1inch.exchange/v3.0/${chainId}/swap?fromTokenAddress=${swapParams.tokenIn}&toTokenAddress=${
         swapParams.tokenOut
@@ -68,7 +72,7 @@ export const swap = async (chainId: number, swapParams: SwapParams): Promise<Swa
         swapParams.slippage
       }&disableEstimate=${swapParams.disableEstimate}&allowPartialFill=${swapParams.allowPartialFill}&fee=${swapParams.fee}&gasLimit=${
         swapParams.gasLimit
-      }`
+      }&protocols=${protocols.join(',')}`
     );
   } catch (err) {
     throw new Error(`Status code: ${err.response.data.statusCode}. Message: ${err.response.data.message}`);

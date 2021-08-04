@@ -5,7 +5,7 @@ async function main() {
   const pendingTrades = await tradeFactory['pendingTradesIds()']();
   for (let i = 0; i < pendingTrades.length; i++) {
     console.log('Executing trade', pendingTrades[i].toString());
-    await tradeFactory.execute(pendingTrades[i]);
+    await tradeFactory.execute(pendingTrades[i], { gasLimit: 1000000 });
   }
 }
 

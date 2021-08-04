@@ -10,7 +10,7 @@ import './TradeFactorySwapperHandler.sol';
 interface ITradeFactoryFeesHandler {
   event SwapperFeeSet(address _strategy, uint256 _fee);
 
-  function feeReceiver() external view returns (address _maxFee);
+  function feeReceiver() external view returns (address _feeReceiver);
 
   function maxFee() external view returns (uint256 _maxFee);
 

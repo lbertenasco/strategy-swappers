@@ -42,7 +42,7 @@ abstract contract OTCPoolDesk is IOTCPoolDesk, CollectableDustWithTokensManageme
     _setOTCProvider(_OTCProvider);
   }
 
-  modifier onlyOTCProvider {
+  modifier onlyOTCProvider() {
     require(msg.sender == OTCProvider, 'OTCPool: unauthorized');
     _;
   }

@@ -12,6 +12,17 @@ import { BigNumber, utils } from 'ethers';
 import Web3 from 'web3';
 import moment from 'moment';
 
+const PRECISION = 1_000_000;
+const FEE = 10 * PRECISION;
+
+const CALCULATE_FEE = (amountIn: BigNumber): BigNumber => {
+  return amountIn.mul(FEE).div(PRECISION * 100);
+};
+
+const APPLY_FEE = (amountIn: BigNumber): BigNumber => {
+  return amountIn.sub(CALCULATE_FEE(amountIn));
+};
+
 contract('TradeFactoryExecutor', () => {
   let governor: SignerWithAddress;
   let strategy: SignerWithAddress;
@@ -44,6 +55,7 @@ contract('TradeFactoryExecutor', () => {
     await executor.connect(governor).grantRole(await executor.SWAPPER_SETTER(), swapperSetter.address);
     await executor.connect(governor).addSwapper(swapper.address);
     await executor.connect(governor).setStrategySwapper(strategy.address, swapper.address, false);
+    await executor.connect(governor).setSwapperFee(swapper.address, FEE);
     machinery.smocked.isMechanic.will.return.with(true);
   });
 
@@ -93,12 +105,17 @@ contract('TradeFactoryExecutor', () => {
       then('token gets enabled for swapper and token', async () => {
         expect(await token.allowance(executor.address, swapper.address)).to.be.equal(constants.MAX_UINT_256);
       });
-      then('moves funds from strategy to trade factory', async () => {
+      then('funds get taken from strategy', async () => {
         expect(await token.balanceOf(strategy.address)).to.equal(initialStrategyBalance.sub(amountIn));
-        expect(await token.balanceOf(executor.address)).to.equal(initialExecutorBalance.add(amountIn));
+      });
+      then('moves funds from strategy to trade factory', async () => {
+        expect(await token.balanceOf(executor.address)).to.equal(initialExecutorBalance.add(APPLY_FEE(amountIn)));
+      });
+      then('sends fee to fee receiver', async () => {
+        expect(await token.balanceOf(governor.address)).to.equal(CALCULATE_FEE(amountIn));
       });
       then('calls swapper swap with correct data', () => {
-        expect(swapper.smocked.swap.calls[0]).to.be.eql([strategy.address, token.address, tokenOut, amountIn, maxSlippage, data]);
+        expect(swapper.smocked.swap.calls[0]).to.be.eql([strategy.address, token.address, tokenOut, APPLY_FEE(amountIn), maxSlippage, data]);
       });
       then('removes trades from trades', async () => {
         expect((await executor.pendingTradesById(tradeId))._id).to.equal(0);
@@ -110,7 +127,7 @@ contract('TradeFactoryExecutor', () => {
         expect(await executor['pendingTradesIds()']()).to.be.empty;
       });
       then('emits event', async () => {
-        await expect(executeTx).to.emit(executor, 'TradeExecuted').withArgs(tradeId, receivedAmount);
+        await expect(executeTx).to.emit(executor, 'TradeExecuted').withArgs(tradeId, CALCULATE_FEE(amountIn), receivedAmount);
       });
     });
   });
@@ -176,59 +193,6 @@ contract('TradeFactoryExecutor', () => {
       });
       then('emits event', async () => {
         await expect(enableSwapperTokenTx).to.emit(executor, 'SwapperAndTokenEnabled').withArgs(swapper.address, token.address);
-      });
-    });
-  });
-
-  describe('processFees', () => {
-    let tradeId: BigNumber;
-    const amountIn = utils.parseEther('100');
-    const deadline = moment().add('30', 'minutes').unix();
-    const tokenOut = wallet.generateRandomAddress();
-    const maxSlippage = BigNumber.from('1000');
-    const data = contracts.encodeParameters([], []);
-    let fee: BigNumber;
-    let PRECISION: BigNumber;
-    beforeEach(async () => {
-      ({ id: tradeId } = await create({
-        tokenIn: token.address,
-        tokenOut,
-        amountIn,
-        maxSlippage,
-        deadline,
-      }));
-      fee = await executor.maxFee();
-      PRECISION = await executor.PRECISION();
-    });
-    when('executing a trade with 0 fees', () => {
-      given(async () => {
-        await executor.connect(governor).setSwapperFee(swapper.address, 0);
-        await executor.execute(tradeId, data);
-      });
-      then('feeReceiver has no balance', async () => {
-        expect(await token.balanceOf(await executor.feeReceiver())).to.be.equal(0);
-      });
-    });
-    when('executing a trade with fees', () => {
-      let executeTx: TransactionResponse;
-      let initialStrategyBalance: BigNumber;
-      let initialExecutorBalance: BigNumber;
-      const receivedAmount = utils.parseEther('92356');
-      given(async () => {
-        await executor.connect(governor).setSwapperFee(swapper.address, fee);
-        swapper.smocked.swap.will.return.with(receivedAmount);
-        initialStrategyBalance = await token.balanceOf(strategy.address);
-        initialExecutorBalance = await token.balanceOf(executor.address);
-        executeTx = await executor.execute(tradeId, data);
-      });
-      then('token gets enabled for swapper and token', async () => {
-        expect(await token.allowance(executor.address, swapper.address)).to.be.equal(constants.MAX_UINT_256);
-      });
-      then('moves funds around', async () => {
-        const feeAmount = amountIn.mul(fee).div(PRECISION.mul(100));
-        expect(await token.balanceOf(await executor.feeReceiver())).to.equal(feeAmount);
-        expect(await token.balanceOf(executor.address)).to.equal(initialExecutorBalance.add(amountIn).sub(feeAmount));
-        expect(await token.balanceOf(strategy.address)).to.equal(initialStrategyBalance.sub(amountIn));
       });
     });
   });

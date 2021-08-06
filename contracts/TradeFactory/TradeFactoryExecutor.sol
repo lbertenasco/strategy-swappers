@@ -12,7 +12,7 @@ import './TradeFactoryPositionsHandler.sol';
 interface ITradeFactoryExecutor {
   event TradeExpired(uint256 indexed _id);
 
-  event TradeExecuted(uint256 indexed _id, uint256 _receivedAmount);
+  event TradeExecuted(uint256 indexed _id, uint256 _fee, uint256 _receivedAmount);
 
   event SwapperAndTokenEnabled(address indexed _swapper, address _token);
 
@@ -68,7 +68,7 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPos
     );
 
     _removePendingTrade(_trade._strategy, _id);
-    emit TradeExecuted(_id, _receivedAmount);
+    emit TradeExecuted(_id, _feeAmount, _receivedAmount);
   }
 
   function expire(uint256 _id) external override onlyMechanic returns (uint256 _freedAmount) {

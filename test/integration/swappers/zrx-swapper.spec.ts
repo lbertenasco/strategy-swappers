@@ -8,21 +8,18 @@ import { then, when } from '../../utils/bdd';
 import moment from 'moment';
 import { setTestChainId } from '../../../utils/deploy';
 import { getNodeUrl } from '../../../utils/network';
-import oneinch, { SwapResponse } from '../../../scripts/libraries/oneinch';
+import zrx, { QuoteResponse } from '../../../scripts/libraries/zrx';
 
-describe('OneInchAggregatorSwapper', function () {
-  let deployer: JsonRpcSigner;
+describe('ZRXSwapper', function () {
   let governor: JsonRpcSigner;
   let crvWhale: JsonRpcSigner;
-  let daiWhale: JsonRpcSigner;
   let yMech: JsonRpcSigner;
   let strategy: Wallet;
 
   let tradeFactory: Contract;
-  let oneInchAggregatorSwapper: Contract;
+  let ZRXSwapper: Contract;
 
   const MAX_SLIPPAGE = 10_000; // 1%
-  const GAS_LIMIT = 1_000_000;
 
   context('on mainnet', () => {
     const CHAIN_ID = 1;
@@ -37,7 +34,7 @@ describe('OneInchAggregatorSwapper', function () {
     let DAI: Contract;
 
     const AMOUNT_IN = utils.parseEther('10000');
-    let oneInchApiResponse: SwapResponse;
+    let zrxAPIResponse: QuoteResponse;
     let forkBlockNumber: number;
 
     before(async () => {
@@ -49,17 +46,12 @@ describe('OneInchAggregatorSwapper', function () {
 
       // We get information for trade first, 1inch API starts returning non-valid data
 
-      oneInchApiResponse = await oneinch.swap(CHAIN_ID, {
-        tokenIn: CRV_ADDRESS,
-        tokenOut: DAI_ADDRESS,
-        amountIn: AMOUNT_IN,
-        fromAddress: wallet.generateRandomAddress(),
-        receiver: strategy.address,
-        slippage: 3,
-        allowPartialFill: false,
-        disableEstimate: true,
-        fee: 0,
-        gasLimit: GAS_LIMIT,
+      zrxAPIResponse = await zrx.quote({
+        chainId: CHAIN_ID,
+        sellToken: CRV_ADDRESS,
+        buyToken: DAI_ADDRESS,
+        sellAmount: AMOUNT_IN,
+        sippagePercentage: 0.1,
       });
 
       forkBlockNumber = await ethers.provider.getBlockNumber();
@@ -73,27 +65,25 @@ describe('OneInchAggregatorSwapper', function () {
 
       const namedAccounts = await getNamedAccounts();
 
-      deployer = await wallet.impersonate(namedAccounts.deployer);
       governor = await wallet.impersonate(namedAccounts.governor);
       crvWhale = await wallet.impersonate(CRV_WHALE_ADDRESS);
-      daiWhale = await wallet.impersonate(DAI_WHALE_ADDRESS);
       yMech = await wallet.impersonate(namedAccounts.yMech);
 
       await setTestChainId(CHAIN_ID);
-      await deployments.fixture('OneInchAggregatorSwapper');
+      await deployments.fixture('ZRXSwapper');
 
       CRV = await ethers.getContractAt(IERC20_ABI, CRV_ADDRESS);
       DAI = await ethers.getContractAt(IERC20_ABI, DAI_ADDRESS);
 
       tradeFactory = await ethers.getContract('TradeFactory');
-      oneInchAggregatorSwapper = await ethers.getContract('OneInchAggregatorSwapper');
+      ZRXSwapper = await ethers.getContract('ZRXSwapper');
 
       await CRV.connect(crvWhale).transfer(strategy.address, AMOUNT_IN, {
         gasPrice: 0,
       });
 
       await tradeFactory.connect(governor).grantRole(await tradeFactory.STRATEGY(), strategy.address, { gasPrice: 0 });
-      await tradeFactory.connect(governor).setStrategySwapper(strategy.address, oneInchAggregatorSwapper.address, false);
+      await tradeFactory.connect(governor).setStrategySwapper(strategy.address, ZRXSwapper.address, false);
 
       await CRV.connect(strategy).approve(tradeFactory.address, AMOUNT_IN, { gasPrice: 0 });
       await tradeFactory
@@ -103,9 +93,8 @@ describe('OneInchAggregatorSwapper', function () {
 
     describe('swap', () => {
       beforeEach(async () => {
-        await tradeFactory.connect(yMech).execute(1, oneInchApiResponse.tx.data, {
+        await tradeFactory.connect(yMech).execute(1, zrxAPIResponse.data, {
           gasPrice: 0,
-          gasLimit: GAS_LIMIT + GAS_LIMIT * 0.25,
         });
       });
 
@@ -126,13 +115,14 @@ describe('OneInchAggregatorSwapper', function () {
     const DAI_ADDRESS = '0x8f3cf7ad23cd3cadbd9735aff958023239c6a063';
 
     const WMATIC_WHALE_ADDRESS = '0xadbf1854e5883eb8aa7baf50705338739e558e5b';
-    const DAI_WHALE_ADDRESS = '0x27f8d03b3a2196956ed754badc28d73be8830a6e';
 
     let WMATIC: Contract;
     let DAI: Contract;
 
+    let wmaticWhale: JsonRpcSigner;
+
     const AMOUNT_IN = utils.parseEther('10000');
-    let oneInchApiResponse: SwapResponse;
+    let zrxAPIResponse: QuoteResponse;
     let forkBlockNumber: number;
 
     before(async () => {
@@ -144,17 +134,12 @@ describe('OneInchAggregatorSwapper', function () {
 
       // We get information for trade first, 1inch API starts returning non-valid data
 
-      oneInchApiResponse = await oneinch.swap(CHAIN_ID, {
-        tokenIn: WMATIC_ADDRESS,
-        tokenOut: DAI_ADDRESS,
-        amountIn: AMOUNT_IN,
-        fromAddress: wallet.generateRandomAddress(),
-        receiver: strategy.address,
-        slippage: 3,
-        allowPartialFill: false,
-        disableEstimate: true,
-        fee: 0,
-        gasLimit: GAS_LIMIT,
+      zrxAPIResponse = await zrx.quote({
+        chainId: CHAIN_ID,
+        sellToken: WMATIC_ADDRESS,
+        buyToken: DAI_ADDRESS,
+        sellAmount: AMOUNT_IN,
+        sippagePercentage: 0.5,
       });
 
       forkBlockNumber = await ethers.provider.getBlockNumber();
@@ -168,27 +153,25 @@ describe('OneInchAggregatorSwapper', function () {
 
       const namedAccounts = await getNamedAccounts();
 
-      deployer = await wallet.impersonate(namedAccounts.deployer);
       governor = await wallet.impersonate(namedAccounts.governor);
-      crvWhale = await wallet.impersonate(WMATIC_WHALE_ADDRESS);
-      daiWhale = await wallet.impersonate(DAI_WHALE_ADDRESS);
+      wmaticWhale = await wallet.impersonate(WMATIC_WHALE_ADDRESS);
       yMech = await wallet.impersonate(namedAccounts.yMech);
 
       setTestChainId(CHAIN_ID);
-      await deployments.fixture('OneInchAggregatorSwapper');
+      await deployments.fixture('ZRXSwapper');
 
       WMATIC = await ethers.getContractAt(IERC20_ABI, WMATIC_ADDRESS);
       DAI = await ethers.getContractAt(IERC20_ABI, DAI_ADDRESS);
 
       tradeFactory = await ethers.getContract('TradeFactory');
-      oneInchAggregatorSwapper = await ethers.getContract('OneInchAggregatorSwapper');
+      ZRXSwapper = await ethers.getContract('ZRXSwapper');
 
-      await WMATIC.connect(crvWhale).transfer(strategy.address, AMOUNT_IN, {
+      await WMATIC.connect(wmaticWhale).transfer(strategy.address, AMOUNT_IN, {
         gasPrice: 0,
       });
 
       await tradeFactory.connect(governor).grantRole(await tradeFactory.STRATEGY(), strategy.address, { gasPrice: 0 });
-      await tradeFactory.connect(governor).setStrategySwapper(strategy.address, oneInchAggregatorSwapper.address, false);
+      await tradeFactory.connect(governor).setStrategySwapper(strategy.address, ZRXSwapper.address, false);
 
       await WMATIC.connect(strategy).approve(tradeFactory.address, AMOUNT_IN, { gasPrice: 0 });
 
@@ -199,9 +182,8 @@ describe('OneInchAggregatorSwapper', function () {
 
     describe('swap', () => {
       beforeEach(async () => {
-        await tradeFactory.connect(yMech).execute(1, oneInchApiResponse.tx.data, {
+        await tradeFactory.connect(yMech).execute(1, zrxAPIResponse.data, {
           gasPrice: 0,
-          gasLimit: GAS_LIMIT + GAS_LIMIT * 0.25,
         });
       });
 

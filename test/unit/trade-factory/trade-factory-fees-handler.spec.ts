@@ -11,6 +11,7 @@ import { BigNumber, Contract, utils } from 'ethers';
 contract('TradeFactoryFeesHandler', () => {
   let deployer: SignerWithAddress;
   let governor: SignerWithAddress;
+  let feeReceiver: SignerWithAddress;
   let swapperSetter: SignerWithAddress;
   let feesHandlerFactory: ModifiableContractFactory;
   let feesHandler: ModifiableContract;
@@ -20,12 +21,12 @@ contract('TradeFactoryFeesHandler', () => {
   const FEE_SETTER_ROLE: string = new Web3().utils.soliditySha3('FEE_SETTER') as string;
 
   before(async () => {
-    [deployer, governor, swapperSetter] = await ethers.getSigners();
+    [deployer, feeReceiver, governor, swapperSetter] = await ethers.getSigners();
     feesHandlerFactory = await smoddit('contracts/mock/TradeFactory/TradeFactoryFeesHandler.sol:TradeFactoryFeesHandlerMock');
   });
 
   beforeEach(async () => {
-    feesHandler = await feesHandlerFactory.deploy(governor.address);
+    feesHandler = await feesHandlerFactory.deploy(governor.address, feeReceiver.address);
     defaultSwapperAddress = wallet.generateRandomAddress();
     await feesHandler.connect(governor).addSwapper(defaultSwapperAddress);
   });

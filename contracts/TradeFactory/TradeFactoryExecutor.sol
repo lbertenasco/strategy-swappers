@@ -8,6 +8,7 @@ import '@lbertenasco/contract-utils/contracts/utils/Machinery.sol';
 
 import '../Swapper.sol';
 import './TradeFactoryPositionsHandler.sol';
+import './TradeFactoryFeesHandler.sol';
 
 interface ITradeFactoryExecutor {
   event TradeExpired(uint256 indexed _id);
@@ -23,12 +24,12 @@ interface ITradeFactoryExecutor {
   function expire(uint256 _id) external returns (uint256 _freedAmount);
 }
 
-abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPositionsHandler, Machinery {
+abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPositionsHandler, TradeFactoryFeesHandler, Machinery {
   using SafeERC20 for IERC20;
   using EnumerableSet for EnumerableSet.UintSet;
   using EnumerableSet for EnumerableSet.AddressSet;
 
-  constructor(address _governor, address _mechanicsRegistry) TradeFactoryPositionsHandler(_governor) Machinery(_mechanicsRegistry) {}
+  constructor(address _mechanicsRegistry) Machinery(_mechanicsRegistry) {}
 
   mapping(address => EnumerableSet.AddressSet) internal _approvedTokensBySwappers;
 
@@ -45,7 +46,6 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPos
   }
 
   // TradeFactoryExecutor
-
   function execute(uint256 _id, bytes calldata _data) external override onlyMechanic returns (uint256 _receivedAmount) {
     require(_pendingTradesIds.contains(_id), 'TradeFactory: trade not pending');
     Trade memory _trade = pendingTradesById[_id];

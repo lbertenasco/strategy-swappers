@@ -5,6 +5,8 @@ import '@openzeppelin/contracts/access/AccessControl.sol';
 import '@lbertenasco/contract-utils/contracts/utils/Governable.sol';
 import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 
+import './TradeFactoryAccessManager.sol';
+
 interface ITradeFactorySwapperHandler {
   event StrategySwapperSet(address _strategy, address _swapper);
   event SwapperAdded(address _swapper);
@@ -18,11 +20,7 @@ interface ITradeFactorySwapperHandler {
 
   function swapperStrategies(address _swapper) external view returns (address[] memory _strategies);
 
-  function setStrategySwapper(
-    address _strategy,
-    address _swapper,
-    bool _migrateSwaps
-  ) external returns (uint256[] memory _changedSwapperIds);
+  function setStrategySwapper(address _strategy, address _swapper) external;
 
   function addSwapper(address _swapper) external;
 
@@ -33,12 +31,11 @@ interface ITradeFactorySwapperHandler {
   function removeSwappers(address[] memory __swappers) external;
 }
 
-abstract contract TradeFactorySwapperHandler is ITradeFactorySwapperHandler, AccessControl, Governable {
+abstract contract TradeFactorySwapperHandler is ITradeFactorySwapperHandler, TradeFactoryAccessManager {
   using EnumerableSet for EnumerableSet.AddressSet;
 
   bytes32 public constant SWAPPER_ADDER = keccak256('SWAPPER_ADDER');
   bytes32 public constant SWAPPER_SETTER = keccak256('SWAPPER_SETTER');
-  bytes32 public constant MASTER_ADMIN = keccak256('MASTER_ADMIN');
 
   // swappers list
   EnumerableSet.AddressSet internal _swappers;
@@ -47,12 +44,11 @@ abstract contract TradeFactorySwapperHandler is ITradeFactorySwapperHandler, Acc
   // strategy -> swapper
   mapping(address => address) public override strategySwapper;
 
-  constructor(address _governor) Governable(_governor) {
+  constructor() {
     _setRoleAdmin(SWAPPER_ADDER, MASTER_ADMIN);
     _setRoleAdmin(SWAPPER_SETTER, MASTER_ADMIN);
     _setupRole(SWAPPER_ADDER, governor);
     _setupRole(SWAPPER_SETTER, governor);
-    _setupRole(MASTER_ADMIN, governor);
   }
 
   function isSwapper(address _swapper) external view override returns (bool) {
@@ -73,7 +69,7 @@ abstract contract TradeFactorySwapperHandler is ITradeFactorySwapperHandler, Acc
     }
   }
 
-  function _setStrategySwapper(address _strategy, address _swapper) internal {
+  function setStrategySwapper(address _strategy, address _swapper) external override onlyRole(SWAPPER_SETTER) {
     require(_swappers.contains(_swapper), 'TradeFactory: invalid swapper');
     // remove strategy from previous swapper if any
     if (strategySwapper[_strategy] != address(0)) _swapperStrategies[strategySwapper[_strategy]].remove(_strategy);

@@ -14,17 +14,19 @@ const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnviro
 
   const chainId = await getChainId(hre);
 
+  const tradeFactory = await hre.deployments.get('TradeFactory');
+
   const deploy = await hre.deployments.deploy('OTCPool', {
     contract: 'contracts/OTCPool/OTCPool.sol:OTCPool',
     from: deployer,
-    args: [governor, OTC_PROVIDER[chainId]],
+    args: [governor, tradeFactory.address, OTC_PROVIDER[chainId]],
     log: true,
   });
 
   if (await shouldVerifyContract(hre, 'OTCPool')) {
     await hre.run('verify:verify', {
       address: deploy.address,
-      constructorArguments: [governor, OTC_PROVIDER[chainId]],
+      constructorArguments: [governor, tradeFactory.address, OTC_PROVIDER[chainId]],
     });
   }
 };

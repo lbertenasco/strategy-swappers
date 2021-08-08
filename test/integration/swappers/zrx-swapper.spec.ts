@@ -51,7 +51,7 @@ describe('ZRXSwapper', function () {
         sellToken: CRV_ADDRESS,
         buyToken: DAI_ADDRESS,
         sellAmount: AMOUNT_IN,
-        sippagePercentage: 0.1,
+        sippagePercentage: 1,
       });
 
       forkBlockNumber = await ethers.provider.getBlockNumber();
@@ -100,12 +100,12 @@ describe('ZRXSwapper', function () {
 
       then('CRV gets taken from strategy', async () => {
         expect(await CRV.balanceOf(strategy.address)).to.equal(0);
-      }).retries(10);
+      });
 
       then('DAI gets airdropped to strategy', async () => {
         expect(await DAI.balanceOf(strategy.address)).to.be.gt(0);
-      }).retries(10);
-    }).retries(10);
+      });
+    });
   });
 
   context('on polygon', () => {
@@ -139,7 +139,7 @@ describe('ZRXSwapper', function () {
         sellToken: WMATIC_ADDRESS,
         buyToken: DAI_ADDRESS,
         sellAmount: AMOUNT_IN,
-        sippagePercentage: 0.5,
+        sippagePercentage: 1,
       });
 
       forkBlockNumber = await ethers.provider.getBlockNumber();
@@ -189,11 +189,11 @@ describe('ZRXSwapper', function () {
 
       then('WMATIC gets taken from strategy and DAI gets airdropped to strategy', async () => {
         expect(await WMATIC.balanceOf(strategy.address)).to.equal(0);
-      }).retries(10);
+      });
 
       then('DAI gets airdropped to strategy', async () => {
         expect(await DAI.balanceOf(strategy.address)).to.be.gt(0);
-      }).retries(10);
-    }).retries(10);
+      });
+    });
   });
 });

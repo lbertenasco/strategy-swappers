@@ -55,6 +55,9 @@ export const quote = async (quoteRequest: QuoteRequest): Promise<QuoteResponse> 
   if (BigNumber.isBigNumber(quoteRequest.buyAmount)) quoteRequest.buyAmount = quoteRequest.buyAmount.toString();
   if (BigNumber.isBigNumber(quoteRequest.gasPrice)) quoteRequest.gasPrice = quoteRequest.gasPrice.toString();
 
+  quoteRequest.excludeSources = quoteRequest.excludeSources ?? [];
+  quoteRequest.excludeSources.push('Mesh');
+
   let response: any;
   try {
     response = await axios.get(`https://${API_URL[quoteRequest.chainId]}/swap/v1/quote?${qs.stringify(quoteRequest)}`);

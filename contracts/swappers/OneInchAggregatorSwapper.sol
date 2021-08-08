@@ -6,7 +6,7 @@ import '../Swapper.sol';
 import 'hardhat/console.sol';
 
 interface IAggregationExecutor {
-  function callBytes(bytes calldata data) external payable; // 0xd9c45357
+  function callBytes(bytes calldata data) external payable;
 }
 
 interface IOneInchExchange {
@@ -59,13 +59,16 @@ interface IOneInchExchange {
 }
 
 interface IOneInchAggregatorSwapper is ISwapper {
+  // solhint-disable-next-line func-name-mixedcase
   function AGGREGATION_ROUTER_V3() external view returns (address);
 }
 
 contract OneInchAggregatorSwapper is IOneInchAggregatorSwapper, Swapper {
   using SafeERC20 for IERC20;
 
-  uint256 private _SHOULD_CLAIM_FLAG = 0x04;
+  uint256 private constant _SHOULD_CLAIM_FLAG = 0x04;
+
+  // solhint-disable-next-line var-name-mixedcase
   address public immutable override AGGREGATION_ROUTER_V3;
 
   constructor(

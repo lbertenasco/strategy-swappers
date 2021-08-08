@@ -83,7 +83,7 @@ describe('ZRXSwapper', function () {
       });
 
       await tradeFactory.connect(governor).grantRole(await tradeFactory.STRATEGY(), strategy.address, { gasPrice: 0 });
-      await tradeFactory.connect(governor).setStrategySwapper(strategy.address, ZRXSwapper.address, false);
+      await tradeFactory.connect(governor).setStrategySwapper(strategy.address, ZRXSwapper.address);
 
       await CRV.connect(strategy).approve(tradeFactory.address, AMOUNT_IN, { gasPrice: 0 });
       await tradeFactory
@@ -171,7 +171,7 @@ describe('ZRXSwapper', function () {
       });
 
       await tradeFactory.connect(governor).grantRole(await tradeFactory.STRATEGY(), strategy.address, { gasPrice: 0 });
-      await tradeFactory.connect(governor).setStrategySwapper(strategy.address, ZRXSwapper.address, false);
+      await tradeFactory.connect(governor).setStrategySwapper(strategy.address, ZRXSwapper.address);
 
       await WMATIC.connect(strategy).approve(tradeFactory.address, AMOUNT_IN, { gasPrice: 0 });
 

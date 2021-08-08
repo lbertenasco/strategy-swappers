@@ -10,6 +10,7 @@ import { expect } from 'chai';
 // Unil sushiswap swapper mainnet is sepparated from polygon one
 contract('TradeFactory', () => {
   let governor: SignerWithAddress;
+  let feeRecipient: SignerWithAddress;
   let mechanic: SignerWithAddress;
   let strategy: SignerWithAddress;
   let hodler: SignerWithAddress;
@@ -32,18 +33,22 @@ contract('TradeFactory', () => {
   const data = contracts.encodeParameters([], []);
 
   before('create fixture loader', async () => {
-    [governor, mechanic, strategy, hodler, swapperSetter] = await ethers.getSigners();
+    [governor, feeRecipient, mechanic, strategy, hodler, swapperSetter] = await ethers.getSigners();
   });
 
   beforeEach(async () => {
     ({ mechanicsRegistry, machinery } = await fixtures.machineryFixture(mechanic.address));
 
-    ({ tradeFactory, uniswapV2Swapper, uniswapV2Factory } = await fixtures.uniswapV2SwapperFixture(governor.address, mechanicsRegistry.address));
+    ({ tradeFactory, uniswapV2Swapper, uniswapV2Factory } = await fixtures.uniswapV2SwapperFixture(
+      governor.address,
+      feeRecipient.address,
+      mechanicsRegistry.address
+    ));
 
     await tradeFactory.grantRole(await tradeFactory.STRATEGY(), strategy.address);
     await tradeFactory.connect(governor).grantRole(await tradeFactory.STRATEGY(), strategy.address);
     await tradeFactory.connect(governor).grantRole(await tradeFactory.SWAPPER_SETTER(), swapperSetter.address);
-    await tradeFactory.connect(governor).setStrategySwapper(strategy.address, uniswapV2Swapper.address, false);
+    await tradeFactory.connect(governor).setStrategySwapper(strategy.address, uniswapV2Swapper.address);
 
     tokenIn = await erc20.deploy({
       name: 'TA',
@@ -75,12 +80,11 @@ contract('TradeFactory', () => {
   });
 
   describe('trade executed with swapper', () => {
-    let executeTx: TransactionResponse;
     let minAmountOut: BigNumber;
     given(async () => {
       // We can do this since ratio is 1 = 1
       minAmountOut = amountIn.sub(amountIn.mul(maxSlippage).div(10000 / 100));
-      executeTx = await tradeFactory.connect(mechanic).execute(1, data);
+      await tradeFactory.connect(mechanic).execute(1, data);
     });
     then('tokens in gets taken from strategy', async () => {
       expect(await tokenIn.balanceOf(strategy.address)).to.equal(0);

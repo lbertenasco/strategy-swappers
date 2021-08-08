@@ -10,14 +10,14 @@ const MECHANICS_REGISTRY: { [chainId: string]: string } = {
 };
 
 const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
-  const { deployer, governor } = await hre.getNamedAccounts();
+  const { deployer, feeReceiver, governor } = await hre.getNamedAccounts();
 
   const chainId = await getChainId(hre);
 
   const deploy = await hre.deployments.deploy('TradeFactory', {
     contract: 'contracts/TradeFactory/TradeFactory.sol:TradeFactory',
     from: deployer,
-    args: [governor, MECHANICS_REGISTRY[chainId]],
+    args: [governor, feeReceiver, MECHANICS_REGISTRY[chainId]],
     log: true,
   });
 

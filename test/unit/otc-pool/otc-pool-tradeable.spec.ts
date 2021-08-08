@@ -8,12 +8,13 @@ import { ethers } from 'hardhat';
 import { behaviours, bn, constants, contracts, erc20, wallet } from '../../utils';
 import { contract, given, then, when } from '../../utils/bdd';
 import { BigNumber } from '@ethersproject/bignumber';
-import { ContractFactory, utils, Wallet } from 'ethers';
+import { ContractFactory, utils } from 'ethers';
 import { expectNoEventWithName } from '../../utils/event-utils';
 import { MockContract, ModifiableContract, ModifiableContractFactory, smockit, smoddit } from '@eth-optimism/smock';
 
 contract('OTCPoolTradeable', () => {
   let governor: SignerWithAddress;
+  let feeRecipient: SignerWithAddress;
   let OTCProvider: SignerWithAddress;
   let swapper: SignerWithAddress;
   let OTCPoolTradeableFactory: ModifiableContractFactory;
@@ -24,7 +25,7 @@ contract('OTCPoolTradeable', () => {
   let OTCPoolTradeable: ModifiableContract;
 
   before(async () => {
-    [governor, OTCProvider, swapper] = await ethers.getSigners();
+    [governor, feeRecipient, OTCProvider, swapper] = await ethers.getSigners();
     OTCPoolTradeableFactory = await smoddit('contracts/mock/OTCPool/OTCPoolTradeable.sol:OTCPoolTradeableMock');
     tradeFactoryFactory = await ethers.getContractFactory('contracts/TradeFactory/TradeFactory.sol:TradeFactory');
   });
@@ -32,7 +33,7 @@ contract('OTCPoolTradeable', () => {
   beforeEach(async () => {
     otcSwapper = await smockit(OTCSwapperABI);
     machinery = await smockit(machineryABI);
-    tradeFactory = await tradeFactoryFactory.deploy(governor.address, machinery.address);
+    tradeFactory = await tradeFactoryFactory.deploy(governor.address, feeRecipient.address, machinery.address);
     OTCPoolTradeable = await OTCPoolTradeableFactory.deploy(OTCProvider.address, tradeFactory.address);
     await tradeFactory.connect(governor).addSwapper(swapper.address);
     machinery.smocked.isMechanic.will.return.with(true);

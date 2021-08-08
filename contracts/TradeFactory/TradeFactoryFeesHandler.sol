@@ -38,10 +38,10 @@ abstract contract TradeFactoryFeesHandler is ITradeFactoryFeesHandler, TradeFact
 
   mapping(address => uint256) public override swapperFee;
 
-  constructor(address _governor) TradeFactorySwapperHandler(_governor) {
+  constructor(address _feeReciever) {
     _setRoleAdmin(FEE_SETTER, MASTER_ADMIN);
     _setupRole(FEE_SETTER, governor);
-    feeReceiver = _governor;
+    feeReceiver = _feeReciever;
     maxFee = MAX_FEE;
   }
 

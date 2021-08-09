@@ -11,17 +11,20 @@ interface IZRXSwapper is ISwapper {
     bytes _bytes;
   }
 
+  // solhint-disable-next-line func-name-mixedcase
   function ZRX() external view returns (address);
 }
 
 contract ZRXSwapper is IZRXSwapper, Swapper {
   using SafeERC20 for IERC20;
 
+  // solhint-disable-next-line var-name-mixedcase
   address public immutable override ZRX;
 
   constructor(
     address _governor,
     address _tradeFactory,
+    // solhint-disable-next-line var-name-mixedcase
     address _ZRX
   ) Swapper(_governor, _tradeFactory) {
     ZRX = _ZRX;

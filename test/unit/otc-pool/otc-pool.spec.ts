@@ -19,7 +19,7 @@ contract('OTCPool', () => {
   });
 
   beforeEach(async () => {
-    OTCPool = await OTCPoolFactory.deploy(governor.address, OTCProvider.address, wallet.generateRandomAddress());
+    OTCPool = await OTCPoolFactory.deploy(governor.address, wallet.generateRandomAddress(), OTCProvider.address);
   });
 
   describe('sendDust', () => {

@@ -8,7 +8,7 @@ import '../../TradeFactory/TradeFactorySwapperHandler.sol';
 contract TradeFactorySwapperHandlerMock is TradeFactorySwapperHandler {
   using EnumerableSet for EnumerableSet.AddressSet;
   
-  constructor(address _governor) TradeFactorySwapperHandler(_governor) {}
+  constructor(address _governor) TradeFactorySwapperHandler() TradeFactoryAccessManager(_governor) {}
 
   function addSwapperInternal(address _swapper) external {
     _swappers.add(_swapper);
@@ -16,16 +16,6 @@ contract TradeFactorySwapperHandlerMock is TradeFactorySwapperHandler {
 
   function removeSwapperInternal(address _swapper) external {
     _swappers.remove(_swapper);
-  }
-
-  function setStrategySwapper(
-    address _strategy,
-    address _swapper,
-    bool _migrateSwaps
-  ) external override returns (uint256[] memory _changedSwapperIds) {
-    _migrateSwaps; // shh
-    _changedSwapperIds; //shh
-    _setStrategySwapper(_strategy, _swapper);
   }
 
 }

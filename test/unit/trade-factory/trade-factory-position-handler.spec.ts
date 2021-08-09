@@ -36,7 +36,7 @@ contract('TradeFactoryPositionsHandler', () => {
     await positionsHandler.connect(governor).grantRole(STRATEGY_ROLE, strategy.address);
     await positionsHandler.connect(governor).grantRole(SWAPPER_SETTER_ROLE, swapperSetter.address);
     await positionsHandler.connect(governor).addSwapper(defaultSwapperAddress);
-    await positionsHandler.connect(governor).setStrategySwapper(strategy.address, defaultSwapperAddress, false);
+    await positionsHandler.connect(governor).setStrategySwapper(strategy.address, defaultSwapperAddress);
   });
 
   describe('constructor', () => {
@@ -198,7 +198,7 @@ contract('TradeFactoryPositionsHandler', () => {
     const deadline = moment().add('30', 'minutes').unix();
     given(async () => {
       await positionsHandler.connect(governor).addSwapper(swapper);
-      await positionsHandler.connect(governor).setStrategySwapper(strategy.address, swapper, false);
+      await positionsHandler.connect(governor).setStrategySwapper(strategy.address, swapper);
     });
     when('strategy is not registered', () => {
       then('tx is reverted with reason', async () => {
@@ -250,7 +250,7 @@ contract('TradeFactoryPositionsHandler', () => {
         await expect(positionsHandler.create(tokenIn, tokenOut, amountIn, maxSlippage, constants.ZERO_ADDRESS)).to.be.revertedWith(
           'TradeFactory: deadline too soon'
         );
-        const staticDeadline = moment().unix() + 200;
+        const staticDeadline = moment().unix() + 1000;
         await evm.advanceToTimeAndBlock(staticDeadline);
         await expect(positionsHandler.create(tokenIn, tokenOut, amountIn, maxSlippage, staticDeadline)).to.be.revertedWith(
           'TradeFactory: deadline too soon'

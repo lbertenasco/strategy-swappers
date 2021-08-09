@@ -10,21 +10,29 @@ import '@openzeppelin/contracts/utils/math/Math.sol';
 import '../Swapper.sol';
 
 interface ISushiswapPolygonSwapper is ISwapper {
+  // solhint-disable-next-line func-name-mixedcase
   function WMATIC() external view returns (address);
 
+  // solhint-disable-next-line func-name-mixedcase
   function WETH() external view returns (address);
 
+  // solhint-disable-next-line func-name-mixedcase
   function UNISWAP_FACTORY() external view returns (address);
 
+  // solhint-disable-next-line func-name-mixedcase
   function UNISWAP_ROUTER() external view returns (address);
 }
 
 contract SushiswapPolygonSwapper is ISushiswapPolygonSwapper, Swapper {
   using SafeERC20 for IERC20;
 
+  // solhint-disable-next-line var-name-mixedcase
   address public immutable override WETH;
+  // solhint-disable-next-line var-name-mixedcase
   address public immutable override WMATIC;
+  // solhint-disable-next-line var-name-mixedcase
   address public immutable override UNISWAP_FACTORY;
+  // solhint-disable-next-line var-name-mixedcase
   address public immutable override UNISWAP_ROUTER;
 
   constructor(
@@ -76,6 +84,7 @@ contract SushiswapPolygonSwapper is ISushiswapPolygonSwapper, Swapper {
     }
 
     uint256 _amountOutByWETHHopPath;
+    // solhint-disable-next-line func-name-mixedcase
     address[] memory _WETHHopPath;
     if (
       IUniswapV2Factory(UNISWAP_FACTORY).getPair(_tokenIn, WETH) != address(0) &&
@@ -89,6 +98,7 @@ contract SushiswapPolygonSwapper is ISushiswapPolygonSwapper, Swapper {
     }
 
     uint256 _amountOutByWMATICHopPath;
+    // solhint-disable-next-line var-name-mixedcase
     address[] memory _WMATICHopPath;
     if (
       IUniswapV2Factory(UNISWAP_FACTORY).getPair(_tokenIn, WMATIC) != address(0) &&

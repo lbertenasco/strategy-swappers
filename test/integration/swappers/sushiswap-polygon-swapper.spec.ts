@@ -65,7 +65,7 @@ describe('SushiswapPolygonSwapper', function () {
     });
 
     await tradeFactory.connect(governor).grantRole(await tradeFactory.STRATEGY(), strategy.address, { gasPrice: 0 });
-    await tradeFactory.connect(governor).setStrategySwapper(strategy.address, sushiswapPolygonSwapper.address, false);
+    await tradeFactory.connect(governor).setStrategySwapper(strategy.address, sushiswapPolygonSwapper.address);
 
     await CRV.connect(strategy).approve(tradeFactory.address, AMOUNT_IN, { gasPrice: 0 });
     await tradeFactory

@@ -10,8 +10,8 @@ interface IOTCPool is IOTCPoolTradeable {}
 contract OTCPool is IOTCPool, CollectableDustWithTokensManagement, Governable, OTCPoolDesk, OTCPoolTradeable {
   constructor(
     address _governor,
-    address _OTCProvider,
-    address _tradeFactory
+    address _tradeFactory,
+    address _OTCProvider
   ) Governable(_governor) OTCPoolDesk(_OTCProvider) OTCPoolTradeable(_tradeFactory) {}
 
   // CollectableDustWithTokenManagement

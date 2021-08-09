@@ -42,6 +42,7 @@ interface IOneSplit {
 }
 
 interface IOneInchSwapper is ISwapper {
+  // solhint-disable-next-line func-name-mixedcase
   function ONE_INCH() external view returns (address);
 
   function parts() external view returns (uint256);
@@ -56,6 +57,7 @@ interface IOneInchSwapper is ISwapper {
 contract OneInchSwapper is IOneInchSwapper, Swapper {
   using SafeERC20 for IERC20;
 
+  // solhint-disable-next-line var-name-mixedcase
   address public immutable override ONE_INCH;
   uint256 public override parts;
   uint256 public override flags;

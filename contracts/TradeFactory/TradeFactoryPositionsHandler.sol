@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.4;
 
-import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 import './TradeFactorySwapperHandler.sol';
 
@@ -65,11 +63,16 @@ interface ITradeFactoryPositionsHandler {
 
   function cancelAllPending() external returns (uint256[] memory _canceledTradesIds);
 
+  function setStrategySwapperAndChangePending(
+    address _strategy,
+    address _swapper,
+    bool _migrateSwaps
+  ) external returns (uint256[] memory _changedSwapperIds);
+
   function changeStrategyPendingTradesSwapper(address _strategy, address _swapper) external returns (uint256[] memory _changedSwapperIds);
 }
 
 abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler, TradeFactorySwapperHandler {
-  using SafeERC20 for IERC20;
   using EnumerableSet for EnumerableSet.UintSet;
   using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -84,7 +87,7 @@ abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler,
 
   mapping(address => EnumerableSet.UintSet) internal _pendingTradesByOwner;
 
-  constructor(address _governor) TradeFactorySwapperHandler(_governor) {
+  constructor() {
     _setRoleAdmin(STRATEGY, STRATEGY_ADMIN);
     _setRoleAdmin(STRATEGY_ADMIN, MASTER_ADMIN);
     _setupRole(STRATEGY_ADMIN, governor);
@@ -154,12 +157,12 @@ abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler,
     emit TradesCanceled(msg.sender, _canceledTradesIds);
   }
 
-  function setStrategySwapper(
+  function setStrategySwapperAndChangePending(
     address _strategy,
     address _swapper,
     bool _migrateSwaps
   ) external override onlyRole(SWAPPER_SETTER) returns (uint256[] memory _changedSwapperIds) {
-    _setStrategySwapper(_strategy, _swapper);
+    this.setStrategySwapper(_strategy, _swapper);
     if (_migrateSwaps) {
       return _changeStrategyPendingTradesSwapper(_strategy, _swapper);
     }

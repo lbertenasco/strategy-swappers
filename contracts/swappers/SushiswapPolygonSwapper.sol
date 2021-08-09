@@ -27,6 +27,9 @@ contract SushiswapPolygonSwapper is ISushiswapPolygonSwapper, Swapper {
   using SafeERC20 for IERC20;
 
   // solhint-disable-next-line var-name-mixedcase
+  SwapperType public override SWAPPER_TYPE = SwapperType.SYNC;
+
+  // solhint-disable-next-line var-name-mixedcase
   address public immutable override WETH;
   // solhint-disable-next-line var-name-mixedcase
   address public immutable override WMATIC;
@@ -84,7 +87,7 @@ contract SushiswapPolygonSwapper is ISushiswapPolygonSwapper, Swapper {
     }
 
     uint256 _amountOutByWETHHopPath;
-    // solhint-disable-next-line func-name-mixedcase
+    // solhint-disable-next-line var-name-mixedcase
     address[] memory _WETHHopPath;
     if (
       IUniswapV2Factory(UNISWAP_FACTORY).getPair(_tokenIn, WETH) != address(0) &&

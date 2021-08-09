@@ -21,6 +21,9 @@ contract UniswapV2Swapper is IUniswapV2Swapper, Swapper {
   using SafeERC20 for IERC20;
 
   // solhint-disable-next-line var-name-mixedcase
+  SwapperType public override SWAPPER_TYPE = SwapperType.SYNC;
+
+  // solhint-disable-next-line var-name-mixedcase
   address public immutable override WETH;
   // solhint-disable-next-line var-name-mixedcase
   address public immutable override UNISWAP_FACTORY;

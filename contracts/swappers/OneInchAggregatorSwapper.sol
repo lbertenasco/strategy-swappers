@@ -69,6 +69,9 @@ contract OneInchAggregatorSwapper is IOneInchAggregatorSwapper, Swapper {
   uint256 private constant _SHOULD_CLAIM_FLAG = 0x04;
 
   // solhint-disable-next-line var-name-mixedcase
+  SwapperType public override SWAPPER_TYPE = SwapperType.ASYNC;
+
+  // solhint-disable-next-line var-name-mixedcase
   address public immutable override AGGREGATION_ROUTER_V3;
 
   constructor(

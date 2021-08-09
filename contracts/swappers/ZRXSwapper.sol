@@ -19,6 +19,9 @@ contract ZRXSwapper is IZRXSwapper, Swapper {
   using SafeERC20 for IERC20;
 
   // solhint-disable-next-line var-name-mixedcase
+  SwapperType public override SWAPPER_TYPE = SwapperType.ASYNC;
+
+  // solhint-disable-next-line var-name-mixedcase
   address public immutable override ZRX;
 
   constructor(

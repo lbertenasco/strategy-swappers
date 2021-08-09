@@ -8,6 +8,11 @@ import '@lbertenasco/contract-utils/contracts/utils/Governable.sol';
 import '@lbertenasco/contract-utils/contracts/utils/CollectableDust.sol';
 
 interface ISwapper {
+  enum SwapperType {
+    ASYNC,
+    SYNC
+  }
+
   event Swapped(
     address _receiver,
     address _tokenIn,
@@ -18,9 +23,14 @@ interface ISwapper {
     bytes _data
   );
 
+  // solhint-disable-next-line func-name-mixedcase
   function SLIPPAGE_PRECISION() external view returns (uint256);
 
+  // solhint-disable-next-line func-name-mixedcase
   function TRADE_FACTORY() external view returns (address);
+
+  // solhint-disable-next-line func-name-mixedcase
+  function SWAPPER_TYPE() external view returns (SwapperType);
 
   function swap(
     address _receiver,
@@ -35,7 +45,10 @@ interface ISwapper {
 abstract contract Swapper is ISwapper, Governable, CollectableDust {
   using SafeERC20 for IERC20;
 
+  // solhint-disable-next-line var-name-mixedcase
   uint256 public immutable override SLIPPAGE_PRECISION = 10000; // 1 is 0.0001%, 1_000 is 0.1%
+
+  // solhint-disable-next-line var-name-mixedcase
   address public immutable override TRADE_FACTORY;
 
   constructor(address _governor, address _tradeFactory) Governable(_governor) {

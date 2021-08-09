@@ -23,7 +23,7 @@ const DAI_ADDRESS = '0x8f3cf7ad23cd3cadbd9735aff958023239c6a063';
 const CRV_WHALE_ADDRESS = '0x3a8a6831a1e866c64bc07c3df0f7b79ac9ef2fa2';
 const DAI_WHALE_ADDRESS = '0x27f8d03b3a2196956ed754badc28d73be8830a6e';
 
-describe('SushiswapPolygonSwapper', function () {
+describe.skip('SushiswapPolygonSwapper', function () {
   let deployer: JsonRpcSigner;
   let governor: JsonRpcSigner;
   let crvWhale: JsonRpcSigner;

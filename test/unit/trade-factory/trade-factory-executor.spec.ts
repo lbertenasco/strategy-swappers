@@ -57,6 +57,7 @@ contract('TradeFactoryExecutor', () => {
     await executor.connect(governor).setStrategySwapper(strategy.address, swapper.address);
     await executor.connect(governor).setSwapperFee(swapper.address, FEE);
     machinery.smocked.isMechanic.will.return.with(true);
+    swapper.smocked.SWAPPER_TYPE.will.return.with(0);
   });
 
   describe('constructor', () => {});

@@ -11,7 +11,7 @@ const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnviro
   const FLAGS = 0;
 
   const deploy = await hre.deployments.deploy('OneInchSwapper', {
-    contract: 'contracts/swappers/OneInchSwapper.sol:OneInchSwapper',
+    contract: 'contracts/swappers/sync/OneInchSwapper.sol:OneInchSwapper',
     from: deployer,
     args: [governor, tradeFactory.address, ONE_INCH, PARTS, FLAGS],
     log: true,

@@ -17,7 +17,7 @@ const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnviro
   const chainId = await getChainId(hre);
 
   const deploy = await hre.deployments.deploy('OneInchAggregatorSwapper', {
-    contract: 'contracts/swappers/OneInchAggregatorSwapper.sol:OneInchAggregatorSwapper',
+    contract: 'contracts/swappers/async/OneInchAggregatorSwapper.sol:OneInchAggregatorSwapper',
     from: deployer,
     args: [governor, tradeFactory.address, AGGREGATION_ROUTER_V3[chainId]],
     log: true,

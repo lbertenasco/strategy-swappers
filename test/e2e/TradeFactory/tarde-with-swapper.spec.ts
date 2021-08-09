@@ -6,8 +6,8 @@ import moment from 'moment';
 import { contracts, erc20, evm, fixtures, uniswap } from '../../utils';
 import { contract, given, then, when } from '../../utils/bdd';
 import { expect } from 'chai';
+import uniswapLibrary from '../../../scripts/libraries/uniswap-v2';
 
-// Unil sushiswap swapper mainnet is sepparated from polygon one
 contract('TradeFactory', () => {
   let governor: SignerWithAddress;
   let feeRecipient: SignerWithAddress;
@@ -24,13 +24,13 @@ contract('TradeFactory', () => {
   let tradeFactory: Contract;
 
   let uniswapV2Factory: Contract;
+  let uniswapV2Router02: Contract;
   let uniswapV2Swapper: Contract;
   let uniswapPairAddress: string;
 
   const amountIn = utils.parseEther('10');
   const maxSlippage = 10_000; // 1%
   const INITIAL_LIQUIDITY = utils.parseEther('100000');
-  const data = contracts.encodeParameters([], []);
 
   before('create fixture loader', async () => {
     [governor, feeRecipient, mechanic, strategy, hodler, swapperSetter] = await ethers.getSigners();
@@ -39,7 +39,7 @@ contract('TradeFactory', () => {
   beforeEach(async () => {
     ({ mechanicsRegistry, machinery } = await fixtures.machineryFixture(mechanic.address));
 
-    ({ tradeFactory, uniswapV2Swapper, uniswapV2Factory } = await fixtures.uniswapV2SwapperFixture(
+    ({ tradeFactory, uniswapV2Swapper, uniswapV2Factory, uniswapV2Router02 } = await fixtures.uniswapV2AsyncSwapperFixture(
       governor.address,
       feeRecipient.address,
       mechanicsRegistry.address
@@ -82,6 +82,13 @@ contract('TradeFactory', () => {
   describe('trade executed with swapper', () => {
     let minAmountOut: BigNumber;
     given(async () => {
+      const data = await uniswapLibrary.getBestPathEncoded({
+        tokenIn: tokenIn.address,
+        tokenOut: tokenOut.address,
+        amountIn: amountIn,
+        uniswapV2Factory: uniswapV2Factory.address,
+        uniswapV2Router: uniswapV2Router02.address,
+      });
       // We can do this since ratio is 1 = 1
       minAmountOut = amountIn.sub(amountIn.mul(maxSlippage).div(10000 / 100));
       await tradeFactory.connect(mechanic).execute(1, data);

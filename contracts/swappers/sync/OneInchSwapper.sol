@@ -4,7 +4,7 @@ pragma solidity 0.8.4;
 import 'hardhat/console.sol';
 
 import '@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol';
-import '../Swapper.sol';
+import '../../Swapper.sol';
 
 interface IOneSplit {
   function getExpectedReturn(

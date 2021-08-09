@@ -51,13 +51,13 @@ interface UniswapV2SwapperFixture extends TradeFactoryFixture {
   uniswapV2Swapper: Contract;
 }
 
-export const uniswapV2SwapperFixture = async (
+export const uniswapV2AsyncSwapperFixture = async (
   governor: string,
   feeRecipient: string,
   mechanicsRegistry: string
 ): Promise<UniswapV2SwapperFixture> => {
   const { tradeFactory } = await tradeFactoryFixture(governor, feeRecipient, mechanicsRegistry);
-  const uniswapV2SwapperFactory = await ethers.getContractFactory('contracts/swappers/UniswapV2Swapper.sol:UniswapV2Swapper');
+  const uniswapV2SwapperFactory = await ethers.getContractFactory('contracts/swappers/async/UniswapV2AsyncSwapper.sol:UniswapV2Swapper');
   const owner = await wallet.generateRandom();
   await ethers.provider.send('hardhat_setBalance', [owner.address, utils.parseEther('10').toHexString()]);
   const uniswapDeployment = await uniswap.deploy({ owner });

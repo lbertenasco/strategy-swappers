@@ -93,7 +93,7 @@ describe('ZRXSwapper', function () {
 
     describe('swap', () => {
       beforeEach(async () => {
-        await tradeFactory.connect(yMech).execute(1, zrxAPIResponse.data, {
+        await tradeFactory.connect(yMech)['execute(uint256,bytes)'](1, zrxAPIResponse.data, {
           gasPrice: 0,
         });
       });
@@ -182,7 +182,7 @@ describe('ZRXSwapper', function () {
 
     describe('swap', () => {
       beforeEach(async () => {
-        await tradeFactory.connect(yMech).execute(1, zrxAPIResponse.data, {
+        await tradeFactory.connect(yMech)['execute(uint256,bytes)'](1, zrxAPIResponse.data, {
           gasPrice: 0,
         });
       });

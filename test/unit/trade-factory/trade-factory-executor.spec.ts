@@ -29,7 +29,8 @@ contract('TradeFactoryExecutor', () => {
   let mechanic: SignerWithAddress;
   let swapperSetter: SignerWithAddress;
   let machinery: MockContract;
-  let swapper: MockContract;
+  let asyncSwapper: MockContract;
+  let syncSwapper: MockContract;
   let executorFactory: ModifiableContractFactory;
   let executor: Contract;
   let token: Contract;
@@ -42,7 +43,8 @@ contract('TradeFactoryExecutor', () => {
   beforeEach(async () => {
     await evm.reset();
     machinery = await smockit(machineryABI);
-    swapper = await smockit(swapperABI);
+    asyncSwapper = await smockit(swapperABI);
+    syncSwapper = await smockit(swapperABI);
     executor = await executorFactory.deploy(governor.address, feeRecipient.address, machinery.address);
     executor = executor.connect(mechanic);
     token = await erc20.deploy({
@@ -53,16 +55,125 @@ contract('TradeFactoryExecutor', () => {
     });
     await executor.connect(governor).grantRole(await executor.STRATEGY(), strategy.address);
     await executor.connect(governor).grantRole(await executor.SWAPPER_SETTER(), swapperSetter.address);
-    await executor.connect(governor).addSwapper(swapper.address);
-    await executor.connect(governor).setStrategySwapper(strategy.address, swapper.address);
-    await executor.connect(governor).setSwapperFee(swapper.address, FEE);
+    await executor.connect(governor).addSwappers([asyncSwapper.address, syncSwapper.address]);
+    await executor.connect(governor).setStrategySwapper(strategy.address, asyncSwapper.address);
+    await executor.connect(governor).setSwapperFee(asyncSwapper.address, FEE);
     machinery.smocked.isMechanic.will.return.with(true);
-    swapper.smocked.SWAPPER_TYPE.will.return.with(0);
+    asyncSwapper.smocked.SWAPPER_TYPE.will.return.with(0);
+    syncSwapper.smocked.SWAPPER_TYPE.will.return.with(1);
   });
 
   describe('constructor', () => {});
 
-  describe('execute', () => {
+  describe('execute sync', () => {
+    const amountIn = utils.parseEther('100');
+    const tokenOut = wallet.generateRandomAddress();
+    const maxSlippage = BigNumber.from('1000');
+    // TODO: ONLY STRATEGY
+    when('swapper is zero address', () => {
+      then('tx is reverted with reason', async () => {
+        await expect(
+          executor
+            .connect(strategy)
+            ['execute(address,address,address,uint256,uint256)'](constants.ZERO_ADDRESS, token.address, tokenOut, amountIn, maxSlippage)
+        ).to.be.revertedWith('TF: zero address');
+      });
+    });
+    when('swapper is not added', () => {
+      then('tx is reverted with reason', async () => {
+        await expect(
+          executor
+            .connect(strategy)
+            ['execute(address,address,address,uint256,uint256)'](wallet.generateRandomAddress(), token.address, tokenOut, amountIn, maxSlippage)
+        ).to.be.revertedWith('TradeFactory: invalid swapper');
+      });
+    });
+    when('swapper is not sync', () => {
+      then('tx is reverted with reason', async () => {
+        await expect(
+          executor
+            .connect(strategy)
+            ['execute(address,address,address,uint256,uint256)'](asyncSwapper.address, token.address, tokenOut, amountIn, maxSlippage)
+        ).to.be.revertedWith('TF: not sync swapper');
+      });
+    });
+    when('token in is zero address', () => {
+      then('tx is reverted with reason', async () => {
+        await expect(
+          executor
+            .connect(strategy)
+            ['execute(address,address,address,uint256,uint256)'](syncSwapper.address, constants.ZERO_ADDRESS, tokenOut, amountIn, maxSlippage)
+        ).to.be.revertedWith('TradeFactory: zero address');
+      });
+    });
+    when('token out is zero address', () => {
+      then('tx is reverted with reason', async () => {
+        await expect(
+          executor
+            .connect(strategy)
+            ['execute(address,address,address,uint256,uint256)'](
+              syncSwapper.address,
+              token.address,
+              constants.ZERO_ADDRESS,
+              amountIn,
+              maxSlippage
+            )
+        ).to.be.revertedWith('TradeFactory: zero address');
+      });
+    });
+    when('amount in is zero', () => {
+      then('tx is reverted with reason', async () => {
+        await expect(
+          executor
+            .connect(strategy)
+            ['execute(address,address,address,uint256,uint256)'](syncSwapper.address, token.address, tokenOut, constants.ZERO, maxSlippage)
+        ).to.be.revertedWith('TradeFactory: zero amount');
+      });
+    });
+    when('max slippage is zero', () => {
+      then('tx is reverted with reason', async () => {
+        await expect(
+          executor
+            .connect(strategy)
+            ['execute(address,address,address,uint256,uint256)'](syncSwapper.address, token.address, tokenOut, amountIn, constants.ZERO)
+        ).to.be.revertedWith('TradeFactory: zero slippage');
+      });
+    });
+    when('is not the first trade being executed of token in & swapper', async () => {
+      let executeTx: TransactionResponse;
+      let initialStrategyBalance: BigNumber;
+      let initialExecutorBalance: BigNumber;
+      const receivedAmount = utils.parseEther('92356');
+      given(async () => {
+        syncSwapper.smocked.swap.will.return.with(receivedAmount);
+        initialStrategyBalance = await token.balanceOf(strategy.address);
+        initialExecutorBalance = await token.balanceOf(executor.address);
+        await token.connect(strategy).approve(executor.address, amountIn);
+        executeTx = await executor
+          .connect(strategy)
+          ['execute(address,address,address,uint256,uint256)'](syncSwapper.address, token.address, tokenOut, amountIn, maxSlippage);
+      });
+      then('token gets enabled for swapper and token', async () => {
+        expect(await token.allowance(executor.address, syncSwapper.address)).to.be.equal(constants.MAX_UINT_256);
+      });
+      then('funds get taken from strategy', async () => {
+        expect(await token.balanceOf(strategy.address)).to.equal(initialStrategyBalance.sub(amountIn));
+      });
+      then('moves funds from strategy to trade factory', async () => {
+        expect(await token.balanceOf(executor.address)).to.equal(initialExecutorBalance.add(amountIn));
+      });
+      then('calls swapper swap with correct data', () => {
+        expect(syncSwapper.smocked.swap.calls[0]).to.be.eql([strategy.address, token.address, tokenOut, amountIn, maxSlippage, '0x']);
+      });
+      then('emits event', async () => {
+        await expect(executeTx)
+          .to.emit(executor, 'SyncTradeExecuted')
+          .withArgs(strategy.address, syncSwapper.address, token.address, tokenOut, amountIn, maxSlippage, receivedAmount);
+      });
+    });
+  });
+
+  describe('execute async', () => {
     let tradeId: BigNumber;
     const amountIn = utils.parseEther('100');
     const deadline = moment().add('30', 'minutes').unix();
@@ -81,7 +192,7 @@ contract('TradeFactoryExecutor', () => {
     // TODO: Only mechanic
     when('executing a trade thats not pending', () => {
       then('tx is reverted with reason', async () => {
-        await expect(executor.execute(tradeId.add(1), data)).to.be.revertedWith('TradeFactory: trade not pending');
+        await expect(executor['execute(uint256,bytes)'](tradeId.add(1), data)).to.be.revertedWith('TradeFactory: trade not pending');
       });
     });
     when('trade has expired', () => {
@@ -89,7 +200,15 @@ contract('TradeFactoryExecutor', () => {
         await evm.advanceToTimeAndBlock(deadline + 1);
       });
       then('tx is reverted with reason', async () => {
-        await expect(executor.execute(tradeId, data)).to.be.revertedWith('TradeFactory: trade has expired');
+        await expect(executor['execute(uint256,bytes)'](tradeId, data)).to.be.revertedWith('TradeFactory: trade has expired');
+      });
+    });
+    when('executing a trade where swapper has been removed', () => {
+      given(async () => {
+        await executor.connect(governor).removeSwapper(asyncSwapper.address);
+      });
+      then('tx is reverted with reason', async () => {
+        await expect(executor['execute(uint256,bytes)'](tradeId, data)).to.be.revertedWith('TradeFactory: invalid swapper');
       });
     });
     when('is not the first trade being executed of token in & swapper', () => {
@@ -98,13 +217,13 @@ contract('TradeFactoryExecutor', () => {
       let initialExecutorBalance: BigNumber;
       const receivedAmount = utils.parseEther('92356');
       given(async () => {
-        swapper.smocked.swap.will.return.with(receivedAmount);
+        asyncSwapper.smocked.swap.will.return.with(receivedAmount);
         initialStrategyBalance = await token.balanceOf(strategy.address);
         initialExecutorBalance = await token.balanceOf(executor.address);
-        executeTx = await executor.execute(tradeId, data);
+        executeTx = await executor['execute(uint256,bytes)'](tradeId, data);
       });
       then('token gets enabled for swapper and token', async () => {
-        expect(await token.allowance(executor.address, swapper.address)).to.be.equal(constants.MAX_UINT_256);
+        expect(await token.allowance(executor.address, asyncSwapper.address)).to.be.equal(constants.MAX_UINT_256);
       });
       then('funds get taken from strategy', async () => {
         expect(await token.balanceOf(strategy.address)).to.equal(initialStrategyBalance.sub(amountIn));
@@ -116,7 +235,14 @@ contract('TradeFactoryExecutor', () => {
         expect(await token.balanceOf(feeRecipient.address)).to.equal(CALCULATE_FEE(amountIn));
       });
       then('calls swapper swap with correct data', () => {
-        expect(swapper.smocked.swap.calls[0]).to.be.eql([strategy.address, token.address, tokenOut, APPLY_FEE(amountIn), maxSlippage, data]);
+        expect(asyncSwapper.smocked.swap.calls[0]).to.be.eql([
+          strategy.address,
+          token.address,
+          tokenOut,
+          APPLY_FEE(amountIn),
+          maxSlippage,
+          data,
+        ]);
       });
       then('removes trades from trades', async () => {
         expect((await executor.pendingTradesById(tradeId))._id).to.equal(0);
@@ -128,7 +254,7 @@ contract('TradeFactoryExecutor', () => {
         expect(await executor['pendingTradesIds()']()).to.be.empty;
       });
       then('emits event', async () => {
-        await expect(executeTx).to.emit(executor, 'TradeExecuted').withArgs(tradeId, CALCULATE_FEE(amountIn), receivedAmount);
+        await expect(executeTx).to.emit(executor, 'AsyncTradeExecuted').withArgs(tradeId, CALCULATE_FEE(amountIn), receivedAmount);
       });
     });
   });
@@ -175,7 +301,7 @@ contract('TradeFactoryExecutor', () => {
         expect(await executor['pendingTradesIds()']()).to.be.empty;
       });
       then('emits event', async () => {
-        await expect(expireTx).to.emit(executor, 'TradeExpired').withArgs(tradeId);
+        await expect(expireTx).to.emit(executor, 'AsyncTradeExpired').withArgs(tradeId);
       });
     });
   });
@@ -184,16 +310,16 @@ contract('TradeFactoryExecutor', () => {
     when('called', () => {
       let enableSwapperTokenTx: TransactionResponse;
       given(async () => {
-        enableSwapperTokenTx = await executor.enableSwapperToken(swapper.address, token.address);
+        enableSwapperTokenTx = await executor.enableSwapperToken(asyncSwapper.address, token.address);
       });
       then('increases allowance of token for swapper to max uint256', async () => {
-        expect(await token.allowance(executor.address, swapper.address)).to.be.equal(constants.MAX_UINT_256);
+        expect(await token.allowance(executor.address, asyncSwapper.address)).to.be.equal(constants.MAX_UINT_256);
       });
       then('adds token to the list of approved tokens of swapper', async () => {
-        expect(await executor.approvedTokensBySwappers(swapper.address)).to.eql([token.address]);
+        expect(await executor.approvedTokensBySwappers(asyncSwapper.address)).to.eql([token.address]);
       });
       then('emits event', async () => {
-        await expect(enableSwapperTokenTx).to.emit(executor, 'SwapperAndTokenEnabled').withArgs(swapper.address, token.address);
+        await expect(enableSwapperTokenTx).to.emit(executor, 'SwapperAndTokenEnabled').withArgs(asyncSwapper.address, token.address);
       });
     });
   });
@@ -218,6 +344,3 @@ contract('TradeFactoryExecutor', () => {
     return { tx, id: parsedEvent.args._id };
   }
 });
-function encodeParameters(arg0: never[], arg1: never[]) {
-  throw new Error('Function not implemented.');
-}

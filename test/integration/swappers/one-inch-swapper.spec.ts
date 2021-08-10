@@ -78,7 +78,7 @@ describe.skip('OneInchSwapper', function () {
 
     describe('swap', () => {
       beforeEach(async () => {
-        await tradeFactory.connect(yMech).execute(1, data, { gasPrice: 0 });
+        await tradeFactory.connect(yMech)['execute(uint256,bytes)'](1, data, { gasPrice: 0 });
       });
 
       then('CRV gets taken from strategy', async () => {

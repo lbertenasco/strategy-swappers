@@ -103,7 +103,7 @@ describe('OneInchAggregatorSwapper', function () {
 
     describe('swap', () => {
       beforeEach(async () => {
-        await tradeFactory.connect(yMech).execute(1, oneInchApiResponse.tx.data, {
+        await tradeFactory.connect(yMech)['execute(uint256,bytes)'](1, oneInchApiResponse.tx.data, {
           gasPrice: 0,
           gasLimit: GAS_LIMIT + GAS_LIMIT * 0.25,
         });
@@ -199,7 +199,7 @@ describe('OneInchAggregatorSwapper', function () {
 
     describe('swap', () => {
       beforeEach(async () => {
-        await tradeFactory.connect(yMech).execute(1, oneInchApiResponse.tx.data, {
+        await tradeFactory.connect(yMech)['execute(uint256,bytes)'](1, oneInchApiResponse.tx.data, {
           gasPrice: 0,
           gasLimit: GAS_LIMIT + GAS_LIMIT * 0.25,
         });

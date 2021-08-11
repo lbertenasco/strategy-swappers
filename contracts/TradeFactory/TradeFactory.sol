@@ -8,7 +8,6 @@ import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 import '@lbertenasco/contract-utils/contracts/utils/CollectableDust.sol';
 
 import './TradeFactoryPositionsHandler.sol';
-import './TradeFactoryFeesHandler.sol';
 import './TradeFactoryExecutor.sol';
 
 interface ITradeFactory is ITradeFactoryExecutor, ITradeFactoryPositionsHandler {}
@@ -18,11 +17,7 @@ contract TradeFactory is TradeFactoryExecutor, CollectableDust, ITradeFactory {
   using EnumerableSet for EnumerableSet.UintSet;
   using EnumerableSet for EnumerableSet.AddressSet;
 
-  constructor(
-    address _governor,
-    address _feeReceiver,
-    address _mechanicsRegistry
-  ) TradeFactoryAccessManager(_governor) TradeFactoryFeesHandler(_feeReceiver) TradeFactoryExecutor(_mechanicsRegistry) {}
+  constructor(address _governor, address _mechanicsRegistry) TradeFactoryAccessManager(_governor) TradeFactoryExecutor(_mechanicsRegistry) {}
 
   // Collectable Dust
   function sendDust(

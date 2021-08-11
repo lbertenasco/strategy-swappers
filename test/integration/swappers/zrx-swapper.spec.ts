@@ -106,7 +106,7 @@ describe('ZRXSwapper', function () {
         expect(await DAI.balanceOf(strategy.address)).to.be.gt(0);
       });
     });
-  });
+  }).retries(5);
 
   context('on polygon', () => {
     const CHAIN_ID = 137;

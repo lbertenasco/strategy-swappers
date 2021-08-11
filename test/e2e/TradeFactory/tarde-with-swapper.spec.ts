@@ -10,7 +10,6 @@ import { expect } from 'chai';
 // Unil sushiswap swapper mainnet is sepparated from polygon one
 contract('TradeFactory', () => {
   let governor: SignerWithAddress;
-  let feeRecipient: SignerWithAddress;
   let mechanic: SignerWithAddress;
   let strategy: SignerWithAddress;
   let hodler: SignerWithAddress;
@@ -33,17 +32,13 @@ contract('TradeFactory', () => {
   const data = contracts.encodeParameters([], []);
 
   before('create fixture loader', async () => {
-    [governor, feeRecipient, mechanic, strategy, hodler, swapperSetter] = await ethers.getSigners();
+    [governor, mechanic, strategy, hodler, swapperSetter] = await ethers.getSigners();
   });
 
   beforeEach(async () => {
     ({ mechanicsRegistry, machinery } = await fixtures.machineryFixture(mechanic.address));
 
-    ({ tradeFactory, uniswapV2Swapper, uniswapV2Factory } = await fixtures.uniswapV2SwapperFixture(
-      governor.address,
-      feeRecipient.address,
-      mechanicsRegistry.address
-    ));
+    ({ tradeFactory, uniswapV2Swapper, uniswapV2Factory } = await fixtures.uniswapV2SwapperFixture(governor.address, mechanicsRegistry.address));
 
     await tradeFactory.grantRole(await tradeFactory.STRATEGY(), strategy.address);
     await tradeFactory.connect(governor).grantRole(await tradeFactory.STRATEGY(), strategy.address);

@@ -89,4 +89,4 @@ describe('OneInchSwapper', function () {
       });
     });
   });
-});
+}).retries(5);

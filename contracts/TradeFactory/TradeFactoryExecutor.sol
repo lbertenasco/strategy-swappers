@@ -8,12 +8,11 @@ import '@lbertenasco/contract-utils/contracts/utils/Machinery.sol';
 
 import '../Swapper.sol';
 import './TradeFactoryPositionsHandler.sol';
-import './TradeFactoryFeesHandler.sol';
 
 interface ITradeFactoryExecutor {
   event TradeExpired(uint256 indexed _id);
 
-  event TradeExecuted(uint256 indexed _id, uint256 _fee, uint256 _receivedAmount);
+  event TradeExecuted(uint256 indexed _id, uint256 _receivedAmount);
 
   event SwapperAndTokenEnabled(address indexed _swapper, address _token);
 
@@ -24,7 +23,7 @@ interface ITradeFactoryExecutor {
   function expire(uint256 _id) external returns (uint256 _freedAmount);
 }
 
-abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPositionsHandler, TradeFactoryFeesHandler, Machinery {
+abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPositionsHandler, Machinery {
   using SafeERC20 for IERC20;
   using EnumerableSet for EnumerableSet.UintSet;
   using EnumerableSet for EnumerableSet.AddressSet;
@@ -56,19 +55,17 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPos
     }
     IERC20(_trade._tokenIn).safeTransferFrom(_trade._strategy, address(this), _trade._amountIn);
 
-    uint256 _feeAmount = _processFees(_trade._swapper, _trade._tokenIn, _trade._amountIn);
-
     _receivedAmount = ISwapper(_trade._swapper).swap(
       _trade._strategy,
       _trade._tokenIn,
       _trade._tokenOut,
-      _trade._amountIn - _feeAmount,
+      _trade._amountIn,
       _trade._maxSlippage,
       _data
     );
 
     _removePendingTrade(_trade._strategy, _id);
-    emit TradeExecuted(_id, _feeAmount, _receivedAmount);
+    emit TradeExecuted(_id, _receivedAmount);
   }
 
   function expire(uint256 _id) external override onlyMechanic returns (uint256 _freedAmount) {

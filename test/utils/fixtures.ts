@@ -36,9 +36,9 @@ interface TradeFactoryFixture {
   tradeFactory: Contract;
 }
 
-export const tradeFactoryFixture = async (governor: string, feeRecipient: string, mechanicsRegistry: string): Promise<TradeFactoryFixture> => {
+export const tradeFactoryFixture = async (governor: string, mechanicsRegistry: string): Promise<TradeFactoryFixture> => {
   const tradeFactoryFactory = await ethers.getContractFactory('contracts/TradeFactory/TradeFactory.sol:TradeFactory');
-  const tradeFactory = await tradeFactoryFactory.deploy(governor, feeRecipient, mechanicsRegistry);
+  const tradeFactory = await tradeFactoryFactory.deploy(governor, mechanicsRegistry);
   return {
     tradeFactory,
   };
@@ -52,12 +52,8 @@ interface UniswapV2SwapperFixture extends TradeFactoryFixture {
   uniswapV2SyncSwapper: Contract;
 }
 
-export const uniswapV2SwapperFixture = async (
-  governor: string,
-  feeRecipient: string,
-  mechanicsRegistry: string
-): Promise<UniswapV2SwapperFixture> => {
-  const { tradeFactory } = await tradeFactoryFixture(governor, feeRecipient, mechanicsRegistry);
+export const uniswapV2SwapperFixture = async (governor: string, mechanicsRegistry: string): Promise<UniswapV2SwapperFixture> => {
+  const { tradeFactory } = await tradeFactoryFixture(governor, mechanicsRegistry);
   const uniswapV2AsyncSwapperFactory = await ethers.getContractFactory('contracts/swappers/async/UniswapV2Swapper.sol:UniswapV2Swapper');
   const uniswapV2SyncSwapperFactory = await ethers.getContractFactory('contracts/swappers/sync/UniswapV2Swapper.sol:UniswapV2Swapper');
   const owner = await wallet.generateRandom();

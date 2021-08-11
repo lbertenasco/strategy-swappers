@@ -11,20 +11,8 @@ import { constants, erc20, evm, wallet, contracts } from '../../utils';
 import { BigNumber, utils } from 'ethers';
 import moment from 'moment';
 
-const PRECISION = 1_000_000;
-const FEE = 10 * PRECISION;
-
-const CALCULATE_FEE = (amountIn: BigNumber): BigNumber => {
-  return amountIn.mul(FEE).div(PRECISION * 100);
-};
-
-const APPLY_FEE = (amountIn: BigNumber): BigNumber => {
-  return amountIn.sub(CALCULATE_FEE(amountIn));
-};
-
 contract('TradeFactoryExecutor', () => {
   let governor: SignerWithAddress;
-  let feeRecipient: SignerWithAddress;
   let strategy: SignerWithAddress;
   let mechanic: SignerWithAddress;
   let swapperSetter: SignerWithAddress;
@@ -36,7 +24,7 @@ contract('TradeFactoryExecutor', () => {
   let token: Contract;
 
   before(async () => {
-    [governor, feeRecipient, strategy, mechanic, swapperSetter] = await ethers.getSigners();
+    [governor, strategy, mechanic, swapperSetter] = await ethers.getSigners();
     executorFactory = await smoddit('contracts/mock/TradeFactory/TradeFactoryExecutor.sol:TradeFactoryExecutorMock', mechanic);
   });
 
@@ -45,7 +33,7 @@ contract('TradeFactoryExecutor', () => {
     machinery = await smockit(machineryABI);
     asyncSwapper = await smockit(swapperABI);
     syncSwapper = await smockit(swapperABI);
-    executor = await executorFactory.deploy(governor.address, feeRecipient.address, machinery.address);
+    executor = await executorFactory.deploy(governor.address, machinery.address);
     executor = executor.connect(mechanic);
     token = await erc20.deploy({
       symbol: 'TK',
@@ -57,7 +45,6 @@ contract('TradeFactoryExecutor', () => {
     await executor.connect(governor).grantRole(await executor.SWAPPER_SETTER(), swapperSetter.address);
     await executor.connect(governor).addSwappers([asyncSwapper.address, syncSwapper.address]);
     await executor.connect(governor).setStrategySwapper(strategy.address, asyncSwapper.address);
-    await executor.connect(governor).setSwapperFee(asyncSwapper.address, FEE);
     machinery.smocked.isMechanic.will.return.with(true);
     asyncSwapper.smocked.SWAPPER_TYPE.will.return.with(0);
     syncSwapper.smocked.SWAPPER_TYPE.will.return.with(1);
@@ -229,20 +216,10 @@ contract('TradeFactoryExecutor', () => {
         expect(await token.balanceOf(strategy.address)).to.equal(initialStrategyBalance.sub(amountIn));
       });
       then('moves funds from strategy to trade factory', async () => {
-        expect(await token.balanceOf(executor.address)).to.equal(initialExecutorBalance.add(APPLY_FEE(amountIn)));
-      });
-      then('sends fee to fee receiver', async () => {
-        expect(await token.balanceOf(feeRecipient.address)).to.equal(CALCULATE_FEE(amountIn));
+        expect(await token.balanceOf(executor.address)).to.equal(initialExecutorBalance.add(amountIn));
       });
       then('calls swapper swap with correct data', () => {
-        expect(asyncSwapper.smocked.swap.calls[0]).to.be.eql([
-          strategy.address,
-          token.address,
-          tokenOut,
-          APPLY_FEE(amountIn),
-          maxSlippage,
-          data,
-        ]);
+        expect(asyncSwapper.smocked.swap.calls[0]).to.be.eql([strategy.address, token.address, tokenOut, amountIn, maxSlippage, data]);
       });
       then('removes trades from trades', async () => {
         expect((await executor.pendingTradesById(tradeId))._id).to.equal(0);
@@ -254,7 +231,7 @@ contract('TradeFactoryExecutor', () => {
         expect(await executor['pendingTradesIds()']()).to.be.empty;
       });
       then('emits event', async () => {
-        await expect(executeTx).to.emit(executor, 'AsyncTradeExecuted').withArgs(tradeId, CALCULATE_FEE(amountIn), receivedAmount);
+        await expect(executeTx).to.emit(executor, 'AsyncTradeExecuted').withArgs(tradeId, receivedAmount);
       });
     });
   });

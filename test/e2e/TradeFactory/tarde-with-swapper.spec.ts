@@ -10,7 +10,6 @@ import uniswapLibrary from '../../../scripts/libraries/uniswap-v2';
 
 contract('TradeFactory', () => {
   let governor: SignerWithAddress;
-  let feeRecipient: SignerWithAddress;
   let mechanic: SignerWithAddress;
   let strategy: SignerWithAddress;
   let hodler: SignerWithAddress;
@@ -34,7 +33,7 @@ contract('TradeFactory', () => {
   const INITIAL_LIQUIDITY = utils.parseEther('100000');
 
   before('create fixture loader', async () => {
-    [governor, feeRecipient, mechanic, strategy, hodler, swapperSetter] = await ethers.getSigners();
+    [governor, mechanic, strategy, hodler, swapperSetter] = await ethers.getSigners();
   });
 
   beforeEach(async () => {
@@ -42,7 +41,6 @@ contract('TradeFactory', () => {
 
     ({ tradeFactory, uniswapV2AsyncSwapper, uniswapV2SyncSwapper, uniswapV2Factory, uniswapV2Router02 } = await fixtures.uniswapV2SwapperFixture(
       governor.address,
-      feeRecipient.address,
       mechanicsRegistry.address
     ));
 

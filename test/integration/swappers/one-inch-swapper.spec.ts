@@ -13,7 +13,7 @@ import { getNodeUrl } from '../../../utils/network';
 // We set a fixed block number so tests can cache blockchain state
 const FORK_BLOCK_NUMBER = 12865115;
 
-describe.skip('OneInchSwapper', function () {
+describe('OneInchSwapper', function () {
   let deployer: JsonRpcSigner;
   let governor: JsonRpcSigner;
   let crvWhale: JsonRpcSigner;
@@ -68,17 +68,18 @@ describe.skip('OneInchSwapper', function () {
       });
 
       await tradeFactory.connect(governor).grantRole(await tradeFactory.STRATEGY(), strategy.address, { gasPrice: 0 });
-      await tradeFactory.connect(governor).setStrategySwapper(strategy.address, oneInchSwapper.address);
+      // await tradeFactory.connect(governor).setStrategySwapper(strategy.address, oneInchSwapper.address);
 
       await CRV.connect(strategy).approve(tradeFactory.address, AMOUNT_IN, { gasPrice: 0 });
-      await tradeFactory
-        .connect(strategy)
-        .create(CRV_ADDRESS, DAI_ADDRESS, AMOUNT_IN, MAX_SLIPPAGE, moment().add('30', 'minutes').unix(), { gasPrice: 0 });
     });
 
     describe('swap', () => {
       beforeEach(async () => {
-        await tradeFactory.connect(yMech)['execute(uint256,bytes)'](1, data, { gasPrice: 0 });
+        await tradeFactory
+          .connect(strategy)
+          ['execute(address,address,address,uint256,uint256)'](oneInchSwapper.address, CRV_ADDRESS, DAI_ADDRESS, AMOUNT_IN, MAX_SLIPPAGE, {
+            gasPrice: 0,
+          });
       });
 
       then('CRV gets taken from strategy', async () => {

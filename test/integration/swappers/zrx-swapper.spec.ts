@@ -83,7 +83,7 @@ describe('ZRXSwapper', function () {
       });
 
       await tradeFactory.connect(governor).grantRole(await tradeFactory.STRATEGY(), strategy.address, { gasPrice: 0 });
-      await tradeFactory.connect(governor).setStrategySwapper(strategy.address, ZRXSwapper.address);
+      await tradeFactory.connect(governor).setStrategyAsyncSwapper(strategy.address, ZRXSwapper.address);
 
       await CRV.connect(strategy).approve(tradeFactory.address, AMOUNT_IN, { gasPrice: 0 });
       await tradeFactory
@@ -93,7 +93,7 @@ describe('ZRXSwapper', function () {
 
     describe('swap', () => {
       beforeEach(async () => {
-        await tradeFactory.connect(yMech).execute(1, zrxAPIResponse.data, {
+        await tradeFactory.connect(yMech)['execute(uint256,bytes)'](1, zrxAPIResponse.data, {
           gasPrice: 0,
         });
       });
@@ -171,7 +171,7 @@ describe('ZRXSwapper', function () {
       });
 
       await tradeFactory.connect(governor).grantRole(await tradeFactory.STRATEGY(), strategy.address, { gasPrice: 0 });
-      await tradeFactory.connect(governor).setStrategySwapper(strategy.address, ZRXSwapper.address);
+      await tradeFactory.connect(governor).setStrategyAsyncSwapper(strategy.address, ZRXSwapper.address);
 
       await WMATIC.connect(strategy).approve(tradeFactory.address, AMOUNT_IN, { gasPrice: 0 });
 
@@ -182,7 +182,7 @@ describe('ZRXSwapper', function () {
 
     describe('swap', () => {
       beforeEach(async () => {
-        await tradeFactory.connect(yMech).execute(1, zrxAPIResponse.data, {
+        await tradeFactory.connect(yMech)['execute(uint256,bytes)'](1, zrxAPIResponse.data, {
           gasPrice: 0,
         });
       });

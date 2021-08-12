@@ -48,26 +48,37 @@ interface UniswapV2SwapperFixture extends TradeFactoryFixture {
   WETH: Contract;
   uniswapV2Factory: Contract;
   uniswapV2Router02: Contract;
-  uniswapV2Swapper: Contract;
+  uniswapV2AsyncSwapper: Contract;
+  uniswapV2SyncSwapper: Contract;
 }
 
-export const uniswapV2AsyncSwapperFixture = async (governor: string, mechanicsRegistry: string): Promise<UniswapV2SwapperFixture> => {
+export const uniswapV2SwapperFixture = async (governor: string, mechanicsRegistry: string): Promise<UniswapV2SwapperFixture> => {
   const { tradeFactory } = await tradeFactoryFixture(governor, mechanicsRegistry);
-  const uniswapV2SwapperFactory = await ethers.getContractFactory('contracts/swappers/async/UniswapV2AsyncSwapper.sol:UniswapV2Swapper');
+  const uniswapV2AsyncSwapperFactory = await ethers.getContractFactory('contracts/swappers/async/UniswapV2Swapper.sol:UniswapV2Swapper');
+  const uniswapV2SyncSwapperFactory = await ethers.getContractFactory('contracts/swappers/sync/UniswapV2Swapper.sol:UniswapV2Swapper');
   const owner = await wallet.generateRandom();
   await ethers.provider.send('hardhat_setBalance', [owner.address, utils.parseEther('10').toHexString()]);
   const uniswapDeployment = await uniswap.deploy({ owner });
-  const uniswapV2Swapper = await uniswapV2SwapperFactory.deploy(
+  const uniswapV2AsyncSwapper = await uniswapV2AsyncSwapperFactory.deploy(
     governor,
     tradeFactory.address,
     uniswapDeployment.WETH.address,
     uniswapDeployment.uniswapV2Factory.address,
     uniswapDeployment.uniswapV2Router02.address
   );
-  await tradeFactory.addSwapper(uniswapV2Swapper.address);
+  const uniswapV2SyncSwapper = await uniswapV2SyncSwapperFactory.deploy(
+    governor,
+    tradeFactory.address,
+    uniswapDeployment.WETH.address,
+    uniswapDeployment.uniswapV2Factory.address,
+    uniswapDeployment.uniswapV2Router02.address
+  );
+  await tradeFactory.addSwapper(uniswapV2AsyncSwapper.address);
+  await tradeFactory.addSwapper(uniswapV2SyncSwapper.address);
   return {
     tradeFactory,
-    uniswapV2Swapper,
+    uniswapV2AsyncSwapper,
+    uniswapV2SyncSwapper,
     ...uniswapDeployment,
   };
 };

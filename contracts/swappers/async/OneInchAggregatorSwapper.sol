@@ -3,8 +3,6 @@ pragma solidity 0.8.4;
 
 import '../../Swapper.sol';
 
-import 'hardhat/console.sol';
-
 interface IAggregationExecutor {
   function callBytes(bytes calldata data) external payable;
 }

@@ -93,7 +93,7 @@ describe('OneInchAggregatorSwapper', function () {
       });
 
       await tradeFactory.connect(governor).grantRole(await tradeFactory.STRATEGY(), strategy.address, { gasPrice: 0 });
-      await tradeFactory.connect(governor).setStrategySwapper(strategy.address, oneInchAggregatorSwapper.address);
+      await tradeFactory.connect(governor).setStrategyAsyncSwapper(strategy.address, oneInchAggregatorSwapper.address);
 
       await CRV.connect(strategy).approve(tradeFactory.address, AMOUNT_IN, { gasPrice: 0 });
       await tradeFactory
@@ -103,7 +103,7 @@ describe('OneInchAggregatorSwapper', function () {
 
     describe('swap', () => {
       beforeEach(async () => {
-        await tradeFactory.connect(yMech).execute(1, oneInchApiResponse.tx.data, {
+        await tradeFactory.connect(yMech)['execute(uint256,bytes)'](1, oneInchApiResponse.tx.data, {
           gasPrice: 0,
           gasLimit: GAS_LIMIT + GAS_LIMIT * 0.25,
         });
@@ -188,7 +188,7 @@ describe('OneInchAggregatorSwapper', function () {
       });
 
       await tradeFactory.connect(governor).grantRole(await tradeFactory.STRATEGY(), strategy.address, { gasPrice: 0 });
-      await tradeFactory.connect(governor).setStrategySwapper(strategy.address, oneInchAggregatorSwapper.address);
+      await tradeFactory.connect(governor).setStrategyAsyncSwapper(strategy.address, oneInchAggregatorSwapper.address);
 
       await WMATIC.connect(strategy).approve(tradeFactory.address, AMOUNT_IN, { gasPrice: 0 });
 
@@ -199,7 +199,7 @@ describe('OneInchAggregatorSwapper', function () {
 
     describe('swap', () => {
       beforeEach(async () => {
-        await tradeFactory.connect(yMech).execute(1, oneInchApiResponse.tx.data, {
+        await tradeFactory.connect(yMech)['execute(uint256,bytes)'](1, oneInchApiResponse.tx.data, {
           gasPrice: 0,
           gasLimit: GAS_LIMIT + GAS_LIMIT * 0.25,
         });

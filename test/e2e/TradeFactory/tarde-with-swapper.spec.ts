@@ -81,9 +81,12 @@ contract('TradeFactory', () => {
   describe('sync trade executed', () => {
     let minAmountOut: BigNumber;
     given(async () => {
+      const data = ethers.utils.defaultAbiCoder.encode([], []);
       // We can do this since ratio is 1 = 1
       minAmountOut = amountIn.sub(amountIn.mul(maxSlippage).div(10000 / 100));
-      await tradeFactory.connect(strategy)['execute(address,address,uint256,uint256)'](tokenIn.address, tokenOut.address, amountIn, maxSlippage);
+      await tradeFactory
+        .connect(strategy)
+        ['execute(address,address,uint256,uint256,bytes)'](tokenIn.address, tokenOut.address, amountIn, maxSlippage, data);
     });
     then('tokens in gets taken from strategy', async () => {
       expect(await tokenIn.balanceOf(strategy.address)).to.equal(0);

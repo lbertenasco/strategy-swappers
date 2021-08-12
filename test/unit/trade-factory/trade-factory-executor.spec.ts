@@ -58,47 +58,49 @@ contract('TradeFactoryExecutor', () => {
     const amountIn = utils.parseEther('100');
     const tokenOut = wallet.generateRandomAddress();
     const maxSlippage = BigNumber.from('1000');
+    const data = ethers.utils.defaultAbiCoder.encode([], []);
     // TODO: ONLY STRATEGY
-    when.skip('sync swapper is not set', () => {
+    when('sync swapper thats set was removed', () => {
       given(async () => {
-        // TODO: Unskip when updated to smock2.0
-        await modifiableExecutor.smodify.put({
-          strategySyncSwapper: {
-            [strategy.address]: '0',
-          },
-        });
+        await executor.connect(governor).removeSwappers([syncSwapper.address]);
       });
       then('tx is reverted with reason', async () => {
         await expect(
-          executor.connect(strategy)['execute(address,address,uint256,uint256)'](token.address, tokenOut, amountIn, maxSlippage)
-        ).to.be.revertedWith('TF: no strategy swapper');
+          executor.connect(strategy)['execute(address,address,uint256,uint256,bytes)'](token.address, tokenOut, amountIn, maxSlippage, data)
+        ).to.be.revertedWith('TradeFactory: invalid swapper');
       });
     });
     when('token in is zero address', () => {
       then('tx is reverted with reason', async () => {
         await expect(
-          executor.connect(strategy)['execute(address,address,uint256,uint256)'](constants.ZERO_ADDRESS, tokenOut, amountIn, maxSlippage)
+          executor
+            .connect(strategy)
+            ['execute(address,address,uint256,uint256,bytes)'](constants.ZERO_ADDRESS, tokenOut, amountIn, maxSlippage, data)
         ).to.be.revertedWith('TradeFactory: zero address');
       });
     });
     when('token out is zero address', () => {
       then('tx is reverted with reason', async () => {
         await expect(
-          executor.connect(strategy)['execute(address,address,uint256,uint256)'](token.address, constants.ZERO_ADDRESS, amountIn, maxSlippage)
+          executor
+            .connect(strategy)
+            ['execute(address,address,uint256,uint256,bytes)'](token.address, constants.ZERO_ADDRESS, amountIn, maxSlippage, data)
         ).to.be.revertedWith('TradeFactory: zero address');
       });
     });
     when('amount in is zero', () => {
       then('tx is reverted with reason', async () => {
         await expect(
-          executor.connect(strategy)['execute(address,address,uint256,uint256)'](token.address, tokenOut, constants.ZERO, maxSlippage)
+          executor
+            .connect(strategy)
+            ['execute(address,address,uint256,uint256,bytes)'](token.address, tokenOut, constants.ZERO, maxSlippage, data)
         ).to.be.revertedWith('TradeFactory: zero amount');
       });
     });
     when('max slippage is zero', () => {
       then('tx is reverted with reason', async () => {
         await expect(
-          executor.connect(strategy)['execute(address,address,uint256,uint256)'](token.address, tokenOut, amountIn, constants.ZERO)
+          executor.connect(strategy)['execute(address,address,uint256,uint256,bytes)'](token.address, tokenOut, amountIn, constants.ZERO, data)
         ).to.be.revertedWith('TradeFactory: zero slippage');
       });
     });
@@ -112,7 +114,9 @@ contract('TradeFactoryExecutor', () => {
         initialStrategyBalance = await token.balanceOf(strategy.address);
         initialExecutorBalance = await token.balanceOf(executor.address);
         await token.connect(strategy).approve(executor.address, amountIn);
-        executeTx = await executor.connect(strategy)['execute(address,address,uint256,uint256)'](token.address, tokenOut, amountIn, maxSlippage);
+        executeTx = await executor
+          .connect(strategy)
+          ['execute(address,address,uint256,uint256,bytes)'](token.address, tokenOut, amountIn, maxSlippage, data);
       });
       then('token gets enabled for swapper and token', async () => {
         expect(await token.allowance(executor.address, syncSwapper.address)).to.be.equal(constants.MAX_UINT_256);
@@ -124,12 +128,12 @@ contract('TradeFactoryExecutor', () => {
         expect(await token.balanceOf(executor.address)).to.equal(initialExecutorBalance.add(amountIn));
       });
       then('calls swapper swap with correct data', () => {
-        expect(syncSwapper.smocked.swap.calls[0]).to.be.eql([strategy.address, token.address, tokenOut, amountIn, maxSlippage, '0x']);
+        expect(syncSwapper.smocked.swap.calls[0]).to.be.eql([strategy.address, token.address, tokenOut, amountIn, maxSlippage, data]);
       });
       then('emits event', async () => {
         await expect(executeTx)
           .to.emit(executor, 'SyncTradeExecuted')
-          .withArgs(strategy.address, syncSwapper.address, token.address, tokenOut, amountIn, maxSlippage, receivedAmount);
+          .withArgs(strategy.address, syncSwapper.address, token.address, tokenOut, amountIn, maxSlippage, data, receivedAmount);
       });
     });
   });

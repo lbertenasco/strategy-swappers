@@ -16,6 +16,7 @@ interface ITradeFactoryExecutor {
     address _tokenOut,
     uint256 _amountIn,
     uint256 _maxSlippage,
+    bytes _data,
     uint256 _receivedAmount
   );
 
@@ -26,6 +27,14 @@ interface ITradeFactoryExecutor {
   event SwapperAndTokenEnabled(address indexed _swapper, address _token);
 
   function approvedTokensBySwappers(address _swapper) external view returns (address[] memory _tokens);
+
+  function execute(
+    address _tokenIn,
+    address _tokenOut,
+    uint256 _amountIn,
+    uint256 _maxSlippage,
+    bytes calldata _data
+  ) external returns (uint256 _receivedAmount);
 
   function execute(uint256 _id, bytes calldata _data) external returns (uint256 _receivedAmount);
 
@@ -57,10 +66,11 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPos
     address _tokenIn,
     address _tokenOut,
     uint256 _amountIn,
-    uint256 _maxSlippage
-  ) external onlyRole(STRATEGY) returns (uint256 _receivedAmount) {
+    uint256 _maxSlippage,
+    bytes calldata _data
+  ) external override onlyRole(STRATEGY) returns (uint256 _receivedAmount) {
     address _swapper = strategySyncSwapper[msg.sender];
-    require(_swapper != address(0), 'TF: no strategy swapper');
+    require(_swappers.contains(_swapper), 'TradeFactory: invalid swapper');
     require(_tokenIn != address(0) && _tokenOut != address(0), 'TradeFactory: zero address');
     require(_amountIn > 0, 'TradeFactory: zero amount');
     require(_maxSlippage > 0, 'TradeFactory: zero slippage');
@@ -68,8 +78,8 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPos
       _enableSwapperToken(_swapper, _tokenIn);
     }
     IERC20(_tokenIn).safeTransferFrom(msg.sender, address(this), _amountIn);
-    _receivedAmount = ISwapper(_swapper).swap(msg.sender, _tokenIn, _tokenOut, _amountIn, _maxSlippage, '');
-    emit SyncTradeExecuted(msg.sender, _swapper, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _receivedAmount);
+    _receivedAmount = ISwapper(_swapper).swap(msg.sender, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _data);
+    emit SyncTradeExecuted(msg.sender, _swapper, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _data, _receivedAmount);
   }
 
   // TradeFactoryExecutor

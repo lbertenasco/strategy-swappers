@@ -123,7 +123,7 @@ abstract contract TradeFactorySwapperHandler is ITradeFactorySwapperHandler, Tra
 
   function _removeSwapper(address _swapper) internal {
     require(_swappers.remove(_swapper), 'TF: swapper not added');
-    // TODO: SHOULD NOT BE ABLE TO REMOVE SWAPPER IF PENDING TRADES HAVE SWAPPER
+    // TODO: SHOULD NOT BE ABLE TO REMOVE SWAPPER IF SWAPPER IS ASSIGNED TO STRAT
     emit SwapperRemoved(_swapper);
   }
 

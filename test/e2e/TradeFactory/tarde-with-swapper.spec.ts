@@ -47,7 +47,8 @@ contract('TradeFactory', () => {
     await tradeFactory.grantRole(await tradeFactory.STRATEGY(), strategy.address);
     await tradeFactory.connect(governor).grantRole(await tradeFactory.STRATEGY(), strategy.address);
     await tradeFactory.connect(governor).grantRole(await tradeFactory.SWAPPER_SETTER(), swapperSetter.address);
-    await tradeFactory.connect(governor).setStrategySwapper(strategy.address, uniswapV2AsyncSwapper.address);
+    await tradeFactory.connect(governor).setStrategySyncSwapper(strategy.address, uniswapV2SyncSwapper.address);
+    await tradeFactory.connect(governor).setStrategyAsyncSwapper(strategy.address, uniswapV2AsyncSwapper.address);
 
     tokenIn = await erc20.deploy({
       name: 'TA',
@@ -80,17 +81,12 @@ contract('TradeFactory', () => {
   describe('sync trade executed', () => {
     let minAmountOut: BigNumber;
     given(async () => {
+      const data = ethers.utils.defaultAbiCoder.encode([], []);
       // We can do this since ratio is 1 = 1
       minAmountOut = amountIn.sub(amountIn.mul(maxSlippage).div(10000 / 100));
       await tradeFactory
         .connect(strategy)
-        ['execute(address,address,address,uint256,uint256)'](
-          uniswapV2SyncSwapper.address,
-          tokenIn.address,
-          tokenOut.address,
-          amountIn,
-          maxSlippage
-        );
+        ['execute(address,address,uint256,uint256,bytes)'](tokenIn.address, tokenOut.address, amountIn, maxSlippage, data);
     });
     then('tokens in gets taken from strategy', async () => {
       expect(await tokenIn.balanceOf(strategy.address)).to.equal(0);

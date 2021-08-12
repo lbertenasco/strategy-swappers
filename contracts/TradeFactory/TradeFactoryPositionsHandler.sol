@@ -3,6 +3,7 @@ pragma solidity 0.8.4;
 
 import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 import './TradeFactorySwapperHandler.sol';
+import '../Swapper.sol';
 
 interface ITradeFactoryPositionsHandler {
   struct Trade {
@@ -63,7 +64,7 @@ interface ITradeFactoryPositionsHandler {
 
   function cancelAllPending() external returns (uint256[] memory _canceledTradesIds);
 
-  function setStrategySwapperAndChangePending(
+  function setStrategyAsyncSwapperAsAndChangePending(
     address _strategy,
     address _swapper,
     bool _migrateSwaps
@@ -114,13 +115,22 @@ abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler,
     uint256 _maxSlippage,
     uint256 _deadline
   ) external override onlyRole(STRATEGY) returns (uint256 _id) {
-    require(strategySwapper[msg.sender] != address(0), 'TF: no strategy swapper');
+    require(strategyAsyncSwapper[msg.sender] != address(0), 'TF: no strategy swapper');
     require(_tokenIn != address(0) && _tokenOut != address(0), 'TradeFactory: zero address');
     require(_amountIn > 0, 'TradeFactory: zero amount');
     require(_maxSlippage > 0, 'TradeFactory: zero slippage');
     require(block.timestamp < _deadline, 'TradeFactory: deadline too soon');
     _id = _tradeCounter;
-    Trade memory _trade = Trade(_tradeCounter, msg.sender, strategySwapper[msg.sender], _tokenIn, _tokenOut, _amountIn, _maxSlippage, _deadline);
+    Trade memory _trade = Trade(
+      _tradeCounter,
+      msg.sender,
+      strategyAsyncSwapper[msg.sender],
+      _tokenIn,
+      _tokenOut,
+      _amountIn,
+      _maxSlippage,
+      _deadline
+    );
     pendingTradesById[_trade._id] = _trade;
     _pendingTradesByOwner[msg.sender].add(_trade._id);
     _pendingTradesIds.add(_trade._id);
@@ -157,12 +167,12 @@ abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler,
     emit TradesCanceled(msg.sender, _canceledTradesIds);
   }
 
-  function setStrategySwapperAndChangePending(
+  function setStrategyAsyncSwapperAsAndChangePending(
     address _strategy,
     address _swapper,
     bool _migrateSwaps
   ) external override onlyRole(SWAPPER_SETTER) returns (uint256[] memory _changedSwapperIds) {
-    this.setStrategySwapper(_strategy, _swapper);
+    this.setStrategyAsyncSwapper(_strategy, _swapper);
     if (_migrateSwaps) {
       return _changeStrategyPendingTradesSwapper(_strategy, _swapper);
     }

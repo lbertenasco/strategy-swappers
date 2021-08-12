@@ -6,17 +6,35 @@ import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 
 import '@lbertenasco/contract-utils/contracts/utils/Machinery.sol';
 
-import '../Swapper.sol';
 import './TradeFactoryPositionsHandler.sol';
 
 interface ITradeFactoryExecutor {
-  event TradeExpired(uint256 indexed _id);
+  event SyncTradeExecuted(
+    address indexed _strategy,
+    address indexed _swapper,
+    address _tokenIn,
+    address _tokenOut,
+    uint256 _amountIn,
+    uint256 _maxSlippage,
+    bytes _data,
+    uint256 _receivedAmount
+  );
 
-  event TradeExecuted(uint256 indexed _id, uint256 _receivedAmount);
+  event AsyncTradeExecuted(uint256 indexed _id, uint256 _receivedAmount);
+
+  event AsyncTradeExpired(uint256 indexed _id);
 
   event SwapperAndTokenEnabled(address indexed _swapper, address _token);
 
   function approvedTokensBySwappers(address _swapper) external view returns (address[] memory _tokens);
+
+  function execute(
+    address _tokenIn,
+    address _tokenOut,
+    uint256 _amountIn,
+    uint256 _maxSlippage,
+    bytes calldata _data
+  ) external returns (uint256 _receivedAmount);
 
   function execute(uint256 _id, bytes calldata _data) external returns (uint256 _receivedAmount);
 
@@ -44,6 +62,26 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPos
     _setMechanicsRegistry(_mechanicsRegistry);
   }
 
+  function execute(
+    address _tokenIn,
+    address _tokenOut,
+    uint256 _amountIn,
+    uint256 _maxSlippage,
+    bytes calldata _data
+  ) external override onlyRole(STRATEGY) returns (uint256 _receivedAmount) {
+    address _swapper = strategySyncSwapper[msg.sender];
+    require(_swappers.contains(_swapper), 'TradeFactory: invalid swapper');
+    require(_tokenIn != address(0) && _tokenOut != address(0), 'TradeFactory: zero address');
+    require(_amountIn > 0, 'TradeFactory: zero amount');
+    require(_maxSlippage > 0, 'TradeFactory: zero slippage');
+    if (!_approvedTokensBySwappers[_swapper].contains(_tokenIn)) {
+      _enableSwapperToken(_swapper, _tokenIn);
+    }
+    IERC20(_tokenIn).safeTransferFrom(msg.sender, address(this), _amountIn);
+    _receivedAmount = ISwapper(_swapper).swap(msg.sender, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _data);
+    emit SyncTradeExecuted(msg.sender, _swapper, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _data, _receivedAmount);
+  }
+
   // TradeFactoryExecutor
   function execute(uint256 _id, bytes calldata _data) external override onlyMechanic returns (uint256 _receivedAmount) {
     require(_pendingTradesIds.contains(_id), 'TradeFactory: trade not pending');
@@ -65,7 +103,7 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPos
     );
 
     _removePendingTrade(_trade._strategy, _id);
-    emit TradeExecuted(_id, _receivedAmount);
+    emit AsyncTradeExecuted(_id, _receivedAmount);
   }
 
   function expire(uint256 _id) external override onlyMechanic returns (uint256 _freedAmount) {
@@ -79,7 +117,7 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPos
     IERC20(_trade._tokenIn).safeTransfer(_trade._strategy, _trade._amountIn);
     // Remove trade
     _removePendingTrade(_trade._strategy, _id);
-    emit TradeExpired(_id);
+    emit AsyncTradeExpired(_id);
   }
 
   function _enableSwapperToken(address _swapper, address _token) internal {

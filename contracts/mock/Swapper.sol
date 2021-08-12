@@ -18,6 +18,10 @@ contract SwapperMock is Swapper {
   
   constructor(address _governor, address _tradeFactory) Swapper(_governor, _tradeFactory) {}
 
+  function SWAPPER_TYPE() external view override returns (SwapperType) {
+    return SwapperType.ASYNC;
+  }
+
   function modifierOnlyTradeFactory() external onlyTradeFactory { }
 
   function assertPreSwap(

@@ -4,7 +4,7 @@ pragma solidity 0.8.4;
 import '@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol';
 import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
-import '../Swapper.sol';
+import '../../Swapper.sol';
 
 interface IUniswapV2Swapper is ISwapper {
   // solhint-disable-next-line func-name-mixedcase
@@ -19,6 +19,9 @@ interface IUniswapV2Swapper is ISwapper {
 
 contract UniswapV2Swapper is IUniswapV2Swapper, Swapper {
   using SafeERC20 for IERC20;
+
+  // solhint-disable-next-line var-name-mixedcase
+  SwapperType public constant override SWAPPER_TYPE = SwapperType.SYNC;
 
   // solhint-disable-next-line var-name-mixedcase
   address public immutable override WETH;
@@ -56,7 +59,7 @@ contract UniswapV2Swapper is IUniswapV2Swapper, Swapper {
       _path,
       _receiver,
       block.timestamp
-    )[0];
+    )[_path.length - 1];
   }
 
   function _getPathAndAmountOut(

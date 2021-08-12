@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.4;
 
-import '../Swapper.sol';
-
-import 'hardhat/console.sol';
+import '../../Swapper.sol';
 
 interface IZRXSwapper is ISwapper {
   struct Transformation {
@@ -17,6 +15,9 @@ interface IZRXSwapper is ISwapper {
 
 contract ZRXSwapper is IZRXSwapper, Swapper {
   using SafeERC20 for IERC20;
+
+  // solhint-disable-next-line var-name-mixedcase
+  SwapperType public constant override SWAPPER_TYPE = SwapperType.ASYNC;
 
   // solhint-disable-next-line var-name-mixedcase
   address public immutable override ZRX;

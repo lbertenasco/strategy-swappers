@@ -37,7 +37,6 @@ describe('OneInchSwapper', function () {
     let DAI: Contract;
 
     const AMOUNT_IN = utils.parseEther('10000');
-    const data = contracts.encodeParameters([], []);
 
     beforeEach(async () => {
       await evm.reset({
@@ -68,17 +67,19 @@ describe('OneInchSwapper', function () {
       });
 
       await tradeFactory.connect(governor).grantRole(await tradeFactory.STRATEGY(), strategy.address, { gasPrice: 0 });
-      await tradeFactory.connect(governor).setStrategySwapper(strategy.address, oneInchSwapper.address);
+      await tradeFactory.connect(governor).setStrategySyncSwapper(strategy.address, oneInchSwapper.address);
 
       await CRV.connect(strategy).approve(tradeFactory.address, AMOUNT_IN, { gasPrice: 0 });
-      await tradeFactory
-        .connect(strategy)
-        .create(CRV_ADDRESS, DAI_ADDRESS, AMOUNT_IN, MAX_SLIPPAGE, moment().add('30', 'minutes').unix(), { gasPrice: 0 });
     });
 
     describe('swap', () => {
+      const data = ethers.utils.defaultAbiCoder.encode([], []);
       beforeEach(async () => {
-        await tradeFactory.connect(yMech).execute(1, data, { gasPrice: 0 });
+        await tradeFactory
+          .connect(strategy)
+          ['execute(address,address,uint256,uint256,bytes)'](CRV_ADDRESS, DAI_ADDRESS, AMOUNT_IN, MAX_SLIPPAGE, data, {
+            gasPrice: 0,
+          });
       });
 
       then('CRV gets taken from strategy', async () => {
@@ -89,4 +90,4 @@ describe('OneInchSwapper', function () {
       });
     });
   });
-}).retries(5);
+});

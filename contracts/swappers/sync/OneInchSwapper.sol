@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.4;
 
-import 'hardhat/console.sol';
-
 import '@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol';
-import '../Swapper.sol';
+import '../../Swapper.sol';
 
 interface IOneSplit {
   function getExpectedReturn(
@@ -56,6 +54,9 @@ interface IOneInchSwapper is ISwapper {
 
 contract OneInchSwapper is IOneInchSwapper, Swapper {
   using SafeERC20 for IERC20;
+
+  // solhint-disable-next-line var-name-mixedcase
+  SwapperType public constant override SWAPPER_TYPE = SwapperType.SYNC;
 
   // solhint-disable-next-line var-name-mixedcase
   address public immutable override ONE_INCH;

@@ -3,6 +3,7 @@ import { TransactionResponse } from '@ethersproject/abstract-provider';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { contract, given, then, when } from '../../utils/bdd';
+import { abi as swapperABI } from '../../../artifacts/contracts/Swapper.sol/ISwapper.json';
 import { smockit, smoddit, MockContract, ModifiableContractFactory, ModifiableContract } from '@eth-optimism/smock';
 import { constants, evm, wallet } from '../../utils';
 import { BigNumber, utils, Wallet } from 'ethers';
@@ -16,7 +17,7 @@ contract('TradeFactoryPositionsHandler', () => {
   let swapperSetter: SignerWithAddress;
   let positionsHandlerFactory: ModifiableContractFactory;
   let positionsHandler: ModifiableContract;
-  let defaultSwapperAddress: string;
+  let defaultSwapperAddress: MockContract;
 
   const STRATEGY_ROLE: string = new Web3().utils.soliditySha3('STRATEGY') as string;
   const STRATEGY_ADMIN_ROLE: string = new Web3().utils.soliditySha3('STRATEGY_ADMIN') as string;
@@ -32,11 +33,11 @@ contract('TradeFactoryPositionsHandler', () => {
 
   beforeEach(async () => {
     positionsHandler = await positionsHandlerFactory.deploy(governor.address);
-    defaultSwapperAddress = wallet.generateRandomAddress();
+    defaultSwapperAddress = await smockit(swapperABI);
     await positionsHandler.connect(governor).grantRole(STRATEGY_ROLE, strategy.address);
     await positionsHandler.connect(governor).grantRole(SWAPPER_SETTER_ROLE, swapperSetter.address);
-    await positionsHandler.connect(governor).addSwapper(defaultSwapperAddress);
-    await positionsHandler.connect(governor).setStrategySwapper(strategy.address, defaultSwapperAddress);
+    await positionsHandler.connect(governor).addSwapper(defaultSwapperAddress.address);
+    await positionsHandler.connect(governor).setStrategyAsyncSwapper(strategy.address, defaultSwapperAddress.address);
   });
 
   describe('constructor', () => {
@@ -190,15 +191,16 @@ contract('TradeFactoryPositionsHandler', () => {
   });
 
   describe('create', () => {
-    const swapper = wallet.generateRandomAddress();
+    let swapper: MockContract;
     const tokenIn = wallet.generateRandomAddress();
     const tokenOut = wallet.generateRandomAddress();
     const amountIn = utils.parseEther('100');
     const maxSlippage = 1000;
     const deadline = moment().add('30', 'minutes').unix();
     given(async () => {
-      await positionsHandler.connect(governor).addSwapper(swapper);
-      await positionsHandler.connect(governor).setStrategySwapper(strategy.address, swapper);
+      swapper = await smockit(swapperABI);
+      await positionsHandler.connect(governor).addSwapper(swapper.address);
+      await positionsHandler.connect(governor).setStrategyAsyncSwapper(strategy.address, swapper.address);
     });
     when('strategy is not registered', () => {
       then('tx is reverted with reason', async () => {
@@ -273,7 +275,7 @@ contract('TradeFactoryPositionsHandler', () => {
         const pendingTrade = await positionsHandler.pendingTradesById(tradeId);
         expect(pendingTrade._id).to.equal(BigNumber.from('1'));
         expect(pendingTrade._strategy).to.equal(strategy.address);
-        expect(pendingTrade._swapper).to.equal(swapper);
+        expect(pendingTrade._swapper).to.equal(swapper.address);
         expect(pendingTrade._tokenIn).to.equal(tokenIn);
         expect(pendingTrade._tokenOut).to.equal(tokenOut);
         expect(pendingTrade._amountIn).to.equal(amountIn);
@@ -292,7 +294,7 @@ contract('TradeFactoryPositionsHandler', () => {
       then('emits event', async () => {
         await expect(createTx)
           .to.emit(positionsHandler, 'TradeCreated')
-          .withArgs(tradeId, strategy.address, swapper, tokenIn, tokenOut, amountIn, maxSlippage, deadline);
+          .withArgs(tradeId, strategy.address, swapper.address, tokenIn, tokenOut, amountIn, maxSlippage, deadline);
       });
     });
   });

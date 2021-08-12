@@ -219,14 +219,6 @@ contract('TradeFactoryPositionsHandler', () => {
         );
       });
     });
-    when('swapper is not async', () => {
-      given(async () => {
-        swapper.smocked.SWAPPER_TYPE.will.return.with(1);
-      });
-      then('tx is reverted with reason', async () => {
-        await expect(positionsHandler.create(tokenIn, tokenOut, amountIn, maxSlippage, deadline)).to.be.revertedWith('TF: not async swapper');
-      });
-    });
     when('token in is zero address', () => {
       then('tx is reverted with reason', async () => {
         await expect(positionsHandler.create(constants.ZERO_ADDRESS, tokenOut, amountIn, maxSlippage, deadline)).to.be.revertedWith(

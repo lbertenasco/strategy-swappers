@@ -3,8 +3,6 @@ pragma solidity 0.8.4;
 
 import '../../Swapper.sol';
 
-import 'hardhat/console.sol';
-
 interface IZRXSwapper is ISwapper {
   struct Transformation {
     uint32 _uint32;

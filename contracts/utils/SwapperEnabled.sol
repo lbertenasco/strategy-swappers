@@ -18,8 +18,6 @@ interface ISwapperEnabled {
 
   function setTradeFactory(address _tradeFactory) external;
 
-  function setSwapperCheckpoint(uint256 _checkpoint) external;
-
   function createTrade(
     address _tokenIn,
     address _tokenOut,

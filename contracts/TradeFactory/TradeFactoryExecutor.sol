@@ -54,15 +54,13 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPos
   }
 
   function execute(
-    address _swapper,
     address _tokenIn,
     address _tokenOut,
     uint256 _amountIn,
     uint256 _maxSlippage
   ) external onlyRole(STRATEGY) returns (uint256 _receivedAmount) {
-    require(_swapper != address(0), 'TF: zero address');
-    require(_swappers.contains(_swapper), 'TradeFactory: invalid swapper');
-    require(ISwapper(_swapper).SWAPPER_TYPE() == ISwapper.SwapperType.SYNC, 'TF: not sync swapper');
+    address _swapper = strategySyncSwapper[msg.sender];
+    require(_swapper != address(0), 'TF: no strategy swapper');
     require(_tokenIn != address(0) && _tokenOut != address(0), 'TradeFactory: zero address');
     require(_amountIn > 0, 'TradeFactory: zero amount');
     require(_maxSlippage > 0, 'TradeFactory: zero slippage');

@@ -116,7 +116,6 @@ abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler,
     uint256 _deadline
   ) external override onlyRole(STRATEGY) returns (uint256 _id) {
     require(strategyAsyncSwapper[msg.sender] != address(0), 'TF: no strategy swapper');
-    require(ISwapper(strategyAsyncSwapper[msg.sender]).SWAPPER_TYPE() == ISwapper.SwapperType.ASYNC, 'TF: not async swapper');
     require(_tokenIn != address(0) && _tokenOut != address(0), 'TradeFactory: zero address');
     require(_amountIn > 0, 'TradeFactory: zero amount');
     require(_maxSlippage > 0, 'TradeFactory: zero slippage');

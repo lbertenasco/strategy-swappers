@@ -5,14 +5,18 @@ import '@openzeppelin/contracts/access/AccessControl.sol';
 import '@lbertenasco/contract-utils/contracts/utils/Governable.sol';
 import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 
+import '../Swapper.sol';
 import './TradeFactoryAccessManager.sol';
 
 interface ITradeFactorySwapperHandler {
-  event StrategySwapperSet(address _strategy, address _swapper);
+  event SyncStrategySwapperSet(address indexed _strategy, address _swapper);
+  event AsyncStrategySwapperSet(address indexed _strategy, address _swapper);
   event SwapperAdded(address _swapper);
   event SwapperRemoved(address _swapper);
 
-  function strategySwapper(address _strategy) external view returns (address _swapper);
+  function strategySyncSwapper(address _strategy) external view returns (address _swapper);
+
+  function strategyAsyncSwapper(address _strategy) external view returns (address _swapper);
 
   function swappers() external view returns (address[] memory _swappersList);
 
@@ -20,7 +24,9 @@ interface ITradeFactorySwapperHandler {
 
   function swapperStrategies(address _swapper) external view returns (address[] memory _strategies);
 
-  function setStrategySwapper(address _strategy, address _swapper) external;
+  function setStrategySyncSwapper(address _strategy, address _swapper) external;
+
+  function setStrategyAsyncSwapper(address _strategy, address _swapper) external;
 
   function addSwapper(address _swapper) external;
 
@@ -41,8 +47,10 @@ abstract contract TradeFactorySwapperHandler is ITradeFactorySwapperHandler, Tra
   EnumerableSet.AddressSet internal _swappers;
   // swapper -> strategy list (useful to know if we can safely deprecate a swapper)
   mapping(address => EnumerableSet.AddressSet) internal _swapperStrategies;
-  // strategy -> swapper
-  mapping(address => address) public override strategySwapper;
+  // strategy -> async swapper
+  mapping(address => address) public override strategyAsyncSwapper;
+  // strategy -> sync swapper
+  mapping(address => address) public override strategySyncSwapper;
 
   constructor() {
     _setRoleAdmin(SWAPPER_ADDER, MASTER_ADMIN);
@@ -69,15 +77,32 @@ abstract contract TradeFactorySwapperHandler is ITradeFactorySwapperHandler, Tra
     }
   }
 
-  function setStrategySwapper(address _strategy, address _swapper) external override onlyRole(SWAPPER_SETTER) {
+  function setStrategySyncSwapper(address _strategy, address _swapper) external override onlyRole(SWAPPER_SETTER) {
+    // we check that swapper being added is async
+    require(ISwapper(_swapper).SWAPPER_TYPE() == ISwapper.SwapperType.SYNC, 'TF: not sync swapper');
+    // we check that swapper is not already added
     require(_swappers.contains(_swapper), 'TradeFactory: invalid swapper');
     // remove strategy from previous swapper if any
-    if (strategySwapper[_strategy] != address(0)) _swapperStrategies[strategySwapper[_strategy]].remove(_strategy);
-    // set new strategy's swapper
-    strategySwapper[_strategy] = _swapper;
+    if (strategySyncSwapper[_strategy] != address(0)) _swapperStrategies[strategySyncSwapper[_strategy]].remove(_strategy);
+    // set new strategy's sync swapper
+    strategySyncSwapper[_strategy] = _swapper;
     // add strategy into new swapper
     _swapperStrategies[_swapper].add(_strategy);
-    emit StrategySwapperSet(_strategy, _swapper);
+    emit SyncStrategySwapperSet(_strategy, _swapper);
+  }
+
+  function setStrategyAsyncSwapper(address _strategy, address _swapper) external override onlyRole(SWAPPER_SETTER) {
+    // we check that swapper being added is async
+    require(ISwapper(_swapper).SWAPPER_TYPE() == ISwapper.SwapperType.ASYNC, 'TF: not async swapper');
+    // we check that swapper is not already added
+    require(_swappers.contains(_swapper), 'TradeFactory: invalid swapper');
+    // remove strategy from previous swapper if any
+    if (strategyAsyncSwapper[_strategy] != address(0)) _swapperStrategies[strategyAsyncSwapper[_strategy]].remove(_strategy);
+    // set new strategy's async swapper
+    strategyAsyncSwapper[_strategy] = _swapper;
+    // add strategy into new swapper
+    _swapperStrategies[_swapper].add(_strategy);
+    emit AsyncStrategySwapperSet(_strategy, _swapper);
   }
 
   function _addSwapper(address _swapper) internal {
@@ -98,6 +123,7 @@ abstract contract TradeFactorySwapperHandler is ITradeFactorySwapperHandler, Tra
 
   function _removeSwapper(address _swapper) internal {
     require(_swappers.remove(_swapper), 'TF: swapper not added');
+    // TODO: SHOULD NOT BE ABLE TO REMOVE SWAPPER IF SWAPPER IS ASSIGNED TO STRAT
     emit SwapperRemoved(_swapper);
   }
 

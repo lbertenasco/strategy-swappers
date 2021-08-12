@@ -5,9 +5,6 @@ import '../Swapper.sol';
 
 contract SwapperMock is Swapper {
 
-  // solhint-disable-next-line var-name-mixedcase
-  SwapperType public constant override SWAPPER_TYPE = SwapperType.ASYNC;
-
   event MyInternalExecuteSwap(
     address _receiver,
     address _tokenIn,

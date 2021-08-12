@@ -13,7 +13,7 @@ const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnviro
   const tradeFactory = await hre.deployments.get('TradeFactory');
 
   const deploy = await hre.deployments.deploy('SushiswapPolygonSwapper', {
-    contract: 'contracts/swappers/SushiswapPolygonSwapper.sol:SushiswapPolygonSwapper',
+    contract: 'contracts/swappers/sync/SushiswapPolygonSwapper.sol:SushiswapPolygonSwapper',
     from: deployer,
     args: [governor, tradeFactory.address, WETH, WMATIC, SUSHISWAP_FACTORY, SUSHISWAP_ROUTER],
     log: true,

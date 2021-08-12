@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.4;
 
-import 'hardhat/console.sol';
-
 import '@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol';
 import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '@openzeppelin/contracts/utils/math/Math.sol';
-import '../Swapper.sol';
+import '../../Swapper.sol';
 
 interface ISushiswapPolygonSwapper is ISwapper {
   // solhint-disable-next-line func-name-mixedcase
@@ -79,7 +77,7 @@ contract SushiswapPolygonSwapper is ISushiswapPolygonSwapper, Swapper {
   ) internal view returns (address[] memory _path, uint256 _amountOut) {
     uint256 _amountOutByDirectPath;
     address[] memory _directPath;
-    if (_tokenIn == WMATIC || _tokenOut == WMATIC || IUniswapV2Factory(UNISWAP_FACTORY).getPair(_tokenIn, _tokenOut) != address(0)) {
+    if (IUniswapV2Factory(UNISWAP_FACTORY).getPair(_tokenIn, _tokenOut) != address(0)) {
       _directPath = new address[](2);
       _directPath[0] = _tokenIn;
       _directPath[1] = _tokenOut;

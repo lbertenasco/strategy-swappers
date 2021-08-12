@@ -15,7 +15,7 @@ const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnviro
   const WETH = await uniswap.WETH();
 
   const deploy = await hre.deployments.deploy('UniswapV2Swapper', {
-    contract: 'contracts/swappers/UniswapV2Swapper.sol:UniswapV2Swapper',
+    contract: 'contracts/swappers/sync/UniswapV2Swapper.sol:UniswapV2Swapper',
     from: deployer,
     args: [governor, tradeFactory.address, WETH, UNISWAP_V2_FACTORY, UNISWAP_V2_ROUTER],
     log: true,

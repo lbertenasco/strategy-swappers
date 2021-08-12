@@ -6,7 +6,6 @@ import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 
 import '@lbertenasco/contract-utils/contracts/utils/Machinery.sol';
 
-import '../Swapper.sol';
 import './TradeFactoryPositionsHandler.sol';
 
 interface ITradeFactoryExecutor {

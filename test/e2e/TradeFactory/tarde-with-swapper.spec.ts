@@ -8,7 +8,7 @@ import { contract, given, then, when } from '../../utils/bdd';
 import { expect } from 'chai';
 
 // Unil sushiswap swapper mainnet is sepparated from polygon one
-contract('TradeFactory', () => {
+contract.skip('TradeFactory', () => {
   let governor: SignerWithAddress;
   let mechanic: SignerWithAddress;
   let strategy: SignerWithAddress;

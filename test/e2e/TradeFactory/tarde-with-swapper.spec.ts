@@ -47,7 +47,7 @@ contract('TradeFactory', () => {
     await tradeFactory.grantRole(await tradeFactory.STRATEGY(), strategy.address);
     await tradeFactory.connect(governor).grantRole(await tradeFactory.STRATEGY(), strategy.address);
     await tradeFactory.connect(governor).grantRole(await tradeFactory.SWAPPER_SETTER(), swapperSetter.address);
-    await tradeFactory.connect(governor).setStrategySwapper(strategy.address, uniswapV2AsyncSwapper.address);
+    await tradeFactory.connect(governor).setStrategyAsyncSwapper(strategy.address, uniswapV2AsyncSwapper.address);
 
     tokenIn = await erc20.deploy({
       name: 'TA',

@@ -37,7 +37,7 @@ contract('TradeFactoryPositionsHandler', () => {
     await positionsHandler.connect(governor).grantRole(STRATEGY_ROLE, strategy.address);
     await positionsHandler.connect(governor).grantRole(SWAPPER_SETTER_ROLE, swapperSetter.address);
     await positionsHandler.connect(governor).addSwapper(defaultSwapperAddress.address);
-    await positionsHandler.connect(governor).setStrategySwapper(strategy.address, defaultSwapperAddress.address);
+    await positionsHandler.connect(governor).setStrategyAsyncSwapper(strategy.address, defaultSwapperAddress.address);
   });
 
   describe('constructor', () => {
@@ -200,7 +200,7 @@ contract('TradeFactoryPositionsHandler', () => {
     given(async () => {
       swapper = await smockit(swapperABI);
       await positionsHandler.connect(governor).addSwapper(swapper.address);
-      await positionsHandler.connect(governor).setStrategySwapper(strategy.address, swapper.address);
+      await positionsHandler.connect(governor).setStrategyAsyncSwapper(strategy.address, swapper.address);
     });
     when('strategy is not registered', () => {
       then('tx is reverted with reason', async () => {

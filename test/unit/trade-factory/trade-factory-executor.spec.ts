@@ -44,7 +44,7 @@ contract('TradeFactoryExecutor', () => {
     await executor.connect(governor).grantRole(await executor.STRATEGY(), strategy.address);
     await executor.connect(governor).grantRole(await executor.SWAPPER_SETTER(), swapperSetter.address);
     await executor.connect(governor).addSwappers([asyncSwapper.address, syncSwapper.address]);
-    await executor.connect(governor).setStrategySwapper(strategy.address, asyncSwapper.address);
+    await executor.connect(governor).setStrategyAsyncSwapper(strategy.address, asyncSwapper.address);
     machinery.smocked.isMechanic.will.return.with(true);
     asyncSwapper.smocked.SWAPPER_TYPE.will.return.with(0);
     syncSwapper.smocked.SWAPPER_TYPE.will.return.with(1);

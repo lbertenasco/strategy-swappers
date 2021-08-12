@@ -12,7 +12,7 @@ interface ITradeFactorySwapperHandler {
   event SwapperAdded(address _swapper);
   event SwapperRemoved(address _swapper);
 
-  function strategySwapper(address _strategy) external view returns (address _swapper);
+  function strategyAsyncSwapper(address _strategy) external view returns (address _swapper);
 
   function swappers() external view returns (address[] memory _swappersList);
 
@@ -20,7 +20,7 @@ interface ITradeFactorySwapperHandler {
 
   function swapperStrategies(address _swapper) external view returns (address[] memory _strategies);
 
-  function setStrategySwapper(address _strategy, address _swapper) external;
+  function setStrategyAsyncSwapper(address _strategy, address _swapper) external;
 
   function addSwapper(address _swapper) external;
 
@@ -42,7 +42,7 @@ abstract contract TradeFactorySwapperHandler is ITradeFactorySwapperHandler, Tra
   // swapper -> strategy list (useful to know if we can safely deprecate a swapper)
   mapping(address => EnumerableSet.AddressSet) internal _swapperStrategies;
   // strategy -> swapper
-  mapping(address => address) public override strategySwapper;
+  mapping(address => address) public override strategyAsyncSwapper;
 
   constructor() {
     _setRoleAdmin(SWAPPER_ADDER, MASTER_ADMIN);
@@ -69,12 +69,12 @@ abstract contract TradeFactorySwapperHandler is ITradeFactorySwapperHandler, Tra
     }
   }
 
-  function setStrategySwapper(address _strategy, address _swapper) external override onlyRole(SWAPPER_SETTER) {
+  function setStrategyAsyncSwapper(address _strategy, address _swapper) external override onlyRole(SWAPPER_SETTER) {
     require(_swappers.contains(_swapper), 'TradeFactory: invalid swapper');
     // remove strategy from previous swapper if any
-    if (strategySwapper[_strategy] != address(0)) _swapperStrategies[strategySwapper[_strategy]].remove(_strategy);
+    if (strategyAsyncSwapper[_strategy] != address(0)) _swapperStrategies[strategyAsyncSwapper[_strategy]].remove(_strategy);
     // set new strategy's swapper
-    strategySwapper[_strategy] = _swapper;
+    strategyAsyncSwapper[_strategy] = _swapper;
     // add strategy into new swapper
     _swapperStrategies[_swapper].add(_strategy);
     emit StrategySwapperSet(_strategy, _swapper);

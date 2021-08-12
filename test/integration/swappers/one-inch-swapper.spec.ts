@@ -37,7 +37,6 @@ describe('OneInchSwapper', function () {
     let DAI: Contract;
 
     const AMOUNT_IN = utils.parseEther('10000');
-    const data = contracts.encodeParameters([], []);
 
     beforeEach(async () => {
       await evm.reset({
@@ -68,16 +67,17 @@ describe('OneInchSwapper', function () {
       });
 
       await tradeFactory.connect(governor).grantRole(await tradeFactory.STRATEGY(), strategy.address, { gasPrice: 0 });
-      // await tradeFactory.connect(governor).setStrategyAsyncSwapper(strategy.address, oneInchSwapper.address);
+      await tradeFactory.connect(governor).setStrategySyncSwapper(strategy.address, oneInchSwapper.address);
 
       await CRV.connect(strategy).approve(tradeFactory.address, AMOUNT_IN, { gasPrice: 0 });
     });
 
     describe('swap', () => {
+      const data = ethers.utils.defaultAbiCoder.encode([], []);
       beforeEach(async () => {
         await tradeFactory
           .connect(strategy)
-          ['execute(address,address,address,uint256,uint256)'](oneInchSwapper.address, CRV_ADDRESS, DAI_ADDRESS, AMOUNT_IN, MAX_SLIPPAGE, {
+          ['execute(address,address,uint256,uint256,bytes)'](CRV_ADDRESS, DAI_ADDRESS, AMOUNT_IN, MAX_SLIPPAGE, data, {
             gasPrice: 0,
           });
       });

@@ -13,7 +13,7 @@ import { getNodeUrl } from '../../../utils/network';
 // We set a fixed block number so tests can cache blockchain state
 const FORK_BLOCK_NUMBER = 12865115;
 
-describe('OneInchSwapper', function () {
+describe.skip('OneInchSwapper', function () {
   let deployer: JsonRpcSigner;
   let governor: JsonRpcSigner;
   let crvWhale: JsonRpcSigner;

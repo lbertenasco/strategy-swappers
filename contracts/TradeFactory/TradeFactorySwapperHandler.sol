@@ -2,7 +2,6 @@
 pragma solidity 0.8.4;
 
 import '@openzeppelin/contracts/access/AccessControl.sol';
-import '@lbertenasco/contract-utils/contracts/utils/Governable.sol';
 import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 
 import '../Swapper.sol';
@@ -52,11 +51,11 @@ abstract contract TradeFactorySwapperHandler is ITradeFactorySwapperHandler, Tra
   // strategy -> sync swapper
   mapping(address => address) public override strategySyncSwapper;
 
-  constructor() {
+  constructor(address _swapperAdder, address _swapperSetter) {
     _setRoleAdmin(SWAPPER_ADDER, MASTER_ADMIN);
     _setRoleAdmin(SWAPPER_SETTER, MASTER_ADMIN);
-    _setupRole(SWAPPER_ADDER, governor);
-    _setupRole(SWAPPER_SETTER, governor);
+    _setupRole(SWAPPER_ADDER, _swapperAdder);
+    _setupRole(SWAPPER_SETTER, _swapperSetter);
   }
 
   function isSwapper(address _swapper) external view override returns (bool) {

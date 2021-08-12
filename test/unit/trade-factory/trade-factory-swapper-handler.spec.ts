@@ -9,25 +9,27 @@ import { contract, given, then, when } from '../../utils/bdd';
 import { BigNumber } from '@ethersproject/bignumber';
 
 contract('TradeFactorySwapperHandler', () => {
-  let governor: SignerWithAddress;
+  let masterAdmin: SignerWithAddress;
+  let swapperAdder: SignerWithAddress;
+  let swapperSetter: SignerWithAddress;
   let mechanic: SignerWithAddress;
 
   let tradeFactoryFactory: ContractFactory;
   let tradeFactory: Contract;
-  let mechanicsRegistry: Contract;
-  let machinery: Contract;
 
   before(async () => {
-    [governor, mechanic] = await ethers.getSigners();
+    [masterAdmin, swapperAdder, swapperSetter, mechanic] = await ethers.getSigners();
     tradeFactoryFactory = await ethers.getContractFactory(
       'contracts/mock/TradeFactory/TradeFactorySwapperHandler.sol:TradeFactorySwapperHandlerMock'
     );
   });
 
   beforeEach(async () => {
-    ({ mechanicsRegistry, machinery } = await fixtures.machineryFixture(mechanic.address));
+    tradeFactory = await tradeFactoryFactory.deploy(masterAdmin.address, swapperAdder.address, swapperSetter.address);
+  });
 
-    tradeFactory = await tradeFactoryFactory.deploy(governor.address);
+  describe('constructor', () => {
+    // checks deployment
   });
 
   describe('swappers', () => {
@@ -40,7 +42,7 @@ contract('TradeFactorySwapperHandler', () => {
       let swappers: string[];
       given(async () => {
         swappers = [wallet.generateRandomAddress(), wallet.generateRandomAddress(), wallet.generateRandomAddress()];
-        await tradeFactory.addSwappers(swappers);
+        await tradeFactory.connect(swapperAdder).connect(swapperAdder).addSwappers(swappers);
       });
       then('returns array with correct swappers', async () => {
         expect(await tradeFactory.swappers()).to.eql(swappers);
@@ -58,7 +60,7 @@ contract('TradeFactorySwapperHandler', () => {
       let swappers: string[];
       given(async () => {
         swappers = [wallet.generateRandomAddress(), wallet.generateRandomAddress(), wallet.generateRandomAddress()];
-        await tradeFactory.addSwappers(swappers);
+        await tradeFactory.connect(swapperAdder).connect(swapperAdder).addSwappers(swappers);
       });
       then('returns array with correct swappers', async () => {
         expect(await tradeFactory.swappers()).to.eql(swappers);
@@ -69,8 +71,8 @@ contract('TradeFactorySwapperHandler', () => {
       let activeSwappers: string[];
       given(async () => {
         swappers = [wallet.generateRandomAddress(), wallet.generateRandomAddress(), wallet.generateRandomAddress()];
-        await tradeFactory.addSwappers(swappers);
-        await tradeFactory.removeSwappers([swappers[1]]);
+        await tradeFactory.connect(swapperAdder).connect(swapperAdder).addSwappers(swappers);
+        await tradeFactory.connect(swapperAdder).removeSwappers([swappers[1]]);
         activeSwappers = await tradeFactory.swappers();
       });
       then('array has same length as total swappers minus 1', () => {
@@ -92,7 +94,7 @@ contract('TradeFactorySwapperHandler', () => {
       let swapper: string;
       given(async () => {
         swapper = wallet.generateRandomAddress();
-        await tradeFactory.addSwappers([swapper]);
+        await tradeFactory.connect(swapperAdder).connect(swapperAdder).addSwappers([swapper]);
       });
       then('returns true', async () => {
         expect(await tradeFactory['isSwapper(address)'](swapper)).to.be.true;
@@ -101,14 +103,14 @@ contract('TradeFactorySwapperHandler', () => {
   });
 
   describe('addSwapper', () => {
-    // only governor
+    // only SWAPPER_ADDER
   });
 
   describe('_addSwapper', () => {
     when('adding swapper with zero address', () => {
       let addSwapperTx: Promise<TransactionResponse>;
       given(async () => {
-        addSwapperTx = tradeFactory.addSwapper(constants.ZERO_ADDRESS);
+        addSwapperTx = tradeFactory.connect(swapperAdder).addSwapper(constants.ZERO_ADDRESS);
       });
       then('tx is reverted with reason', async () => {
         await expect(addSwapperTx).to.be.revertedWith('TF: zero address');
@@ -119,8 +121,8 @@ contract('TradeFactorySwapperHandler', () => {
       let addSwapperTx: Promise<TransactionResponse>;
       given(async () => {
         swapper = wallet.generateRandomAddress();
-        await tradeFactory.addSwappers([swapper]);
-        addSwapperTx = tradeFactory.addSwapper(swapper);
+        await tradeFactory.connect(swapperAdder).connect(swapperAdder).addSwappers([swapper]);
+        addSwapperTx = tradeFactory.connect(swapperAdder).addSwapper(swapper);
       });
       then('tx is reverted with reason', async () => {
         await expect(addSwapperTx).to.be.revertedWith('TF: swapper already added');
@@ -131,7 +133,7 @@ contract('TradeFactorySwapperHandler', () => {
       let addSwapperTx: TransactionResponse;
       given(async () => {
         swapper = wallet.generateRandomAddress();
-        addSwapperTx = await tradeFactory.addSwapper(swapper);
+        addSwapperTx = await tradeFactory.connect(swapperAdder).addSwapper(swapper);
       });
       then('gets added to swappers', async () => {
         expect(await tradeFactory['isSwapper(address)'](swapper)).to.be.true;
@@ -143,14 +145,14 @@ contract('TradeFactorySwapperHandler', () => {
   });
 
   describe('removeSwapper', () => {
-    // only governor
+    // only SWAPPER_ADDER
   });
 
   describe('_removeSwapper', () => {
     when('swapper was not in registry', () => {
       let removeSwapperTx: Promise<TransactionResponse>;
       given(async () => {
-        removeSwapperTx = tradeFactory.removeSwapper(wallet.generateRandomAddress());
+        removeSwapperTx = tradeFactory.connect(swapperAdder).removeSwapper(wallet.generateRandomAddress());
       });
       then('tx is reverted with reason', async () => {
         await expect(removeSwapperTx).to.be.revertedWith('TF: swapper not added');
@@ -161,8 +163,8 @@ contract('TradeFactorySwapperHandler', () => {
       let removeSwapperTx: TransactionResponse;
       given(async () => {
         swapper = wallet.generateRandomAddress();
-        await tradeFactory.addSwappers([swapper]);
-        removeSwapperTx = await tradeFactory.removeSwapper(swapper);
+        await tradeFactory.connect(swapperAdder).connect(swapperAdder).addSwappers([swapper]);
+        removeSwapperTx = await tradeFactory.connect(swapperAdder).removeSwapper(swapper);
       });
       then('sets removed to true', async () => {
         expect(await tradeFactory.isSwapper(swapper)).to.be.false;
@@ -174,6 +176,6 @@ contract('TradeFactorySwapperHandler', () => {
   });
 
   describe('sendDust', () => {
-    // only governor
+    // only MASTER_ADMIN
   });
 });

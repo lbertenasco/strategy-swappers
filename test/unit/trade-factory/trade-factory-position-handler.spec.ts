@@ -12,19 +12,21 @@ import moment from 'moment';
 
 contract('TradeFactoryPositionsHandler', () => {
   let deployer: SignerWithAddress;
-  let governor: SignerWithAddress;
+  let masterAdmin: SignerWithAddress;
   let strategy: SignerWithAddress;
+  let swapperAdder: SignerWithAddress;
   let swapperSetter: SignerWithAddress;
+  let strategyAdder: SignerWithAddress;
   let positionsHandlerFactory: ModifiableContractFactory;
   let positionsHandler: ModifiableContract;
   let defaultSwapperAddress: MockContract;
 
+  const MASTER_ADMIN_ROLE: string = new Web3().utils.soliditySha3('MASTER_ADMIN') as string;
   const STRATEGY_ROLE: string = new Web3().utils.soliditySha3('STRATEGY') as string;
-  const STRATEGY_ADMIN_ROLE: string = new Web3().utils.soliditySha3('STRATEGY_ADMIN') as string;
-  const SWAPPER_SETTER_ROLE: string = new Web3().utils.soliditySha3('SWAPPER_SETTER') as string;
+  const STRATEGY_ADDER_ROLE: string = new Web3().utils.soliditySha3('STRATEGY_ADDER') as string;
 
   before(async () => {
-    [deployer, governor, strategy, swapperSetter] = await ethers.getSigners();
+    [deployer, masterAdmin, swapperAdder, swapperSetter, strategyAdder, strategy] = await ethers.getSigners();
     positionsHandlerFactory = await smoddit(
       'contracts/mock/TradeFactory/TradeFactoryPositionsHandler.sol:TradeFactoryPositionsHandlerMock',
       strategy
@@ -32,25 +34,26 @@ contract('TradeFactoryPositionsHandler', () => {
   });
 
   beforeEach(async () => {
-    positionsHandler = await positionsHandlerFactory.deploy(governor.address);
+    positionsHandler = await positionsHandlerFactory.deploy(
+      masterAdmin.address,
+      swapperAdder.address,
+      swapperSetter.address,
+      strategyAdder.address
+    );
     defaultSwapperAddress = await smockit(swapperABI);
-    await positionsHandler.connect(governor).grantRole(STRATEGY_ROLE, strategy.address);
-    await positionsHandler.connect(governor).grantRole(SWAPPER_SETTER_ROLE, swapperSetter.address);
-    await positionsHandler.connect(governor).addSwapper(defaultSwapperAddress.address);
-    await positionsHandler.connect(governor).setStrategyAsyncSwapper(strategy.address, defaultSwapperAddress.address);
+    await positionsHandler.connect(swapperAdder).addSwapper(defaultSwapperAddress.address);
+    await positionsHandler.connect(swapperSetter).setStrategyAsyncSwapper(strategy.address, defaultSwapperAddress.address);
+    await positionsHandler.connect(strategyAdder).grantRole(STRATEGY_ROLE, strategy.address);
   });
 
   describe('constructor', () => {
     // TODO: Make it better
     when('all data is valid', () => {
-      then('governor is set correctly', async () => {
-        expect(await positionsHandler.governor()).to.equal(governor.address);
-      });
       then('role admin of strategy is strategy admin', async () => {
-        expect(await positionsHandler.getRoleAdmin(STRATEGY_ROLE)).to.equal(STRATEGY_ADMIN_ROLE);
+        expect(await positionsHandler.getRoleAdmin(STRATEGY_ROLE)).to.equal(STRATEGY_ADDER_ROLE);
       });
-      then('governor has strategy admin role', async () => {
-        expect(await positionsHandler.hasRole(STRATEGY_ADMIN_ROLE, governor.address)).to.be.true;
+      then('role admin of strategy admin is master admin', async () => {
+        expect(await positionsHandler.getRoleAdmin(STRATEGY_ADDER_ROLE)).to.equal(MASTER_ADMIN_ROLE);
       });
     });
   });
@@ -58,7 +61,7 @@ contract('TradeFactoryPositionsHandler', () => {
   describe('grantRole', () => {
     when('granting STRATEGY_ROLE', () => {
       const randomStrategy = wallet.generateRandomAddress();
-      when('not called from governor', () => {
+      when('not called from strategy adder', () => {
         let grantRoleTx: Promise<TransactionResponse>;
         given(() => {
           grantRoleTx = positionsHandler.connect(deployer).grantRole(STRATEGY_ROLE, randomStrategy);
@@ -67,35 +70,35 @@ contract('TradeFactoryPositionsHandler', () => {
           await expect(grantRoleTx).to.be.reverted;
         });
       });
-      when('called from governor', () => {
+      when('called from strategy adder', () => {
         given(async () => {
-          await positionsHandler.connect(governor).grantRole(STRATEGY_ROLE, randomStrategy);
+          await positionsHandler.connect(strategyAdder).grantRole(STRATEGY_ROLE, randomStrategy);
         });
         then('role gets added to address', async () => {
           expect(await positionsHandler.hasRole(STRATEGY_ROLE, randomStrategy)).to.be.true;
         });
       });
     });
-    when('granting STRATEGY_ADMIN_ROLE', () => {
+    when('granting STRATEGY_ADDER_ROLE', () => {
       let randomGuy: Wallet;
       beforeEach(async () => {
         randomGuy = await wallet.generateRandom();
       });
-      when('not called from governor', () => {
+      when('not called from master adminx', () => {
         let grantRoleTx: Promise<TransactionResponse>;
         given(() => {
-          grantRoleTx = positionsHandler.connect(deployer).grantRole(STRATEGY_ADMIN_ROLE, randomGuy.address);
+          grantRoleTx = positionsHandler.connect(deployer).grantRole(STRATEGY_ADDER_ROLE, randomGuy.address);
         });
         then('tx get reverted with reason', async () => {
           await expect(grantRoleTx).to.be.reverted;
         });
       });
-      when('called from governor', () => {
+      when('called from master adminx', () => {
         given(async () => {
-          await positionsHandler.connect(governor).grantRole(STRATEGY_ADMIN_ROLE, randomGuy.address);
+          await positionsHandler.connect(masterAdmin).grantRole(STRATEGY_ADDER_ROLE, randomGuy.address);
         });
         then('role gets added to address', async () => {
-          expect(await positionsHandler.hasRole(STRATEGY_ADMIN_ROLE, randomGuy.address)).to.be.true;
+          expect(await positionsHandler.hasRole(STRATEGY_ADDER_ROLE, randomGuy.address)).to.be.true;
         });
         then('new strategy admin can add strategies', async () => {
           const randomStrategy = wallet.generateRandomAddress();
@@ -110,9 +113,9 @@ contract('TradeFactoryPositionsHandler', () => {
     const randomStrategy = wallet.generateRandomAddress();
     when('revoking STRATEGY_ROLE', () => {
       given(async () => {
-        await positionsHandler.connect(governor).grantRole(STRATEGY_ROLE, randomStrategy);
+        await positionsHandler.connect(strategyAdder).grantRole(STRATEGY_ROLE, randomStrategy);
       });
-      when('not called from governor', () => {
+      when('not called from master admin', () => {
         let grantRoleTx: Promise<TransactionResponse>;
         given(() => {
           grantRoleTx = positionsHandler.connect(deployer).revokeRole(STRATEGY_ROLE, randomStrategy);
@@ -121,9 +124,9 @@ contract('TradeFactoryPositionsHandler', () => {
           await expect(grantRoleTx).to.be.reverted;
         });
       });
-      when('called from governor', () => {
+      when('called from master admin', () => {
         given(async () => {
-          await positionsHandler.connect(governor).revokeRole(STRATEGY_ROLE, randomStrategy);
+          await positionsHandler.connect(strategyAdder).revokeRole(STRATEGY_ROLE, randomStrategy);
         });
         then('role gets removed from address', async () => {
           expect(await positionsHandler.hasRole(STRATEGY_ROLE, randomStrategy)).to.be.false;
@@ -180,16 +183,6 @@ contract('TradeFactoryPositionsHandler', () => {
     });
   });
 
-  describe('onlyStrategy', () => {
-    when('not being called from strategy', () => {
-      then('tx is reverted with reason');
-    });
-    when('being called from strategy', () => {
-      then('tradeFactory is consulted');
-      then('tx is not reverted');
-    });
-  });
-
   describe('create', () => {
     let swapper: MockContract;
     const tokenIn = wallet.generateRandomAddress();
@@ -199,8 +192,8 @@ contract('TradeFactoryPositionsHandler', () => {
     const deadline = moment().add('30', 'minutes').unix();
     given(async () => {
       swapper = await smockit(swapperABI);
-      await positionsHandler.connect(governor).addSwapper(swapper.address);
-      await positionsHandler.connect(governor).setStrategyAsyncSwapper(strategy.address, swapper.address);
+      await positionsHandler.connect(swapperAdder).addSwapper(swapper.address);
+      await positionsHandler.connect(swapperSetter).setStrategyAsyncSwapper(strategy.address, swapper.address);
     });
     when('strategy is not registered', () => {
       then('tx is reverted with reason', async () => {
@@ -210,13 +203,15 @@ contract('TradeFactoryPositionsHandler', () => {
       });
     });
     when('swapper is not registered', () => {
+      let newRandomStrategy: Wallet;
       given(async () => {
-        await positionsHandler.connect(governor).grantRole(STRATEGY_ROLE, deployer.address);
+        newRandomStrategy = await wallet.generateRandom();
+        await positionsHandler.connect(strategyAdder).grantRole(STRATEGY_ROLE, newRandomStrategy.address);
       });
       then('tx is reverted with reason', async () => {
-        await expect(positionsHandler.connect(deployer).create(tokenIn, tokenOut, amountIn, maxSlippage, deadline)).to.be.revertedWith(
-          'TF: no strategy swapper'
-        );
+        await expect(
+          positionsHandler.connect(newRandomStrategy).create(tokenIn, tokenOut, amountIn, maxSlippage, deadline, { gasPrice: 0 })
+        ).to.be.revertedWith('TF: no strategy swapper');
       });
     });
     when('token in is zero address', () => {
@@ -456,7 +451,7 @@ contract('TradeFactoryPositionsHandler', () => {
       let changeStrategyPendingTradesSwapper: TransactionResponse;
       const newSwapper = wallet.generateRandomAddress();
       given(async () => {
-        await positionsHandler.connect(governor).addSwapper(newSwapper);
+        await positionsHandler.connect(swapperAdder).addSwapper(newSwapper);
         changeStrategyPendingTradesSwapper = await positionsHandler
           .connect(swapperSetter)
           .changeStrategyPendingTradesSwapper(strategy.address, newSwapper);
@@ -487,7 +482,7 @@ contract('TradeFactoryPositionsHandler', () => {
     maxSlippage: number;
     deadline: number;
   }): Promise<{ tx: TransactionResponse; id: BigNumber }> {
-    const tx = await positionsHandler.create(tokenIn, tokenOut, amountIn, maxSlippage, deadline);
+    const tx = await positionsHandler.connect(strategy).create(tokenIn, tokenOut, amountIn, maxSlippage, deadline);
     const txReceipt = await tx.wait();
     const parsedEvent = positionsHandler.interface.parseLog(txReceipt.logs[0]);
     return { tx, id: parsedEvent.args._id };

@@ -67,7 +67,7 @@ contract SushiswapPolygonSwapper is ISushiswapPolygonSwapper, Swapper {
       _path,
       _receiver,
       block.timestamp + 1800
-    )[0];
+    )[_path.length - 1];
   }
 
   function _getPathAndAmountOut(

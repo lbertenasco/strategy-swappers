@@ -36,9 +36,15 @@ interface TradeFactoryFixture {
   tradeFactory: Contract;
 }
 
-export const tradeFactoryFixture = async (governor: string, mechanicsRegistry: string): Promise<TradeFactoryFixture> => {
+export const tradeFactoryFixture = async (
+  masterAdmin: string,
+  swapperAdder: string,
+  swapperSetter: string,
+  strategyAdder: string,
+  mechanicsRegistry: string
+): Promise<TradeFactoryFixture> => {
   const tradeFactoryFactory = await ethers.getContractFactory('contracts/TradeFactory/TradeFactory.sol:TradeFactory');
-  const tradeFactory = await tradeFactoryFactory.deploy(governor, mechanicsRegistry);
+  const tradeFactory = await tradeFactoryFactory.deploy(masterAdmin, swapperAdder, swapperSetter, strategyAdder, mechanicsRegistry);
   return {
     tradeFactory,
   };
@@ -52,29 +58,33 @@ interface UniswapV2SwapperFixture extends TradeFactoryFixture {
   uniswapV2SyncSwapper: Contract;
 }
 
-export const uniswapV2SwapperFixture = async (governor: string, mechanicsRegistry: string): Promise<UniswapV2SwapperFixture> => {
-  const { tradeFactory } = await tradeFactoryFixture(governor, mechanicsRegistry);
+export const uniswapV2SwapperFixture = async (
+  masterAdmin: string,
+  swapperAdder: string,
+  swapperSetter: string,
+  strategyAdder: string,
+  mechanicsRegistry: string
+): Promise<UniswapV2SwapperFixture> => {
+  const { tradeFactory } = await tradeFactoryFixture(masterAdmin, swapperAdder, swapperSetter, strategyAdder, mechanicsRegistry);
   const uniswapV2AsyncSwapperFactory = await ethers.getContractFactory('contracts/swappers/async/UniswapV2Swapper.sol:UniswapV2Swapper');
   const uniswapV2SyncSwapperFactory = await ethers.getContractFactory('contracts/swappers/sync/UniswapV2Swapper.sol:UniswapV2Swapper');
   const owner = await wallet.generateRandom();
   await ethers.provider.send('hardhat_setBalance', [owner.address, utils.parseEther('10').toHexString()]);
   const uniswapDeployment = await uniswap.deploy({ owner });
   const uniswapV2AsyncSwapper = await uniswapV2AsyncSwapperFactory.deploy(
-    governor,
+    masterAdmin,
     tradeFactory.address,
     uniswapDeployment.WETH.address,
     uniswapDeployment.uniswapV2Factory.address,
     uniswapDeployment.uniswapV2Router02.address
   );
   const uniswapV2SyncSwapper = await uniswapV2SyncSwapperFactory.deploy(
-    governor,
+    masterAdmin,
     tradeFactory.address,
     uniswapDeployment.WETH.address,
     uniswapDeployment.uniswapV2Factory.address,
     uniswapDeployment.uniswapV2Router02.address
   );
-  await tradeFactory.addSwapper(uniswapV2AsyncSwapper.address);
-  await tradeFactory.addSwapper(uniswapV2SyncSwapper.address);
   return {
     tradeFactory,
     uniswapV2AsyncSwapper,

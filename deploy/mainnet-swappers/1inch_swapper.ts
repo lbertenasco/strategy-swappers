@@ -17,8 +17,6 @@ const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnviro
     log: true,
   });
 
-  await hre.deployments.execute('TradeFactory', { from: governor, gasLimit: 200000 }, 'addSwapper', deploy.address);
-
   if (await shouldVerifyContract(hre, 'OneInchSwapper')) {
     await hre.run('verify:verify', {
       address: deploy.address,

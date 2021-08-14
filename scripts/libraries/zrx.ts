@@ -19,7 +19,7 @@ export type QuoteRequest = {
   sippagePercentage?: number;
   gasPrice?: BigNumber | string;
   takerAddress?: string;
-  excludeSources?: string[];
+  excludeSources?: string[] | string;
   includeSources?: string[];
   skipValidation?: boolean;
   intentOnFilling?: boolean;
@@ -55,8 +55,10 @@ export const quote = async (quoteRequest: QuoteRequest): Promise<QuoteResponse> 
   if (BigNumber.isBigNumber(quoteRequest.buyAmount)) quoteRequest.buyAmount = quoteRequest.buyAmount.toString();
   if (BigNumber.isBigNumber(quoteRequest.gasPrice)) quoteRequest.gasPrice = quoteRequest.gasPrice.toString();
 
-  quoteRequest.excludeSources = quoteRequest.excludeSources ?? [];
+  quoteRequest.excludeSources = (quoteRequest.excludeSources as string[]) ?? [];
   quoteRequest.excludeSources.push('Mesh');
+
+  quoteRequest.excludeSources = quoteRequest.excludeSources.join(',');
 
   let response: any;
   try {

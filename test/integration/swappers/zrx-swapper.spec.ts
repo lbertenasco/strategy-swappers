@@ -11,7 +11,7 @@ import { getNodeUrl } from '../../../utils/network';
 import zrx, { QuoteResponse } from '../../../scripts/libraries/zrx';
 import { STRATEGY_ADDER, SWAPPER_ADDER, SWAPPER_SETTER } from '../../../deploy/001_trade_factory';
 
-describe('ZRXSwapper', function () {
+describe.only('ZRXSwapper', function () {
   let swapperAdder: JsonRpcSigner;
   let swapperSetter: JsonRpcSigner;
   let strategyAdder: JsonRpcSigner;

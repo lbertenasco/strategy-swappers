@@ -9,11 +9,13 @@ import { expect } from 'chai';
 import uniswapLibrary from '../../../scripts/libraries/uniswap-v2';
 
 contract('TradeFactory', () => {
-  let governor: SignerWithAddress;
+  let masterAdmin: SignerWithAddress;
   let mechanic: SignerWithAddress;
   let strategy: SignerWithAddress;
   let hodler: SignerWithAddress;
+  let swapperAdder: SignerWithAddress;
   let swapperSetter: SignerWithAddress;
+  let strategyAdder: SignerWithAddress;
 
   let tokenIn: Contract;
   let tokenOut: Contract;
@@ -33,22 +35,25 @@ contract('TradeFactory', () => {
   const INITIAL_LIQUIDITY = utils.parseEther('100000');
 
   before('create fixture loader', async () => {
-    [governor, mechanic, strategy, hodler, swapperSetter] = await ethers.getSigners();
+    [masterAdmin, swapperAdder, swapperSetter, strategyAdder, mechanic, strategy, hodler, swapperSetter] = await ethers.getSigners();
   });
 
   beforeEach(async () => {
     ({ mechanicsRegistry, machinery } = await fixtures.machineryFixture(mechanic.address));
 
     ({ tradeFactory, uniswapV2AsyncSwapper, uniswapV2SyncSwapper, uniswapV2Factory, uniswapV2Router02 } = await fixtures.uniswapV2SwapperFixture(
-      governor.address,
+      masterAdmin.address,
+      swapperAdder.address,
+      swapperSetter.address,
+      strategyAdder.address,
       mechanicsRegistry.address
     ));
 
-    await tradeFactory.grantRole(await tradeFactory.STRATEGY(), strategy.address);
-    await tradeFactory.connect(governor).grantRole(await tradeFactory.STRATEGY(), strategy.address);
-    await tradeFactory.connect(governor).grantRole(await tradeFactory.SWAPPER_SETTER(), swapperSetter.address);
-    await tradeFactory.connect(governor).setStrategySyncSwapper(strategy.address, uniswapV2SyncSwapper.address);
-    await tradeFactory.connect(governor).setStrategyAsyncSwapper(strategy.address, uniswapV2AsyncSwapper.address);
+    await tradeFactory.connect(strategyAdder).grantRole(await tradeFactory.STRATEGY(), strategy.address);
+    await tradeFactory.connect(swapperAdder).addSwapper(uniswapV2AsyncSwapper.address);
+    await tradeFactory.connect(swapperAdder).addSwapper(uniswapV2SyncSwapper.address);
+    await tradeFactory.connect(swapperSetter).setStrategySyncSwapper(strategy.address, uniswapV2SyncSwapper.address);
+    await tradeFactory.connect(swapperSetter).setStrategyAsyncSwapper(strategy.address, uniswapV2AsyncSwapper.address);
 
     tokenIn = await erc20.deploy({
       name: 'TA',

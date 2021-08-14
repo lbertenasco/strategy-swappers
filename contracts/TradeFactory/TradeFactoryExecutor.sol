@@ -58,7 +58,7 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPos
   }
 
   // Machinery
-  function setMechanicsRegistry(address _mechanicsRegistry) external virtual override onlyGovernor {
+  function setMechanicsRegistry(address _mechanicsRegistry) external virtual override onlyRole(MASTER_ADMIN) {
     _setMechanicsRegistry(_mechanicsRegistry);
   }
 

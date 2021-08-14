@@ -9,10 +9,12 @@ import moment from 'moment';
 import { setTestChainId } from '../../../utils/deploy';
 import { getNodeUrl } from '../../../utils/network';
 import oneinch, { SwapResponse } from '../../../scripts/libraries/oneinch';
+import { STRATEGY_ADDER, SWAPPER_ADDER, SWAPPER_SETTER } from '../../../deploy/001_trade_factory';
 
 describe('OneInchAggregatorSwapper', function () {
-  let deployer: JsonRpcSigner;
-  let governor: JsonRpcSigner;
+  let swapperAdder: JsonRpcSigner;
+  let swapperSetter: JsonRpcSigner;
+  let strategyAdder: JsonRpcSigner;
   let crvWhale: JsonRpcSigner;
   let daiWhale: JsonRpcSigner;
   let yMech: JsonRpcSigner;
@@ -73,8 +75,9 @@ describe('OneInchAggregatorSwapper', function () {
 
       const namedAccounts = await getNamedAccounts();
 
-      deployer = await wallet.impersonate(namedAccounts.deployer);
-      governor = await wallet.impersonate(namedAccounts.governor);
+      swapperAdder = await wallet.impersonate(SWAPPER_ADDER[CHAIN_ID]);
+      swapperSetter = await wallet.impersonate(SWAPPER_SETTER[CHAIN_ID]);
+      strategyAdder = await wallet.impersonate(STRATEGY_ADDER[CHAIN_ID]);
       crvWhale = await wallet.impersonate(CRV_WHALE_ADDRESS);
       daiWhale = await wallet.impersonate(DAI_WHALE_ADDRESS);
       yMech = await wallet.impersonate(namedAccounts.yMech);
@@ -92,8 +95,9 @@ describe('OneInchAggregatorSwapper', function () {
         gasPrice: 0,
       });
 
-      await tradeFactory.connect(governor).grantRole(await tradeFactory.STRATEGY(), strategy.address, { gasPrice: 0 });
-      await tradeFactory.connect(governor).setStrategyAsyncSwapper(strategy.address, oneInchAggregatorSwapper.address);
+      await tradeFactory.connect(strategyAdder).grantRole(await tradeFactory.STRATEGY(), strategy.address, { gasPrice: 0 });
+      await tradeFactory.connect(swapperAdder).addSwapper(oneInchAggregatorSwapper.address, { gasPrice: 0 });
+      await tradeFactory.connect(swapperSetter).setStrategyAsyncSwapper(strategy.address, oneInchAggregatorSwapper.address);
 
       await CRV.connect(strategy).approve(tradeFactory.address, AMOUNT_IN, { gasPrice: 0 });
       await tradeFactory
@@ -168,8 +172,9 @@ describe('OneInchAggregatorSwapper', function () {
 
       const namedAccounts = await getNamedAccounts();
 
-      deployer = await wallet.impersonate(namedAccounts.deployer);
-      governor = await wallet.impersonate(namedAccounts.governor);
+      swapperAdder = await wallet.impersonate(SWAPPER_ADDER[CHAIN_ID]);
+      swapperSetter = await wallet.impersonate(SWAPPER_SETTER[CHAIN_ID]);
+      strategyAdder = await wallet.impersonate(STRATEGY_ADDER[CHAIN_ID]);
       crvWhale = await wallet.impersonate(WMATIC_WHALE_ADDRESS);
       daiWhale = await wallet.impersonate(DAI_WHALE_ADDRESS);
       yMech = await wallet.impersonate(namedAccounts.yMech);
@@ -187,8 +192,9 @@ describe('OneInchAggregatorSwapper', function () {
         gasPrice: 0,
       });
 
-      await tradeFactory.connect(governor).grantRole(await tradeFactory.STRATEGY(), strategy.address, { gasPrice: 0 });
-      await tradeFactory.connect(governor).setStrategyAsyncSwapper(strategy.address, oneInchAggregatorSwapper.address);
+      await tradeFactory.connect(strategyAdder).grantRole(await tradeFactory.STRATEGY(), strategy.address, { gasPrice: 0 });
+      await tradeFactory.connect(swapperAdder).addSwapper(oneInchAggregatorSwapper.address, { gasPrice: 0 });
+      await tradeFactory.connect(swapperSetter).setStrategyAsyncSwapper(strategy.address, oneInchAggregatorSwapper.address);
 
       await WMATIC.connect(strategy).approve(tradeFactory.address, AMOUNT_IN, { gasPrice: 0 });
 

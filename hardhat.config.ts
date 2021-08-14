@@ -8,6 +8,7 @@ import 'solidity-coverage';
 import 'hardhat-deploy';
 import { HardhatUserConfig, NetworksUserConfig } from 'hardhat/types';
 import { DEFAULT_ACCOUNT, getNodeUrl } from './utils/network';
+import { utils } from 'ethers';
 
 const networks: NetworksUserConfig = process.env.TEST
   ? {}
@@ -34,7 +35,7 @@ const networks: NetworksUserConfig = process.env.TEST
       polygon: {
         url: getNodeUrl('polygon'),
         accounts: [(process.env.POLYGON_PRIVATE_KEY as string) || DEFAULT_ACCOUNT],
-        gasPrice: 'auto',
+        gasPrice: utils.parseUnits('40', 'gwei').toNumber(),
         tags: ['production'],
       },
     };
@@ -43,10 +44,7 @@ const config: HardhatUserConfig = {
   defaultNetwork: 'hardhat',
   namedAccounts: {
     deployer: 0, // yMECH Alejo
-    governor: 0, // yMECH Alejo
-    // yMech: 0, // yMECH Alejo
-    // deployer: '0xB82193725471dC7bfaAB1a3AB93c7b42963F3265', // yMECH Alejo
-    // governor: '0xB82193725471dC7bfaAB1a3AB93c7b42963F3265', // yMECH Alejo
+    governor: 0,
     yMech: '0xB82193725471dC7bfaAB1a3AB93c7b42963F3265', // yMECH Alejo
   },
   networks,

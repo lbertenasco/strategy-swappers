@@ -17,14 +17,25 @@ contract TradeFactory is TradeFactoryExecutor, CollectableDust, ITradeFactory {
   using EnumerableSet for EnumerableSet.UintSet;
   using EnumerableSet for EnumerableSet.AddressSet;
 
-  constructor(address _governor, address _mechanicsRegistry) TradeFactoryAccessManager(_governor) TradeFactoryExecutor(_mechanicsRegistry) {}
+  constructor(
+    address _masterAdmin,
+    address _swapperAdder,
+    address _swapperSetter,
+    address _strategyAdder,
+    address _mechanicsRegistry
+  )
+    TradeFactoryAccessManager(_masterAdmin)
+    TradeFactoryPositionsHandler(_strategyAdder)
+    TradeFactorySwapperHandler(_swapperAdder, _swapperSetter)
+    TradeFactoryExecutor(_mechanicsRegistry)
+  {}
 
   // Collectable Dust
   function sendDust(
     address _to,
     address _token,
     uint256 _amount
-  ) external virtual override onlyGovernor {
+  ) external virtual override onlyRole(MASTER_ADMIN) {
     _sendDust(_to, _token, _amount);
   }
 }

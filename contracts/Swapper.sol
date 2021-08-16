@@ -7,7 +7,9 @@ import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '@lbertenasco/contract-utils/contracts/utils/Governable.sol';
 import '@lbertenasco/contract-utils/contracts/utils/CollectableDust.sol';
 
-interface ISwapper {
+import './utils/ITrade.sol';
+
+interface ISwapper is ITrade {
   enum SwapperType {
     ASYNC,
     SYNC
@@ -40,6 +42,10 @@ interface ISwapper {
     uint256 _maxSlippage,
     bytes calldata _data
   ) external returns (uint256 _receivedAmount);
+
+  function swapMultiple(Trade[] calldata _trades, bytes calldata _data)
+    external
+    returns (uint256[] memory _receivedAmountsIn, uint256[] memory _receivedAmountsOut);
 }
 
 abstract contract Swapper is ISwapper, Governable, CollectableDust {
@@ -95,6 +101,19 @@ abstract contract Swapper is ISwapper, Governable, CollectableDust {
     IERC20(_tokenIn).safeTransferFrom(TRADE_FACTORY, address(this), _amountIn);
     _receivedAmount = _executeSwap(_receiver, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _data);
     emit Swapped(_receiver, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _receivedAmount, _data);
+  }
+
+  function swapMultiple(Trade[] memory _trades, bytes memory _data)
+    external
+    virtual
+    override
+    onlyTradeFactory
+    returns (uint256[] memory _receivedAmountsIn, uint256[] memory _receivedAmountsOut)
+  {
+    _trades;
+    _data;
+    _receivedAmountsIn;
+    _receivedAmountsOut;
   }
 
   function sendDust(

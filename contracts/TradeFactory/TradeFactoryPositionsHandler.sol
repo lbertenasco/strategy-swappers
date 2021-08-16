@@ -3,20 +3,10 @@ pragma solidity 0.8.4;
 
 import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 import './TradeFactorySwapperHandler.sol';
+import '../utils/ITrade.sol';
 import '../Swapper.sol';
 
-interface ITradeFactoryPositionsHandler {
-  struct Trade {
-    uint256 _id;
-    address _strategy;
-    address _swapper;
-    address _tokenIn;
-    address _tokenOut;
-    uint256 _amountIn;
-    uint256 _maxSlippage;
-    uint256 _deadline;
-  }
-
+interface ITradeFactoryPositionsHandler is ITrade {
   event TradeCreated(
     uint256 indexed _id,
     address _strategy,

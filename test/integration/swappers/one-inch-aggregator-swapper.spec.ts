@@ -135,7 +135,7 @@ describe('OneInchAggregatorSwapper', function () {
     let WMATIC: Contract;
     let DAI: Contract;
 
-    const AMOUNT_IN = utils.parseEther('10000');
+    const AMOUNT_IN = utils.parseEther('1000');
     let oneInchApiResponse: SwapResponse;
     let forkBlockNumber: number;
 
@@ -154,7 +154,7 @@ describe('OneInchAggregatorSwapper', function () {
         amountIn: AMOUNT_IN,
         fromAddress: wallet.generateRandomAddress(),
         receiver: strategy.address,
-        slippage: 3,
+        slippage: 5,
         allowPartialFill: false,
         disableEstimate: true,
         fee: 0,

@@ -125,9 +125,6 @@ contract('TradeFactoryExecutor', () => {
           .connect(strategy)
           ['execute(address,address,uint256,uint256,bytes)'](token.address, tokenOut, amountIn, maxSlippage, data);
       });
-      then('token gets enabled for swapper and token', async () => {
-        expect(await token.allowance(executor.address, syncSwapper.address)).to.be.equal(constants.MAX_UINT_256);
-      });
       then('funds get taken from strategy', async () => {
         expect(await token.balanceOf(strategy.address)).to.equal(initialStrategyBalance.sub(amountIn));
       });
@@ -193,9 +190,6 @@ contract('TradeFactoryExecutor', () => {
         initialStrategyBalance = await token.balanceOf(strategy.address);
         initialExecutorBalance = await token.balanceOf(executor.address);
         executeTx = await executor['execute(uint256,bytes)'](tradeId, data);
-      });
-      then('token gets enabled for swapper and token', async () => {
-        expect(await token.allowance(executor.address, asyncSwapper.address)).to.be.equal(constants.MAX_UINT_256);
       });
       then('funds get taken from strategy', async () => {
         expect(await token.balanceOf(strategy.address)).to.equal(initialStrategyBalance.sub(amountIn));

@@ -11,7 +11,7 @@ import { getNodeUrl } from '../../../utils/network';
 import zrx, { QuoteResponse } from '../../../scripts/libraries/zrx';
 import { STRATEGY_ADDER, SWAPPER_ADDER, SWAPPER_SETTER } from '../../../deploy/001_trade_factory';
 
-describe.only('ZRXSwapper', function () {
+describe('ZRXSwapper', function () {
   let swapperAdder: JsonRpcSigner;
   let swapperSetter: JsonRpcSigner;
   let strategyAdder: JsonRpcSigner;
@@ -111,7 +111,7 @@ describe.only('ZRXSwapper', function () {
         expect(await DAI.balanceOf(strategy.address)).to.be.gt(0);
       });
     });
-  }).retries(5);
+  });
 
   context('on polygon', () => {
     const CHAIN_ID = 137;

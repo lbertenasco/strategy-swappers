@@ -49,7 +49,7 @@ const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnviro
     log: true,
   });
 
-  if (await shouldVerifyContract(hre, 'TradeFactory')) {
+  if (await shouldVerifyContract(deploy)) {
     await hre.run('verify:verify', {
       address: deploy.address,
       constructorArguments: [

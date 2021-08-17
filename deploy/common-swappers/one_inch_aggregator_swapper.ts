@@ -23,7 +23,7 @@ const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnviro
     log: true,
   });
 
-  if (await shouldVerifyContract(hre, 'OneInchAggregatorSwapper')) {
+  if (await shouldVerifyContract(deploy)) {
     await hre.run('verify:verify', {
       address: deploy.address,
       constructorArguments: [governor, tradeFactory.address, AGGREGATION_ROUTER_V3[chainId]],
@@ -31,5 +31,5 @@ const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnviro
   }
 };
 deployFunction.dependencies = ['TradeFactory'];
-deployFunction.tags = ['OneInchAggregatorSwapper'];
+deployFunction.tags = ['Common', 'OneInchAggregatorSwapper'];
 export default deployFunction;

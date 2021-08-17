@@ -26,7 +26,7 @@ interface ITradeFactoryExecutor {
 
   event SwapperAndTokenEnabled(address indexed _swapper, address _token);
 
-  function approvedTokensBySwappers(address _swapper) external view returns (address[] memory _tokens);
+  // function approvedTokensBySwappers(address _swapper) external view returns (address[] memory _tokens);
 
   function execute(
     address _tokenIn,
@@ -52,14 +52,14 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPos
 
   constructor(address _mechanicsRegistry) Machinery(_mechanicsRegistry) {}
 
-  mapping(address => EnumerableSet.AddressSet) internal _approvedTokensBySwappers;
+  // mapping(address => EnumerableSet.AddressSet) internal _approvedTokensBySwappers;
 
-  function approvedTokensBySwappers(address _swapper) external view override returns (address[] memory _tokens) {
-    _tokens = new address[](_approvedTokensBySwappers[_swapper].length());
-    for (uint256 i = 0; i < _approvedTokensBySwappers[_swapper].length(); i++) {
-      _tokens[i] = _approvedTokensBySwappers[_swapper].at(i);
-    }
-  }
+  // function approvedTokensBySwappers(address _swapper) external view override returns (address[] memory _tokens) {
+  //   _tokens = new address[](_approvedTokensBySwappers[_swapper].length());
+  //   for (uint256 i = 0; i < _approvedTokensBySwappers[_swapper].length(); i++) {
+  //     _tokens[i] = _approvedTokensBySwappers[_swapper].at(i);
+  //   }
+  // }
 
   // Machinery
   function setMechanicsRegistry(address _mechanicsRegistry) external virtual override onlyGovernor {
@@ -73,17 +73,18 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPos
     uint256 _maxSlippage,
     bytes calldata _data
   ) external override onlyRole(STRATEGY) returns (uint256 _receivedAmount) {
-    address _swapper = strategySyncSwapper[msg.sender];
+    address _strategy = msg.sender; // not really needed but improves readability
+    address _swapper = strategySyncSwapper[_strategy];
     require(_swappers.contains(_swapper), 'TradeFactory: invalid swapper');
     require(_tokenIn != address(0) && _tokenOut != address(0), 'TradeFactory: zero address');
     require(_amountIn > 0, 'TradeFactory: zero amount');
     require(_maxSlippage > 0, 'TradeFactory: zero slippage');
-    if (!_approvedTokensBySwappers[_swapper].contains(_tokenIn)) {
-      _enableSwapperToken(_swapper, _tokenIn);
-    }
-    IERC20(_tokenIn).safeTransferFrom(msg.sender, address(this), _amountIn);
-    _receivedAmount = ISwapper(_swapper).swap(msg.sender, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _data);
-    emit SyncTradeExecuted(msg.sender, _swapper, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _data, _receivedAmount);
+    // if (!_approvedTokensBySwappers[_swapper].contains(_tokenIn)) {
+    //   _enableSwapperToken(_swapper, _tokenIn);
+    // }
+    IERC20(_tokenIn).safeTransferFrom(_strategy, _swapper, _amountIn);
+    _receivedAmount = ISwapper(_swapper).swap(_strategy, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _data);
+    emit SyncTradeExecuted(_strategy, _swapper, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _data, _receivedAmount);
   }
 
   // TradeFactoryExecutor
@@ -92,10 +93,10 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPos
     Trade memory _trade = pendingTradesById[_id];
     require(block.timestamp <= _trade._deadline, 'TradeFactory: trade has expired');
     require(_swappers.contains(_trade._swapper), 'TradeFactory: invalid swapper');
-    if (!_approvedTokensBySwappers[_trade._swapper].contains(_trade._tokenIn)) {
-      _enableSwapperToken(_trade._swapper, _trade._tokenIn);
-    }
-    IERC20(_trade._tokenIn).safeTransferFrom(_trade._strategy, address(this), _trade._amountIn);
+    // if (!_approvedTokensBySwappers[_trade._swapper].contains(_trade._tokenIn)) {
+    //   _enableSwapperToken(_trade._swapper, _trade._tokenIn);
+    // }
+    IERC20(_trade._tokenIn).safeTransferFrom(_trade._strategy, _trade._swapper, _trade._amountIn);
 
     _receivedAmount = ISwapper(_trade._swapper).swap(
       _trade._strategy,
@@ -135,10 +136,10 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPos
       Trade memory _trade = pendingTradesById[_ids[i]];
       require(_trade._swapper == _swapper, 'TradeFactory: invalid swapper');
       require(block.timestamp <= _trade._deadline, 'TradeFactory: trade has expired');
-      if (!_approvedTokensBySwappers[_trade._swapper].contains(_trade._tokenIn)) {
-        _enableSwapperToken(_trade._swapper, _trade._tokenIn);
-      }
-      IERC20(_trade._tokenIn).safeTransferFrom(_trade._strategy, address(this), _trade._amountIn);
+      // if (!_approvedTokensBySwappers[_trade._swapper].contains(_trade._tokenIn)) {
+      //   _enableSwapperToken(_trade._swapper, _trade._tokenIn);
+      // }
+      IERC20(_trade._tokenIn).safeTransferFrom(_trade._strategy, _trade._swapper, _trade._amountIn);
       // _strategies[i] = _trade._strategy;
       _trades[i] = _trade;
     }
@@ -156,18 +157,20 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPos
     Trade memory _trade = pendingTradesById[_id];
     require(_trade._deadline <= block.timestamp, 'TradeFactory: trade not expired');
     _freedAmount = _trade._amountIn;
-    // We have to take tokens from strategy, to decrease the allowance
-    IERC20(_trade._tokenIn).safeTransferFrom(_trade._strategy, address(this), _trade._amountIn);
-    // Send tokens back to strategy
-    IERC20(_trade._tokenIn).safeTransfer(_trade._strategy, _trade._amountIn);
+    // TODO Check: not entirely sure all ERC20 support same _from & _to on transfer. might brick on some tokens :/
+    // We have to take tokens from strategy, to decrease the allowance, and send them back to strategy.
+    IERC20(_trade._tokenIn).safeTransferFrom(_trade._strategy, _trade._strategy, _trade._amountIn);
+    // // Send tokens back to strategy
+    // IERC20(_trade._tokenIn).safeTransfer(_trade._strategy, _trade._amountIn);
     // Remove trade
     _removePendingTrade(_trade._strategy, _id);
     emit AsyncTradeExpired(_id);
   }
 
-  function _enableSwapperToken(address _swapper, address _token) internal {
-    IERC20(_token).safeApprove(_swapper, type(uint256).max);
-    _approvedTokensBySwappers[_swapper].add(_token);
-    emit SwapperAndTokenEnabled(_swapper, _token);
-  }
+  // Deprecated
+  // function _enableSwapperToken(address _swapper, address _token) internal {
+  //   IERC20(_token).safeApprove(_swapper, type(uint256).max);
+  //   _approvedTokensBySwappers[_swapper].add(_token);
+  //   emit SwapperAndTokenEnabled(_swapper, _token);
+  // }
 }

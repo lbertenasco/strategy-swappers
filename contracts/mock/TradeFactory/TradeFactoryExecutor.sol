@@ -8,7 +8,7 @@ contract TradeFactoryExecutorMock is TradeFactoryExecutor {
     TradeFactoryAccessManager(_governor)
     TradeFactoryExecutor(_mechanicsRegistry) {}
 
-  function enableSwapperToken(address _swapper, address _token) external {
-    _enableSwapperToken(_swapper, _token);
-  }
+  // function enableSwapperToken(address _swapper, address _token) external {
+  //   _enableSwapperToken(_swapper, _token);
+  // }
 }

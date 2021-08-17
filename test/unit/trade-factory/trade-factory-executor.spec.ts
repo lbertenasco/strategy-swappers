@@ -261,23 +261,23 @@ contract('TradeFactoryExecutor', () => {
     });
   });
 
-  describe('enableSwapperToken', () => {
-    when('called', () => {
-      let enableSwapperTokenTx: TransactionResponse;
-      given(async () => {
-        enableSwapperTokenTx = await executor.enableSwapperToken(asyncSwapper.address, token.address);
-      });
-      then('increases allowance of token for swapper to max uint256', async () => {
-        expect(await token.allowance(executor.address, asyncSwapper.address)).to.be.equal(constants.MAX_UINT_256);
-      });
-      then('adds token to the list of approved tokens of swapper', async () => {
-        expect(await executor.approvedTokensBySwappers(asyncSwapper.address)).to.eql([token.address]);
-      });
-      then('emits event', async () => {
-        await expect(enableSwapperTokenTx).to.emit(executor, 'SwapperAndTokenEnabled').withArgs(asyncSwapper.address, token.address);
-      });
-    });
-  });
+  // describe('enableSwapperToken', () => {
+  //   when('called', () => {
+  //     let enableSwapperTokenTx: TransactionResponse;
+  //     given(async () => {
+  //       enableSwapperTokenTx = await executor.enableSwapperToken(asyncSwapper.address, token.address);
+  //     });
+  //     then('increases allowance of token for swapper to max uint256', async () => {
+  //       expect(await token.allowance(executor.address, asyncSwapper.address)).to.be.equal(constants.MAX_UINT_256);
+  //     });
+  //     then('adds token to the list of approved tokens of swapper', async () => {
+  //       expect(await executor.approvedTokensBySwappers(asyncSwapper.address)).to.eql([token.address]);
+  //     });
+  //     then('emits event', async () => {
+  //       await expect(enableSwapperTokenTx).to.emit(executor, 'SwapperAndTokenEnabled').withArgs(asyncSwapper.address, token.address);
+  //     });
+  //   });
+  // });
 
   async function create({
     tokenIn,

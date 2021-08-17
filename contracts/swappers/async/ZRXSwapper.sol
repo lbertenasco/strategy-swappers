@@ -4,11 +4,6 @@ pragma solidity 0.8.4;
 import '../../Swapper.sol';
 
 interface IZRXSwapper is ISwapper {
-  struct Transformation {
-    uint32 _uint32;
-    bytes _bytes;
-  }
-
   // solhint-disable-next-line func-name-mixedcase
   function ZRX() external view returns (address);
 }
@@ -39,20 +34,17 @@ contract ZRXSwapper is IZRXSwapper, Swapper {
     uint256, // Max slippage is used off-chain
     bytes calldata _data
   ) internal override returns (uint256 _receivedAmount) {
-    (
-      address inputToken,
-      address outputToken,
-      uint256 inputAmount, // minAmountOut
-      ,
-
-    ) = abi.decode(_data[4:], (address, address, uint256, uint256, Transformation[]));
-
-    require(inputToken == _tokenIn && outputToken == _tokenOut && inputAmount == _amountIn, 'Swapper: incorrect swap information');
-    IERC20(_tokenIn).approve(ZRX, 0);
+    uint256 _initialBalanceTokenIn = IERC20(_tokenIn).balanceOf(address(this));
+    uint256 _initialBalanceOfTokenOut = IERC20(_tokenOut).balanceOf(address(this));
     IERC20(_tokenIn).approve(ZRX, _amountIn);
     (bool success, ) = ZRX.call{value: 0}(_data);
     require(success, 'Swapper: ZRX trade reverted');
-    _receivedAmount = IERC20(_tokenOut).balanceOf(address(this));
+    // Check that token in & amount in was excatly correct
+    require(_initialBalanceTokenIn - IERC20(_tokenIn).balanceOf(address(this)) == _amountIn, 'Swapper: incorrect swap information');
+    // Check that token out was correct
+    uint256 _finalBalanceOfTokenOut = IERC20(_tokenOut).balanceOf(address(this));
+    _receivedAmount = _finalBalanceOfTokenOut - _initialBalanceOfTokenOut;
+    require(_receivedAmount > 0, 'Swapper: incorrect swap information');
     IERC20(_tokenOut).safeTransfer(_receiver, _receivedAmount);
   }
 }

@@ -11,7 +11,7 @@ import { getNodeUrl } from '../../../utils/network';
 import zrx, { QuoteResponse } from '../../../scripts/libraries/zrx';
 import { STRATEGY_ADDER, SWAPPER_ADDER, SWAPPER_SETTER } from '../../../deploy/001_trade_factory';
 
-describe.only('ZRXSwapper', function () {
+describe('ZRXSwapper', function () {
   let swapperAdder: JsonRpcSigner;
   let swapperSetter: JsonRpcSigner;
   let strategyAdder: JsonRpcSigner;
@@ -53,7 +53,7 @@ describe.only('ZRXSwapper', function () {
         sellToken: CRV_ADDRESS,
         buyToken: DAI_ADDRESS,
         sellAmount: AMOUNT_IN,
-        sippagePercentage: 1,
+        sippagePercentage: 0.03,
       });
 
       forkBlockNumber = await ethers.provider.getBlockNumber();
@@ -88,7 +88,7 @@ describe.only('ZRXSwapper', function () {
 
       await tradeFactory.connect(strategyAdder).grantRole(await tradeFactory.STRATEGY(), strategy.address, { gasPrice: 0 });
       await tradeFactory.connect(swapperAdder).addSwapper(ZRXSwapper.address, { gasPrice: 0 });
-      await tradeFactory.connect(swapperSetter).setStrategyAsyncSwapper(strategy.address, ZRXSwapper.address);
+      await tradeFactory.connect(swapperSetter).setStrategyAsyncSwapper(strategy.address, ZRXSwapper.address, { gasPrice: 0 });
 
       await CRV.connect(strategy).approve(tradeFactory.address, AMOUNT_IN, { gasPrice: 0 });
       await tradeFactory
@@ -111,7 +111,7 @@ describe.only('ZRXSwapper', function () {
         expect(await DAI.balanceOf(strategy.address)).to.be.gt(0);
       });
     });
-  }).retries(5);
+  });
 
   context('on polygon', () => {
     const CHAIN_ID = 137;
@@ -144,7 +144,7 @@ describe.only('ZRXSwapper', function () {
         sellToken: WMATIC_ADDRESS,
         buyToken: DAI_ADDRESS,
         sellAmount: AMOUNT_IN,
-        sippagePercentage: 1,
+        sippagePercentage: 0.03,
       });
 
       forkBlockNumber = await ethers.provider.getBlockNumber();
@@ -179,7 +179,7 @@ describe.only('ZRXSwapper', function () {
 
       await tradeFactory.connect(strategyAdder).grantRole(await tradeFactory.STRATEGY(), strategy.address, { gasPrice: 0 });
       await tradeFactory.connect(swapperAdder).addSwapper(ZRXSwapper.address, { gasPrice: 0 });
-      await tradeFactory.connect(swapperSetter).setStrategyAsyncSwapper(strategy.address, ZRXSwapper.address);
+      await tradeFactory.connect(swapperSetter).setStrategyAsyncSwapper(strategy.address, ZRXSwapper.address, { gasPrice: 0 });
 
       await WMATIC.connect(strategy).approve(tradeFactory.address, AMOUNT_IN, { gasPrice: 0 });
 
@@ -204,4 +204,4 @@ describe.only('ZRXSwapper', function () {
       });
     });
   });
-});
+}).retries(5);

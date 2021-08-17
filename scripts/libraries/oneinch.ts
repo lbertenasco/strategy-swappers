@@ -77,12 +77,6 @@ export const swap = async (chainId: number, swapParams: SwapParams): Promise<Swa
   } catch (err) {
     throw new Error(`Status code: ${err.response.data.statusCode}. Message: ${err.response.data.message}`);
   }
-  // const oneinch = await ethers.getContractAt(
-  //   'contracts/swappers/OneInchV2Swapper.sol:IOneInchExchange',
-  //   '0x11111112542D85B3EF69AE05771c2dCCff4fAa26'
-  // );
-  // const parsedTx = await oneinch.interface.parseTransaction(rawAxiosResponse.data.tx);
-  // console.log('args', utils.formatEther(parsedTx.args.desc.minReturnAmount));
   return rawAxiosResponse.data as SwapResponse;
 };
 

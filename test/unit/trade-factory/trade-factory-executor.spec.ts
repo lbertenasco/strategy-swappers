@@ -12,10 +12,12 @@ import { BigNumber, utils } from 'ethers';
 import moment from 'moment';
 
 contract('TradeFactoryExecutor', () => {
-  let governor: SignerWithAddress;
+  let masterAdmin: SignerWithAddress;
   let strategy: SignerWithAddress;
-  let mechanic: SignerWithAddress;
+  let swapperAdder: SignerWithAddress;
   let swapperSetter: SignerWithAddress;
+  let strategyAdder: SignerWithAddress;
+  let mechanic: SignerWithAddress;
   let machinery: MockContract;
   let asyncSwapper: MockContract;
   let syncSwapper: MockContract;
@@ -25,7 +27,7 @@ contract('TradeFactoryExecutor', () => {
   let token: Contract;
 
   before(async () => {
-    [governor, strategy, mechanic, swapperSetter] = await ethers.getSigners();
+    [masterAdmin, swapperAdder, swapperSetter, strategyAdder, strategy, mechanic] = await ethers.getSigners();
     executorFactory = await smoddit('contracts/mock/TradeFactory/TradeFactoryExecutor.sol:TradeFactoryExecutorMock', mechanic);
   });
 
@@ -34,7 +36,13 @@ contract('TradeFactoryExecutor', () => {
     machinery = await smockit(machineryABI);
     asyncSwapper = await smockit(swapperABI);
     syncSwapper = await smockit(swapperABI);
-    modifiableExecutor = await executorFactory.deploy(governor.address, machinery.address);
+    modifiableExecutor = await executorFactory.deploy(
+      masterAdmin.address,
+      swapperAdder.address,
+      swapperSetter.address,
+      strategyAdder.address,
+      machinery.address
+    );
     executor = modifiableExecutor.connect(mechanic);
     token = await erc20.deploy({
       symbol: 'TK',
@@ -42,14 +50,13 @@ contract('TradeFactoryExecutor', () => {
       initialAccount: strategy.address,
       initialAmount: utils.parseEther('10000'),
     });
-    await executor.connect(governor).grantRole(await executor.STRATEGY(), strategy.address);
-    await executor.connect(governor).grantRole(await executor.SWAPPER_SETTER(), swapperSetter.address);
-    await executor.connect(governor).addSwappers([asyncSwapper.address, syncSwapper.address]);
+    await executor.connect(strategyAdder).grantRole(await executor.STRATEGY(), strategy.address);
+    await executor.connect(swapperAdder).addSwappers([asyncSwapper.address, syncSwapper.address]);
     machinery.smocked.isMechanic.will.return.with(true);
     asyncSwapper.smocked.SWAPPER_TYPE.will.return.with(0);
     syncSwapper.smocked.SWAPPER_TYPE.will.return.with(1);
-    await executor.connect(governor).setStrategySyncSwapper(strategy.address, syncSwapper.address);
-    await executor.connect(governor).setStrategyAsyncSwapper(strategy.address, asyncSwapper.address);
+    await executor.connect(swapperSetter).setStrategySyncSwapper(strategy.address, syncSwapper.address);
+    await executor.connect(swapperSetter).setStrategyAsyncSwapper(strategy.address, asyncSwapper.address);
   });
 
   describe('constructor', () => {});
@@ -62,7 +69,7 @@ contract('TradeFactoryExecutor', () => {
     // TODO: ONLY STRATEGY
     when('sync swapper thats set was removed', () => {
       given(async () => {
-        await executor.connect(governor).removeSwappers([syncSwapper.address]);
+        await executor.connect(swapperAdder).removeSwappers([syncSwapper.address]);
       });
       then('tx is reverted with reason', async () => {
         await expect(
@@ -170,7 +177,7 @@ contract('TradeFactoryExecutor', () => {
     });
     when('executing a trade where swapper has been removed', () => {
       given(async () => {
-        await executor.connect(governor).removeSwapper(asyncSwapper.address);
+        await executor.connect(swapperAdder).removeSwapper(asyncSwapper.address);
       });
       then('tx is reverted with reason', async () => {
         await expect(executor['execute(uint256,bytes)'](tradeId, data)).to.be.revertedWith('TradeFactory: invalid swapper');

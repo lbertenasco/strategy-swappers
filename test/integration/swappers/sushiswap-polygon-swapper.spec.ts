@@ -9,6 +9,7 @@ import { then, when } from '../../utils/bdd';
 import moment from 'moment';
 import { getNodeUrl } from '../../../utils/network';
 import { setTestChainId } from '../../../utils/deploy';
+import { STRATEGY_ADDER, SWAPPER_ADDER, SWAPPER_SETTER } from '../../../deploy/001_trade_factory';
 
 // We set a fixed block number so tests can cache blockchain state
 const FORK_BLOCK_NUMBER = 17080654;
@@ -24,8 +25,9 @@ const CRV_WHALE_ADDRESS = '0x3a8a6831a1e866c64bc07c3df0f7b79ac9ef2fa2';
 const DAI_WHALE_ADDRESS = '0x27f8d03b3a2196956ed754badc28d73be8830a6e';
 
 describe('SushiswapPolygonSwapper', function () {
-  let deployer: JsonRpcSigner;
-  let governor: JsonRpcSigner;
+  let swapperAdder: JsonRpcSigner;
+  let swapperSetter: JsonRpcSigner;
+  let strategyAdder: JsonRpcSigner;
   let crvWhale: JsonRpcSigner;
   let daiWhale: JsonRpcSigner;
   let yMech: JsonRpcSigner;
@@ -38,17 +40,20 @@ describe('SushiswapPolygonSwapper', function () {
   let DAI: Contract;
 
   beforeEach(async () => {
+    const CHAIN_ID = 137;
+
     await evm.reset({
       jsonRpcUrl: getNodeUrl('polygon'),
       blockNumber: FORK_BLOCK_NUMBER,
     });
-    await setTestChainId(137);
+    await setTestChainId(CHAIN_ID);
     await deployments.fixture('SushiswapPolygonSwapper');
 
     const namedAccounts = await getNamedAccounts();
 
-    deployer = await wallet.impersonate(namedAccounts.deployer);
-    governor = await wallet.impersonate(namedAccounts.governor);
+    swapperAdder = await wallet.impersonate(SWAPPER_ADDER[CHAIN_ID]);
+    swapperSetter = await wallet.impersonate(SWAPPER_SETTER[CHAIN_ID]);
+    strategyAdder = await wallet.impersonate(STRATEGY_ADDER[CHAIN_ID]);
     crvWhale = await wallet.impersonate(CRV_WHALE_ADDRESS);
     daiWhale = await wallet.impersonate(DAI_WHALE_ADDRESS);
     yMech = await wallet.impersonate(namedAccounts.yMech);
@@ -64,8 +69,9 @@ describe('SushiswapPolygonSwapper', function () {
       gasPrice: 0,
     });
 
-    await tradeFactory.connect(governor).grantRole(await tradeFactory.STRATEGY(), strategy.address, { gasPrice: 0 });
-    await tradeFactory.connect(governor).setStrategySyncSwapper(strategy.address, sushiswapPolygonSwapper.address);
+    await tradeFactory.connect(strategyAdder).grantRole(await tradeFactory.STRATEGY(), strategy.address, { gasPrice: 0 });
+    await tradeFactory.connect(swapperAdder).addSwapper(sushiswapPolygonSwapper.address, { gasPrice: 0 });
+    await tradeFactory.connect(swapperSetter).setStrategySyncSwapper(strategy.address, sushiswapPolygonSwapper.address);
 
     await CRV.connect(strategy).approve(tradeFactory.address, AMOUNT_IN, { gasPrice: 0 });
   });

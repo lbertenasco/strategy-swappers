@@ -13,7 +13,10 @@ import { expectNoEventWithName } from '../../utils/event-utils';
 import { MockContract, ModifiableContract, ModifiableContractFactory, smockit, smoddit } from '@eth-optimism/smock';
 
 contract('OTCPoolTradeable', () => {
-  let governor: SignerWithAddress;
+  let masterAdmin: SignerWithAddress;
+  let swapperAdder: SignerWithAddress;
+  let swapperSetter: SignerWithAddress;
+  let strategyAdder: SignerWithAddress;
   let OTCProvider: SignerWithAddress;
   let swapper: SignerWithAddress;
   let OTCPoolTradeableFactory: ModifiableContractFactory;
@@ -24,7 +27,7 @@ contract('OTCPoolTradeable', () => {
   let OTCPoolTradeable: ModifiableContract;
 
   before(async () => {
-    [governor, OTCProvider, swapper] = await ethers.getSigners();
+    [masterAdmin, swapperAdder, swapperSetter, strategyAdder, OTCProvider, swapper] = await ethers.getSigners();
     OTCPoolTradeableFactory = await smoddit('contracts/mock/OTCPool/OTCPoolTradeable.sol:OTCPoolTradeableMock');
     tradeFactoryFactory = await ethers.getContractFactory('contracts/TradeFactory/TradeFactory.sol:TradeFactory');
   });
@@ -32,9 +35,15 @@ contract('OTCPoolTradeable', () => {
   beforeEach(async () => {
     otcSwapper = await smockit(OTCSwapperABI);
     machinery = await smockit(machineryABI);
-    tradeFactory = await tradeFactoryFactory.deploy(governor.address, machinery.address);
+    tradeFactory = await tradeFactoryFactory.deploy(
+      masterAdmin.address,
+      swapperAdder.address,
+      swapperSetter.address,
+      strategyAdder.address,
+      machinery.address
+    );
     OTCPoolTradeable = await OTCPoolTradeableFactory.deploy(OTCProvider.address, tradeFactory.address);
-    await tradeFactory.connect(governor).addSwapper(swapper.address);
+    await tradeFactory.connect(swapperAdder).addSwapper(swapper.address);
     machinery.smocked.isMechanic.will.return.with(true);
   });
 
@@ -60,7 +69,7 @@ contract('OTCPoolTradeable', () => {
   });
 
   describe('setTradeFactory', () => {
-    // TODO: Only governor
+    // TODO: Only masterAdmin
     when('tradeFactory is zero address', () => {
       let setSwapperTx: Promise<TransactionResponse>;
       given(async () => {

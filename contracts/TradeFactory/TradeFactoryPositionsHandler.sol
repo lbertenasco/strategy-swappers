@@ -68,7 +68,7 @@ abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler,
   using EnumerableSet for EnumerableSet.AddressSet;
 
   bytes32 public constant STRATEGY = keccak256('STRATEGY');
-  bytes32 public constant STRATEGY_ADMIN = keccak256('STRATEGY_ADMIN');
+  bytes32 public constant STRATEGY_ADDER = keccak256('STRATEGY_ADDER');
 
   uint256 private _tradeCounter = 1;
 
@@ -78,10 +78,10 @@ abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler,
 
   mapping(address => EnumerableSet.UintSet) internal _pendingTradesByOwner;
 
-  constructor() {
-    _setRoleAdmin(STRATEGY, STRATEGY_ADMIN);
-    _setRoleAdmin(STRATEGY_ADMIN, MASTER_ADMIN);
-    _setupRole(STRATEGY_ADMIN, governor);
+  constructor(address _strategyAdder) {
+    _setRoleAdmin(STRATEGY, STRATEGY_ADDER);
+    _setRoleAdmin(STRATEGY_ADDER, MASTER_ADMIN);
+    _setupRole(STRATEGY_ADDER, _strategyAdder);
   }
 
   function pendingTradesIds() external view override returns (uint256[] memory _pendingIds) {

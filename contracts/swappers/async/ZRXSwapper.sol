@@ -39,7 +39,7 @@ contract ZRXSwapper is IZRXSwapper, Swapper {
     IERC20(_tokenIn).approve(ZRX, _amountIn);
     (bool success, ) = ZRX.call{value: 0}(_data);
     require(success, 'Swapper: ZRX trade reverted');
-    // Check that token in & amount in was excatly correct
+    // Check that token in & amount in was exactly correct
     require(_initialBalanceTokenIn - IERC20(_tokenIn).balanceOf(address(this)) == _amountIn, 'Swapper: incorrect swap information');
     // Check that token out was correct
     uint256 _finalBalanceOfTokenOut = IERC20(_tokenOut).balanceOf(address(this));

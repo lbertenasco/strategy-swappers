@@ -100,7 +100,7 @@ contract OneInchAggregatorSwapper is IOneInchAggregatorSwapper, Swapper {
         _swapDescription.flags == _SHOULD_CLAIM_FLAG,
       'Swapper: incorrect swap information'
     );
-    // Using safe approve iis not neccesary when resetting allowance
+    // Using safe approve is not neccesary when resetting allowance
     IERC20(_tokenIn).approve(AGGREGATION_ROUTER_V3, 0);
     IERC20(_tokenIn).approve(AGGREGATION_ROUTER_V3, _amountIn);
     (_receivedAmount, ) = IOneInchExchange(AGGREGATION_ROUTER_V3).swap(_caller, _swapDescription, _tradeData);

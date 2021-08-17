@@ -105,10 +105,10 @@ contract('Swapper', () => {
           name: 'Token In',
           symbol: 'TI',
         });
-        await tokenIn.connect(tradeFactory).approve(swapper.address, amount);
+        await tokenIn.connect(tradeFactory).transfer(swapper.address, amount);
         swapTx = await swapper.connect(tradeFactory).swap(receiver, tokenIn.address, tokenOut, amount, maxSlippage, data);
       });
-      then('takes tokens from caller', async () => {
+      then('has tokens from tradeFactory', async () => {
         expect(await tokenIn.balanceOf(tradeFactory.address)).to.equal(0);
       });
       then('sends tokens to swapper', async () => {

@@ -4,7 +4,7 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signers';
 import { TransactionResponse } from '@ethersproject/abstract-provider';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
-import { constants, fixtures, wallet } from '../../utils';
+import { constants, evm, fixtures, wallet } from '../../utils';
 import { contract, given, then, when } from '../../utils/bdd';
 import { BigNumber } from '@ethersproject/bignumber';
 
@@ -25,6 +25,7 @@ contract('TradeFactorySwapperHandler', () => {
   });
 
   beforeEach(async () => {
+    await evm.reset();
     tradeFactory = await tradeFactoryFactory.deploy(masterAdmin.address, swapperAdder.address, swapperSetter.address);
   });
 

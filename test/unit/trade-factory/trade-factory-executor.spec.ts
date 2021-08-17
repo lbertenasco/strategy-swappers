@@ -114,12 +114,12 @@ contract('TradeFactoryExecutor', () => {
     when('is not the first trade being executed of token in & swapper', async () => {
       let executeTx: TransactionResponse;
       let initialStrategyBalance: BigNumber;
-      let initialExecutorBalance: BigNumber;
+      let initialSwapperBalance: BigNumber;
       const receivedAmount = utils.parseEther('92356');
       given(async () => {
         syncSwapper.smocked.swap.will.return.with(receivedAmount);
         initialStrategyBalance = await token.balanceOf(strategy.address);
-        initialExecutorBalance = await token.balanceOf(executor.address);
+        initialSwapperBalance = await token.balanceOf(syncSwapper.address);
         await token.connect(strategy).approve(executor.address, amountIn);
         executeTx = await executor
           .connect(strategy)
@@ -128,8 +128,9 @@ contract('TradeFactoryExecutor', () => {
       then('funds get taken from strategy', async () => {
         expect(await token.balanceOf(strategy.address)).to.equal(initialStrategyBalance.sub(amountIn));
       });
-      then('moves funds from strategy to trade factory', async () => {
-        expect(await token.balanceOf(executor.address)).to.equal(initialExecutorBalance.add(amountIn));
+      then('moves funds from strategy to swapper', async () => {
+        expect(await token.balanceOf(executor.address)).to.equal(0);
+        expect(await token.balanceOf(syncSwapper.address)).to.equal(initialSwapperBalance.add(amountIn));
       });
       then('calls swapper swap with correct data', () => {
         expect(syncSwapper.smocked.swap.calls[0]).to.be.eql([strategy.address, token.address, tokenOut, amountIn, maxSlippage, data]);
@@ -183,19 +184,20 @@ contract('TradeFactoryExecutor', () => {
     when('is not the first trade being executed of token in & swapper', () => {
       let executeTx: TransactionResponse;
       let initialStrategyBalance: BigNumber;
-      let initialExecutorBalance: BigNumber;
+      let initialSwapperBalance: BigNumber;
       const receivedAmount = utils.parseEther('92356');
       given(async () => {
         asyncSwapper.smocked.swap.will.return.with(receivedAmount);
         initialStrategyBalance = await token.balanceOf(strategy.address);
-        initialExecutorBalance = await token.balanceOf(executor.address);
+        initialSwapperBalance = await token.balanceOf(asyncSwapper.address);
         executeTx = await executor['execute(uint256,bytes)'](tradeId, data);
       });
       then('funds get taken from strategy', async () => {
         expect(await token.balanceOf(strategy.address)).to.equal(initialStrategyBalance.sub(amountIn));
       });
-      then('moves funds from strategy to trade factory', async () => {
-        expect(await token.balanceOf(executor.address)).to.equal(initialExecutorBalance.add(amountIn));
+      then('moves funds from strategy to swapper', async () => {
+        expect(await token.balanceOf(executor.address)).to.equal(0);
+        expect(await token.balanceOf(asyncSwapper.address)).to.equal(initialSwapperBalance.add(amountIn));
       });
       then('calls swapper swap with correct data', () => {
         expect(asyncSwapper.smocked.swap.calls[0]).to.be.eql([strategy.address, token.address, tokenOut, amountIn, maxSlippage, data]);

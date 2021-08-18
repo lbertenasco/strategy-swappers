@@ -1,3 +1,5 @@
+import { ethers } from 'hardhat';
+import { DeployResult } from 'hardhat-deploy/dist/types';
 import { HardhatNetworkUserConfig, HardhatRuntimeEnvironment } from 'hardhat/types';
 
 let testChainId: number;
@@ -22,7 +24,8 @@ export const getRealChainIdOfFork = (hre: HardhatRuntimeEnvironment): number => 
   throw new Error('Should specify chain id of fork');
 };
 
-export const shouldVerifyContract = async (hre: HardhatRuntimeEnvironment, contract: string): Promise<boolean> => {
-  const isDeployed = (await hre.deployments.getOrNull(contract)) != null;
-  return !isDeployed && !process.env.FORK && !process.env.TEST;
+export const shouldVerifyContract = async (deploy: DeployResult): Promise<boolean> => {
+  const txReceipt = await ethers.provider.getTransaction(deploy.receipt!.transactionHash);
+  await txReceipt.wait(10);
+  return deploy.newlyDeployed && !process.env.FORK && !process.env.TEST;
 };

@@ -23,7 +23,7 @@ const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnviro
     log: true,
   });
 
-  if (await shouldVerifyContract(hre, 'ZRXSwapper')) {
+  if (await shouldVerifyContract(deploy)) {
     await hre.run('verify:verify', {
       address: deploy.address,
       constructorArguments: [governor, tradeFactory.address, ZRX[chainId]],
@@ -31,5 +31,5 @@ const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnviro
   }
 };
 deployFunction.dependencies = ['TradeFactory'];
-deployFunction.tags = ['ZRXSwapper'];
+deployFunction.tags = ['Common', 'ZRXSwapper'];
 export default deployFunction;

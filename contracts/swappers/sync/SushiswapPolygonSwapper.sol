@@ -59,7 +59,6 @@ contract SushiswapPolygonSwapper is ISushiswapPolygonSwapper, Swapper {
     bytes calldata
   ) internal override returns (uint256 _receivedAmount) {
     (address[] memory _path, uint256 _amountOut) = _getPathAndAmountOut(_tokenIn, _tokenOut, _amountIn);
-    IERC20(_path[0]).safeApprove(UNISWAP_ROUTER, 0);
     IERC20(_path[0]).safeApprove(UNISWAP_ROUTER, _amountIn);
     _receivedAmount = IUniswapV2Router02(UNISWAP_ROUTER).swapExactTokensForTokens(
       _amountIn,

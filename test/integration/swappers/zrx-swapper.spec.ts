@@ -74,7 +74,7 @@ describe('ZRXSwapper', function () {
       yMech = await wallet.impersonate(namedAccounts.yMech);
 
       await setTestChainId(CHAIN_ID);
-      await deployments.fixture('ZRXSwapper');
+      await deployments.fixture(['TradeFactory', 'ZRXSwapper'], { keepExistingDeployments: false });
 
       CRV = await ethers.getContractAt(IERC20_ABI, CRV_ADDRESS);
       DAI = await ethers.getContractAt(IERC20_ABI, DAI_ADDRESS);
@@ -165,7 +165,7 @@ describe('ZRXSwapper', function () {
       yMech = await wallet.impersonate(namedAccounts.yMech);
 
       setTestChainId(CHAIN_ID);
-      await deployments.fixture('ZRXSwapper');
+      await deployments.fixture(['TradeFactory', 'ZRXSwapper'], { keepExistingDeployments: false });
 
       WMATIC = await ethers.getContractAt(IERC20_ABI, WMATIC_ADDRESS);
       DAI = await ethers.getContractAt(IERC20_ABI, DAI_ADDRESS);

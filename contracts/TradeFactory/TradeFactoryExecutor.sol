@@ -6,6 +6,7 @@ import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 
 import '@lbertenasco/contract-utils/contracts/utils/Machinery.sol';
 
+import '../utils/ITrade.sol';
 import './TradeFactoryPositionsHandler.sol';
 
 interface ITradeFactoryExecutor {
@@ -90,7 +91,7 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPos
   // TradeFactoryExecutor
   function execute(uint256 _id, bytes calldata _data) external override onlyMechanic returns (uint256 _receivedAmount) {
     require(_pendingTradesIds.contains(_id), 'TradeFactory: trade not pending');
-    Trade memory _trade = pendingTradesById[_id];
+    ITrade.Trade memory _trade = pendingTradesById[_id];
     require(block.timestamp <= _trade._deadline, 'TradeFactory: trade has expired');
     require(_swappers.contains(_trade._swapper), 'TradeFactory: invalid swapper');
     // if (!_approvedTokensBySwappers[_trade._swapper].contains(_trade._tokenIn)) {
@@ -120,7 +121,7 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPos
     require(_ids.length > 0, 'TradeFactory: no ids');
 
     // address[] _strategies = new address[](_ids.length);
-    Trade[] memory _trades = new Trade[](_ids.length);
+    ITrade.Trade[] memory _trades = new ITrade.Trade[](_ids.length);
     require(_pendingTradesIds.contains(_ids[0]), 'TradeFactory: trade not pending');
     require(block.timestamp <= pendingTradesById[_ids[0]]._deadline, 'TradeFactory: trade has expired');
     address _swapper = pendingTradesById[_ids[0]]._swapper;
@@ -133,7 +134,7 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPos
     // skips index 0
     for (uint256 i = 1; i < _ids.length; i++) {
       require(_pendingTradesIds.contains(_ids[i]), 'TradeFactory: trade not pending');
-      Trade memory _trade = pendingTradesById[_ids[i]];
+      ITrade.Trade memory _trade = pendingTradesById[_ids[i]];
       require(_trade._swapper == _swapper, 'TradeFactory: invalid swapper');
       require(block.timestamp <= _trade._deadline, 'TradeFactory: trade has expired');
       // if (!_approvedTokensBySwappers[_trade._swapper].contains(_trade._tokenIn)) {
@@ -154,7 +155,7 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPos
 
   function expire(uint256 _id) external override onlyMechanic returns (uint256 _freedAmount) {
     require(_pendingTradesIds.contains(_id), 'TradeFactory: trade not pending');
-    Trade memory _trade = pendingTradesById[_id];
+    ITrade.Trade memory _trade = pendingTradesById[_id];
     require(_trade._deadline <= block.timestamp, 'TradeFactory: trade not expired');
     _freedAmount = _trade._amountIn;
     // TODO Check: not entirely sure all ERC20 support same _from & _to on transfer. might brick on some tokens :/

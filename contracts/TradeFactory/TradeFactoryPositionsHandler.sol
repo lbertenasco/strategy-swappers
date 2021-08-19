@@ -6,7 +6,7 @@ import './TradeFactorySwapperHandler.sol';
 import '../utils/ITrade.sol';
 import '../Swapper.sol';
 
-interface ITradeFactoryPositionsHandler is ITrade {
+interface ITradeFactoryPositionsHandler {
   event TradeCreated(
     uint256 indexed _id,
     address _strategy,
@@ -72,7 +72,7 @@ abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler,
 
   uint256 private _tradeCounter = 1;
 
-  mapping(uint256 => Trade) public override pendingTradesById;
+  mapping(uint256 => ITrade.Trade) public override pendingTradesById;
 
   EnumerableSet.UintSet internal _pendingTradesIds;
 
@@ -111,7 +111,7 @@ abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler,
     require(_maxSlippage > 0, 'TradeFactory: zero slippage');
     require(_deadline > block.timestamp, 'TradeFactory: deadline too soon');
     _id = _tradeCounter;
-    Trade memory _trade = Trade(
+    ITrade.Trade memory _trade = ITrade.Trade(
       _tradeCounter,
       msg.sender,
       strategyAsyncSwapper[msg.sender],
@@ -140,7 +140,7 @@ abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler,
   function cancelPending(uint256 _id) external override onlyRole(STRATEGY) {
     require(_pendingTradesIds.contains(_id), 'TradeFactory: trade not pending');
     require(pendingTradesById[_id]._strategy == msg.sender, 'TradeFactory: does not own trade');
-    Trade memory _trade = pendingTradesById[_id];
+    ITrade.Trade memory _trade = pendingTradesById[_id];
     _removePendingTrade(_trade._strategy, _id);
     emit TradeCanceled(msg.sender, _id);
   }

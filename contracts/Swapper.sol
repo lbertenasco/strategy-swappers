@@ -9,7 +9,7 @@ import '@lbertenasco/contract-utils/contracts/utils/CollectableDust.sol';
 
 import './utils/ITrade.sol';
 
-interface ISwapper is ITrade {
+interface ISwapper {
   enum SwapperType {
     ASYNC,
     SYNC
@@ -24,6 +24,8 @@ interface ISwapper is ITrade {
     uint256 _receivedAmount,
     bytes _data
   );
+
+  error ExecuteSwapMultipleNotImplemented();
 
   // solhint-disable-next-line func-name-mixedcase
   function SLIPPAGE_PRECISION() external view returns (uint256);
@@ -43,7 +45,7 @@ interface ISwapper is ITrade {
     bytes calldata _data
   ) external returns (uint256 _receivedAmount);
 
-  function swapMultiple(Trade[] calldata _trades, bytes calldata _data)
+  function swapMultiple(ITrade.Trade[] calldata _trades, bytes calldata _data)
     external
     returns (uint256[] memory _receivedAmountsIn, uint256[] memory _receivedAmountsOut);
 }
@@ -89,6 +91,13 @@ abstract contract Swapper is ISwapper, Governable, CollectableDust {
     bytes calldata _data
   ) internal virtual returns (uint256 _receivedAmount);
 
+  function _executeSwapMultiple(ITrade.Trade[] memory _trades, bytes calldata _data) internal virtual returns (uint256 _receivedAmount) {
+    _trades; // shh
+    _data; // shh
+    _receivedAmount; // shh
+    revert ExecuteSwapMultipleNotImplemented();
+  }
+
   function swap(
     address _receiver,
     address _tokenIn,
@@ -103,7 +112,7 @@ abstract contract Swapper is ISwapper, Governable, CollectableDust {
     emit Swapped(_receiver, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _receivedAmount, _data);
   }
 
-  function swapMultiple(Trade[] memory _trades, bytes memory _data)
+  function swapMultiple(ITrade.Trade[] memory _trades, bytes memory _data)
     external
     virtual
     override

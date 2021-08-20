@@ -53,8 +53,8 @@ contract UniswapV2Swapper is IUniswapV2Swapper, Swapper {
     address[] memory _path = abi.decode(_data, (address[]));
     if (_tokenIn != _path[0] || _tokenOut != _path[_path.length - 1]) revert CommonErrors.IncorrectSwapInformation();
     uint256 _amountOut = IUniswapV2Router02(UNISWAP_ROUTER).getAmountsOut(_amountIn, _path)[_path.length - 1];
-    IERC20(_path[0]).safeApprove(UNISWAP_ROUTER, 0);
-    IERC20(_path[0]).safeApprove(UNISWAP_ROUTER, _amountIn);
+    IERC20(_path[0]).approve(UNISWAP_ROUTER, 0);
+    IERC20(_path[0]).approve(UNISWAP_ROUTER, _amountIn);
     _receivedAmount = IUniswapV2Router02(UNISWAP_ROUTER).swapExactTokensForTokens(
       _amountIn,
       _amountOut - ((_amountOut * _maxSlippage) / SLIPPAGE_PRECISION / 100), // slippage calcs

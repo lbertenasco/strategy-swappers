@@ -36,7 +36,8 @@ contract ZRXSwapper is IZRXSwapper, Swapper {
   ) internal override returns (uint256 _receivedAmount) {
     uint256 _initialBalanceTokenIn = IERC20(_tokenIn).balanceOf(address(this));
     uint256 _initialBalanceOfTokenOut = IERC20(_tokenOut).balanceOf(address(this));
-    IERC20(_tokenIn).safeApprove(ZRX, _amountIn);
+    IERC20(_tokenIn).approve(ZRX, 0);
+    IERC20(_tokenIn).approve(ZRX, _amountIn);
     (bool success, ) = ZRX.call{value: 0}(_data);
     require(success, 'Swapper: ZRX trade reverted');
     // Check that token in & amount in was correct

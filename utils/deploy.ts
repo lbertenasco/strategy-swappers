@@ -25,7 +25,9 @@ export const getRealChainIdOfFork = (hre: HardhatRuntimeEnvironment): number => 
 };
 
 export const shouldVerifyContract = async (deploy: DeployResult): Promise<boolean> => {
+  if (process.env.FORK || process.env.TEST) return false;
   const txReceipt = await ethers.provider.getTransaction(deploy.receipt!.transactionHash);
+  if (!deploy.newlyDeployed) return false;
   await txReceipt.wait(10);
-  return deploy.newlyDeployed && !process.env.FORK && !process.env.TEST;
+  return true;
 };

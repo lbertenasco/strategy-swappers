@@ -47,7 +47,7 @@ describe('SushiswapPolygonSwapper', function () {
       blockNumber: FORK_BLOCK_NUMBER,
     });
     await setTestChainId(CHAIN_ID);
-    await deployments.fixture('SushiswapPolygonSwapper');
+    await deployments.fixture(['TradeFactory', 'SushiswapPolygonSwapper'], { keepExistingDeployments: false });
 
     const namedAccounts = await getNamedAccounts();
 

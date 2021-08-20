@@ -7,6 +7,8 @@ import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '@lbertenasco/contract-utils/contracts/utils/Governable.sol';
 import '@lbertenasco/contract-utils/contracts/utils/CollectableDust.sol';
 
+import './libraries/CommonErrors.sol';
+
 interface ISwapper {
   enum SwapperType {
     ASYNC,
@@ -52,12 +54,12 @@ abstract contract Swapper is ISwapper, Governable, CollectableDust {
   address public immutable override TRADE_FACTORY;
 
   constructor(address _governor, address _tradeFactory) Governable(_governor) {
-    require(_tradeFactory != address(0), 'Swapper: zero address');
+    if (_tradeFactory == address(0)) revert CommonErrors.ZeroAddress();
     TRADE_FACTORY = _tradeFactory;
   }
 
   modifier onlyTradeFactory() {
-    require(msg.sender == TRADE_FACTORY, 'Swapper: not trade factory');
+    if (msg.sender != TRADE_FACTORY) revert CommonErrors.NotAuthorized();
     _;
   }
 
@@ -68,9 +70,8 @@ abstract contract Swapper is ISwapper, Governable, CollectableDust {
     uint256 _amountIn,
     uint256 _maxSlippage
   ) internal pure {
-    require(_receiver != address(0), 'Swapper: zero address');
-    require(_tokenIn != address(0) && _tokenOut != address(0), 'Swapper: zero address');
-    require(_amountIn > 0, 'Swapper: zero amount');
+    if (_receiver == address(0) || _tokenIn == address(0) || _tokenOut == address(0)) revert CommonErrors.ZeroAddress();
+    if (_amountIn == 0) revert CommonErrors.ZeroAmount();
     require(_maxSlippage > 0, 'Swapper: zero slippage');
   }
 

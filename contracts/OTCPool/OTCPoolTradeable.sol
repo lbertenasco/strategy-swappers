@@ -56,14 +56,14 @@ abstract contract OTCPoolTradeable is IOTCPoolTradeable, OTCPoolDesk {
   }
 
   function _setTradeFactory(address _tradeFactory) internal {
-    require(_tradeFactory != address(0), 'OTCPool: zero address');
+    if (_tradeFactory == address(0)) revert CommonErrors.ZeroAddress();
     tradeFactory = _tradeFactory;
     emit TradeFactorySet(_tradeFactory);
   }
 
   function claim(address _token, uint256 _amountToClaim) external override onlyOTCProvider {
-    require(msg.sender != address(0), 'OTCPool: zero address');
-    require(_token != address(0), 'OTCPool: zero address'); // TODO: can this be deprecated ? technically if token is zero, it wont have swapped available -- gas optimization
+    // TODO: can this be deprecated ? technically if token is zero, it wont have swapped available -- gas optimization
+    if (_token == address(0)) revert CommonErrors.ZeroAddress();
     require(_amountToClaim <= swappedAvailable[_token], 'OTCPool: zero claim');
     swappedAvailable[_token] -= _amountToClaim;
     IERC20(_token).safeTransfer(msg.sender, _amountToClaim);

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.4;
+pragma solidity >=0.8.4 <0.9.0;
 
 import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 import './TradeFactorySwapperHandler.sol';
@@ -116,7 +116,7 @@ abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler,
     uint256 _deadline
   ) external override onlyRole(STRATEGY) returns (uint256 _id) {
     require(strategyAsyncSwapper[msg.sender] != address(0), 'TF: no strategy swapper');
-    require(_tokenIn != address(0) && _tokenOut != address(0), 'TradeFactory: zero address');
+    if (_tokenIn == address(0) || _tokenOut == address(0)) revert CommonErrors.ZeroAddress();
     require(_amountIn > 0, 'TradeFactory: zero amount');
     require(_maxSlippage > 0, 'TradeFactory: zero slippage');
     require(block.timestamp < _deadline, 'TradeFactory: deadline too soon');

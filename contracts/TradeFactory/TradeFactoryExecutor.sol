@@ -70,8 +70,8 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPos
     bytes calldata _data
   ) external override onlyRole(STRATEGY) returns (uint256 _receivedAmount) {
     address _swapper = strategySyncSwapper[msg.sender];
-    require(_swappers.contains(_swapper), 'TradeFactory: invalid swapper');
-    require(_tokenIn != address(0) && _tokenOut != address(0), 'TradeFactory: zero address');
+    if (!_swappers.contains(_swapper)) revert InvalidSwapper();
+    if (_tokenIn == address(0) || _tokenOut == address(0)) revert CommonErrors.ZeroAddress();
     require(_amountIn > 0, 'TradeFactory: zero amount');
     require(_maxSlippage > 0, 'TradeFactory: zero slippage');
     if (!_approvedTokensBySwappers[_swapper].contains(_tokenIn)) {
@@ -87,7 +87,7 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPos
     require(_pendingTradesIds.contains(_id), 'TradeFactory: trade not pending');
     Trade memory _trade = pendingTradesById[_id];
     require(block.timestamp <= _trade._deadline, 'TradeFactory: trade has expired');
-    require(_swappers.contains(_trade._swapper), 'TradeFactory: invalid swapper');
+    if (!_swappers.contains(_trade._swapper)) revert InvalidSwapper();
     if (!_approvedTokensBySwappers[_trade._swapper].contains(_trade._tokenIn)) {
       _enableSwapperToken(_trade._swapper, _trade._tokenIn);
     }

@@ -6,7 +6,7 @@ import { removeConsoleLog } from 'hardhat-preprocessor';
 import 'hardhat-gas-reporter';
 import 'solidity-coverage';
 import 'hardhat-deploy';
-import { HardhatUserConfig, NetworksUserConfig } from 'hardhat/types';
+import { HardhatUserConfig, MultiSolcUserConfig, NetworksUserConfig } from 'hardhat/types';
 import { DEFAULT_ACCOUNT, getNodeUrl } from './utils/network';
 import { utils } from 'ethers';
 
@@ -51,16 +51,20 @@ const config: HardhatUserConfig = {
   solidity: {
     compilers: [
       {
-        version: '0.8.4',
+        version: '0.8.7',
         settings: {
           optimizer: {
             enabled: true,
             runs: 200,
           },
-          outputSelection: {
-            '*': {
-              '*': ['storageLayout'],
-            },
+        },
+      },
+      {
+        version: '0.8.4',
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
           },
         },
       },
@@ -78,5 +82,20 @@ const config: HardhatUserConfig = {
     apiKey: process.env.ETHERSCAN_API_KEY,
   },
 };
+
+if (process.env.TEST) {
+  const solidity = config.solidity as MultiSolcUserConfig;
+  solidity.compilers.forEach((_, i) => {
+    solidity.compilers[i].settings! = {
+      ...solidity.compilers[i].settings!,
+      outputSelection: {
+        '*': {
+          '*': ['storageLayout'],
+        },
+      },
+    };
+  });
+  config.solidity = solidity;
+}
 
 export default config;

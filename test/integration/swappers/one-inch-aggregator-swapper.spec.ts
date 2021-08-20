@@ -83,7 +83,7 @@ describe('OneInchAggregatorSwapper', function () {
       yMech = await wallet.impersonate(namedAccounts.yMech);
 
       await setTestChainId(CHAIN_ID);
-      await deployments.fixture('OneInchAggregatorSwapper');
+      await deployments.fixture(['TradeFactory', 'OneInchAggregatorSwapper'], { keepExistingDeployments: false });
 
       CRV = await ethers.getContractAt(IERC20_ABI, CRV_ADDRESS);
       DAI = await ethers.getContractAt(IERC20_ABI, DAI_ADDRESS);
@@ -180,7 +180,7 @@ describe('OneInchAggregatorSwapper', function () {
       yMech = await wallet.impersonate(namedAccounts.yMech);
 
       setTestChainId(CHAIN_ID);
-      await deployments.fixture('OneInchAggregatorSwapper');
+      await deployments.fixture(['TradeFactory', 'OneInchAggregatorSwapper'], { keepExistingDeployments: false });
 
       WMATIC = await ethers.getContractAt(IERC20_ABI, WMATIC_ADDRESS);
       DAI = await ethers.getContractAt(IERC20_ABI, DAI_ADDRESS);

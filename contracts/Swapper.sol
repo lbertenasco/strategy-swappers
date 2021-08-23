@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.4;
+pragma solidity >=0.8.4 <0.9.0;
 
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
@@ -72,7 +72,7 @@ abstract contract Swapper is ISwapper, Governable, CollectableDust {
   ) internal pure {
     if (_receiver == address(0) || _tokenIn == address(0) || _tokenOut == address(0)) revert CommonErrors.ZeroAddress();
     if (_amountIn == 0) revert CommonErrors.ZeroAmount();
-    require(_maxSlippage > 0, 'Swapper: zero slippage');
+    if (_maxSlippage == 0) revert CommonErrors.ZeroSlippage();
   }
 
   function _executeSwap(

@@ -270,7 +270,7 @@ const shouldBeCheckPreAssetSwap = ({ contract, func, withData }: { contract: () 
       tx = contract()[func](...args);
     });
     then('tx is reverted with reason', async () => {
-      await expect(tx).to.be.revertedWith('Swapper: zero slippage');
+      await expect(tx).to.be.revertedWith('ZeroSlippage()');
     });
   });
 };

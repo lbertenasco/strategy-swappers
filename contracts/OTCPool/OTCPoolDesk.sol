@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.4;
+pragma solidity >=0.8.4 <0.9.0;
 
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
@@ -12,6 +12,8 @@ interface IOTCPoolDesk {
   event OTCProviderSet(address indexed _OTCProvider);
   event Deposited(address indexed _depositor, address _offeredTokenToPool, address _wantedTokenFromPool, uint256 _amountToOffer);
   event Withdrew(address indexed _receiver, address _offeredTokenToPool, address _wantedTokenFromPool, uint256 _amountToWithdraw);
+
+  error InvalidWithdraw();
 
   function OTCProvider() external view returns (address);
 
@@ -77,7 +79,7 @@ abstract contract OTCPoolDesk is IOTCPoolDesk, CollectableDustWithTokensManageme
   ) public virtual override onlyOTCProvider {
     if (_offeredTokenToPool == address(0) || _wantedTokenFromPool == address(0)) revert CommonErrors.ZeroAddress();
     if (_amount == 0) revert CommonErrors.ZeroAmount();
-    require(availableFor[_offeredTokenToPool][_wantedTokenFromPool] >= _amount, 'OTCPool: not enough provided');
+    if (availableFor[_offeredTokenToPool][_wantedTokenFromPool] < _amount) revert InvalidWithdraw();
     availableFor[_offeredTokenToPool][_wantedTokenFromPool] -= _amount;
     IERC20(_offeredTokenToPool).safeTransfer(msg.sender, _amount);
     _subTokenUnderManagement(_offeredTokenToPool, _amount);

@@ -212,7 +212,7 @@ contract('TradeFactoryPositionsHandler', () => {
       then('tx is reverted with reason', async () => {
         await expect(
           positionsHandler.connect(newRandomStrategy).create(tokenIn, tokenOut, amountIn, maxSlippage, deadline, { gasPrice: 0 })
-        ).to.be.revertedWith('TF: no strategy swapper');
+        ).to.be.revertedWith('InvalidSwapper()');
       });
     });
     when('token in is zero address', () => {
@@ -236,21 +236,17 @@ contract('TradeFactoryPositionsHandler', () => {
     });
     when('max slippage is set to zero', () => {
       then('tx is reverted with reason', async () => {
-        await expect(positionsHandler.create(tokenIn, tokenOut, amountIn, constants.ZERO, deadline)).to.be.revertedWith(
-          'TradeFactory: zero slippage'
-        );
+        await expect(positionsHandler.create(tokenIn, tokenOut, amountIn, constants.ZERO, deadline)).to.be.revertedWith('ZeroSlippage()');
       });
     });
     when('deadline is equal or less than current timestamp', () => {
       then('tx is reverted with reason', async () => {
         await expect(positionsHandler.create(tokenIn, tokenOut, amountIn, maxSlippage, constants.ZERO_ADDRESS)).to.be.revertedWith(
-          'TradeFactory: deadline too soon'
+          'InvalidDeadline()'
         );
         const staticDeadline = moment().unix() + 1000;
         await evm.advanceToTimeAndBlock(staticDeadline);
-        await expect(positionsHandler.create(tokenIn, tokenOut, amountIn, maxSlippage, staticDeadline)).to.be.revertedWith(
-          'TradeFactory: deadline too soon'
-        );
+        await expect(positionsHandler.create(tokenIn, tokenOut, amountIn, maxSlippage, staticDeadline)).to.be.revertedWith('InvalidDeadline()');
       });
     });
     when('all data is correct', () => {
@@ -306,7 +302,7 @@ contract('TradeFactoryPositionsHandler', () => {
     // TODO: only strategy
     when('pending trade does not exist', () => {
       then('tx is reverted with reason', async () => {
-        await expect(positionsHandler.cancelPending(BigNumber.from('12'))).to.be.revertedWith('TradeFactory: trade not pending');
+        await expect(positionsHandler.cancelPending(BigNumber.from('12'))).to.be.revertedWith('InvalidTrade()');
       });
     });
     when('pending trade exists', () => {
@@ -331,11 +327,6 @@ contract('TradeFactoryPositionsHandler', () => {
 
   describe('cancelAllPending', () => {
     // TODO: only strategy
-    when('owner does not have pending trades', () => {
-      then('tx is reverted with reason', async () => {
-        await expect(positionsHandler.cancelAllPending()).to.be.revertedWith('TradeFactory: no trades pending from strategy');
-      });
-    });
     when('owner does have pending trades', () => {
       let tradeIds: BigNumber[];
       let cancellAllPendingTx: TransactionResponse;

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.4;
+pragma solidity >=0.8.4 <0.9.0;
 
 import '@openzeppelin/contracts/utils/math/Math.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
@@ -19,6 +19,10 @@ interface IOTCPoolTradeable {
     uint256 _tookFromPool,
     uint256 _tookFromSwapper
   );
+
+  error UnregisteredSwapper();
+
+  error InvalidClaim();
 
   function tradeFactory() external view returns (address _tradeFactory);
 
@@ -47,7 +51,7 @@ abstract contract OTCPoolTradeable is IOTCPoolTradeable, OTCPoolDesk {
 
   // this modifier allows any registered swapper to utilize OTC funds, this is not an idial design. TODO change.
   modifier onlyRegisteredSwapper() {
-    require(ITradeFactorySwapperHandler(tradeFactory).isSwapper(msg.sender), 'OTCPool: unregistered swapper');
+    if (!ITradeFactorySwapperHandler(tradeFactory).isSwapper(msg.sender)) revert UnregisteredSwapper();
     _;
   }
 
@@ -64,7 +68,7 @@ abstract contract OTCPoolTradeable is IOTCPoolTradeable, OTCPoolDesk {
   function claim(address _token, uint256 _amountToClaim) external override onlyOTCProvider {
     // TODO: can this be deprecated ? technically if token is zero, it wont have swapped available -- gas optimization
     if (_token == address(0)) revert CommonErrors.ZeroAddress();
-    require(_amountToClaim <= swappedAvailable[_token], 'OTCPool: zero claim');
+    if (swappedAvailable[_token] < _amountToClaim) revert InvalidClaim();
     swappedAvailable[_token] -= _amountToClaim;
     IERC20(_token).safeTransfer(msg.sender, _amountToClaim);
     _subTokenUnderManagement(_token, _amountToClaim);

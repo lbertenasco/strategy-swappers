@@ -120,7 +120,7 @@ contract('OTCPoolTradeable', () => {
         claimTx = OTCPoolTradeable.connect(OTCProvider).claim(constants.NOT_ZERO_ADDRESS, 1);
       });
       then('tx is reverted with reason', async () => {
-        await expect(claimTx).to.be.revertedWith('OTCPool: zero claim');
+        await expect(claimTx).to.be.revertedWith('InvalidClaim()');
       });
     });
     when('parameters are valid', () => {

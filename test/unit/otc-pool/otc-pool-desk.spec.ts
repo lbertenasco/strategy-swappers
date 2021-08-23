@@ -153,7 +153,7 @@ contract('OTCPoolDesk', () => {
         withdrawTx = OTCPoolDesk.withdraw(wallet.generateRandomAddress(), wallet.generateRandomAddress(), 1);
       });
       then('tx is reverted with reason', async () => {
-        await expect(withdrawTx).to.be.revertedWith('OTCPool: not enough provided');
+        await expect(withdrawTx).to.be.revertedWith('InvalidWithdraw()');
       });
     });
     when('all parameters are valid', () => {

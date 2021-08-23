@@ -5,5 +5,6 @@ library CommonErrors {
   error ZeroAddress();
   error NotAuthorized();
   error ZeroAmount();
+  error ZeroSlippage();
   error IncorrectSwapInformation();
 }

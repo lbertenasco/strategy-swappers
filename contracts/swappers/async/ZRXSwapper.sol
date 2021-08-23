@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.4;
+pragma solidity >=0.8.4 <0.9.0;
 
 import '../../Swapper.sol';
 
 interface IZRXSwapper is ISwapper {
+  error TradeReverted();
+
   // solhint-disable-next-line func-name-mixedcase
   function ZRX() external view returns (address);
 }
@@ -39,7 +41,7 @@ contract ZRXSwapper is IZRXSwapper, Swapper {
     IERC20(_tokenIn).approve(ZRX, 0);
     IERC20(_tokenIn).approve(ZRX, _amountIn);
     (bool success, ) = ZRX.call{value: 0}(_data);
-    require(success, 'Swapper: ZRX trade reverted');
+    if (!success) revert TradeReverted();
     // Check that token in & amount in was correct
     if (_initialBalanceTokenIn - IERC20(_tokenIn).balanceOf(address(this)) < _amountIn) revert CommonErrors.IncorrectSwapInformation();
     // Check that token out was correct

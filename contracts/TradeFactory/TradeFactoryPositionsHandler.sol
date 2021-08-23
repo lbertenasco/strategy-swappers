@@ -34,6 +34,10 @@ interface ITradeFactoryPositionsHandler {
 
   event TradesSwapperChanged(address indexed _strategy, uint256[] _ids, address _newSwapper);
 
+  error InvalidTrade();
+
+  error InvalidDeadline();
+
   function pendingTradesById(uint256)
     external
     view
@@ -115,11 +119,11 @@ abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler,
     uint256 _maxSlippage,
     uint256 _deadline
   ) external override onlyRole(STRATEGY) returns (uint256 _id) {
-    require(strategyAsyncSwapper[msg.sender] != address(0), 'TF: no strategy swapper');
+    if (strategyAsyncSwapper[msg.sender] == address(0)) revert InvalidSwapper();
     if (_tokenIn == address(0) || _tokenOut == address(0)) revert CommonErrors.ZeroAddress();
     if (_amountIn == 0) revert CommonErrors.ZeroAmount();
-    require(_maxSlippage > 0, 'TradeFactory: zero slippage');
-    require(block.timestamp < _deadline, 'TradeFactory: deadline too soon');
+    if (_maxSlippage == 0) revert CommonErrors.ZeroSlippage();
+    if (_deadline <= block.timestamp) revert InvalidDeadline();
     _id = _tradeCounter;
     Trade memory _trade = Trade(
       _tradeCounter,
@@ -148,15 +152,14 @@ abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler,
   }
 
   function cancelPending(uint256 _id) external override onlyRole(STRATEGY) {
-    require(_pendingTradesIds.contains(_id), 'TradeFactory: trade not pending');
-    require(pendingTradesById[_id]._strategy == msg.sender, 'TradeFactory: does not own trade');
+    if (!_pendingTradesIds.contains(_id)) revert InvalidTrade();
+    if (pendingTradesById[_id]._strategy != msg.sender) revert CommonErrors.NotAuthorized();
     Trade memory _trade = pendingTradesById[_id];
     _removePendingTrade(_trade._strategy, _id);
     emit TradeCanceled(msg.sender, _id);
   }
 
   function cancelAllPending() external override onlyRole(STRATEGY) returns (uint256[] memory _canceledTradesIds) {
-    require(_pendingTradesByOwner[msg.sender].length() > 0, 'TradeFactory: no trades pending from strategy');
     _canceledTradesIds = new uint256[](_pendingTradesByOwner[msg.sender].length());
     for (uint256 i; i < _pendingTradesByOwner[msg.sender].length(); i++) {
       _canceledTradesIds[i] = _pendingTradesByOwner[msg.sender].at(i);

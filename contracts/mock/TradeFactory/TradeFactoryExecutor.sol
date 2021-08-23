@@ -14,8 +14,4 @@ contract TradeFactoryExecutorMock is TradeFactoryPositionsHandlerMock, TradeFact
   ) 
     TradeFactoryPositionsHandlerMock(_masterAdmin, _swapperAdder, _swapperSetter, _strategyAdder)
     TradeFactoryExecutor(_mechanicsRegistry) {}
-
-  function enableSwapperToken(address _swapper, address _token) external {
-    _enableSwapperToken(_swapper, _token);
-  }
 }

@@ -34,6 +34,7 @@ contract('TradeFactoryPositionsHandler', () => {
   });
 
   beforeEach(async () => {
+    await evm.reset();
     positionsHandler = await positionsHandlerFactory.deploy(
       masterAdmin.address,
       swapperAdder.address,

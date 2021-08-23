@@ -60,7 +60,7 @@ contract('OTCPoolDesk', () => {
         depositTx = OTCPoolDesk.deposit(constants.ZERO_ADDRESS, wallet.generateRandomAddress(), 1);
       });
       then('tx is reverted with reason', async () => {
-        await expect(depositTx).to.be.revertedWith('OTCPool: tokens should not be zero');
+        await expect(depositTx).to.be.revertedWith('ZeroAddress()');
       });
     });
     when('wanted token from pool is zero address', () => {
@@ -69,7 +69,7 @@ contract('OTCPoolDesk', () => {
         depositTx = OTCPoolDesk.deposit(wallet.generateRandomAddress(), constants.ZERO_ADDRESS, 1);
       });
       then('tx is reverted with reason', async () => {
-        await expect(depositTx).to.be.revertedWith('OTCPool: tokens should not be zero');
+        await expect(depositTx).to.be.revertedWith('ZeroAddress()');
       });
     });
     when('amount being offered is zero', () => {
@@ -78,7 +78,7 @@ contract('OTCPoolDesk', () => {
         depositTx = OTCPoolDesk.deposit(wallet.generateRandomAddress(), wallet.generateRandomAddress(), 0);
       });
       then('tx is reverted with reason', async () => {
-        await expect(depositTx).to.be.revertedWith('OTCPool: should provide more than zero');
+        await expect(depositTx).to.be.revertedWith('ZeroAmount()');
       });
     });
     when('all parameters are valid', () => {
@@ -126,7 +126,7 @@ contract('OTCPoolDesk', () => {
         withdrawTx = OTCPoolDesk.withdraw(constants.ZERO_ADDRESS, wallet.generateRandomAddress(), 1);
       });
       then('tx is reverted with reason', async () => {
-        await expect(withdrawTx).to.be.revertedWith('OTCPool: tokens should not be zero');
+        await expect(withdrawTx).to.be.revertedWith('ZeroAddress()');
       });
     });
     when('wanted token from pool is zero address', () => {
@@ -135,7 +135,7 @@ contract('OTCPoolDesk', () => {
         withdrawTx = OTCPoolDesk.withdraw(wallet.generateRandomAddress(), constants.ZERO_ADDRESS, 1);
       });
       then('tx is reverted with reason', async () => {
-        await expect(withdrawTx).to.be.revertedWith('OTCPool: tokens should not be zero');
+        await expect(withdrawTx).to.be.revertedWith('ZeroAddress()');
       });
     });
     when('amount being withdrawn is zero', () => {
@@ -144,7 +144,7 @@ contract('OTCPoolDesk', () => {
         withdrawTx = OTCPoolDesk.withdraw(wallet.generateRandomAddress(), wallet.generateRandomAddress(), 0);
       });
       then('tx is reverted with reason', async () => {
-        await expect(withdrawTx).to.be.revertedWith('OTCPool: should withdraw more than zero');
+        await expect(withdrawTx).to.be.revertedWith('ZeroAmount()');
       });
     });
     when('amount being withdrawn is bigger than offered for trade', () => {

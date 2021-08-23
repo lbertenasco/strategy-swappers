@@ -74,7 +74,7 @@ contract('TradeFactoryExecutor', () => {
       then('tx is reverted with reason', async () => {
         await expect(
           executor.connect(strategy)['execute(address,address,uint256,uint256,bytes)'](token.address, tokenOut, amountIn, maxSlippage, data)
-        ).to.be.revertedWith('TradeFactory: invalid swapper');
+        ).to.be.revertedWith('InvalidSwapper()');
       });
     });
     when('token in is zero address', () => {
@@ -83,7 +83,7 @@ contract('TradeFactoryExecutor', () => {
           executor
             .connect(strategy)
             ['execute(address,address,uint256,uint256,bytes)'](constants.ZERO_ADDRESS, tokenOut, amountIn, maxSlippage, data)
-        ).to.be.revertedWith('TradeFactory: zero address');
+        ).to.be.revertedWith('ZeroAddress()');
       });
     });
     when('token out is zero address', () => {
@@ -92,7 +92,7 @@ contract('TradeFactoryExecutor', () => {
           executor
             .connect(strategy)
             ['execute(address,address,uint256,uint256,bytes)'](token.address, constants.ZERO_ADDRESS, amountIn, maxSlippage, data)
-        ).to.be.revertedWith('TradeFactory: zero address');
+        ).to.be.revertedWith('ZeroAddress()');
       });
     });
     when('amount in is zero', () => {
@@ -101,7 +101,7 @@ contract('TradeFactoryExecutor', () => {
           executor
             .connect(strategy)
             ['execute(address,address,uint256,uint256,bytes)'](token.address, tokenOut, constants.ZERO, maxSlippage, data)
-        ).to.be.revertedWith('TradeFactory: zero amount');
+        ).to.be.revertedWith('ZeroAmount()');
       });
     });
     when('max slippage is zero', () => {
@@ -180,7 +180,7 @@ contract('TradeFactoryExecutor', () => {
         await executor.connect(swapperAdder).removeSwapper(asyncSwapper.address);
       });
       then('tx is reverted with reason', async () => {
-        await expect(executor['execute(uint256,bytes)'](tradeId, data)).to.be.revertedWith('TradeFactory: invalid swapper');
+        await expect(executor['execute(uint256,bytes)'](tradeId, data)).to.be.revertedWith('InvalidSwapper()');
       });
     });
     when('is not the first trade being executed of token in & swapper', () => {

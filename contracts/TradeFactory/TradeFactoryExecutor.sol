@@ -61,7 +61,7 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPos
     address _swapper = strategySyncSwapper[msg.sender];
     if (!_swappers.contains(_swapper)) revert InvalidSwapper();
     if (_tokenIn == address(0) || _tokenOut == address(0)) revert CommonErrors.ZeroAddress();
-    require(_amountIn > 0, 'TradeFactory: zero amount');
+    if (_amountIn == 0) revert CommonErrors.ZeroAmount();
     require(_maxSlippage > 0, 'TradeFactory: zero slippage');
     IERC20(_tokenIn).safeTransferFrom(msg.sender, _swapper, _amountIn);
     _receivedAmount = ISwapper(_swapper).swap(msg.sender, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _data);

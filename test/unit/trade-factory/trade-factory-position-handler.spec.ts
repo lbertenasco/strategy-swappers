@@ -218,22 +218,20 @@ contract('TradeFactoryPositionsHandler', () => {
     when('token in is zero address', () => {
       then('tx is reverted with reason', async () => {
         await expect(positionsHandler.create(constants.ZERO_ADDRESS, tokenOut, amountIn, maxSlippage, deadline)).to.be.revertedWith(
-          'TradeFactory: zero address'
+          'ZeroAddress()'
         );
       });
     });
     when('token out is zero address', () => {
       then('tx is reverted with reason', async () => {
         await expect(positionsHandler.create(tokenIn, constants.ZERO_ADDRESS, amountIn, maxSlippage, deadline)).to.be.revertedWith(
-          'TradeFactory: zero address'
+          'ZeroAddress()'
         );
       });
     });
     when('amount in is zero', () => {
       then('tx is reverted with reason', async () => {
-        await expect(positionsHandler.create(tokenIn, tokenOut, constants.ZERO, maxSlippage, deadline)).to.be.revertedWith(
-          'TradeFactory: zero amount'
-        );
+        await expect(positionsHandler.create(tokenIn, tokenOut, constants.ZERO, maxSlippage, deadline)).to.be.revertedWith('ZeroAmount()');
       });
     });
     when('max slippage is set to zero', () => {
@@ -445,7 +443,7 @@ contract('TradeFactoryPositionsHandler', () => {
           .changeStrategyPendingTradesSwapper(strategy.address, wallet.generateRandomAddress());
       });
       then('tx is reverted with reason', async () => {
-        await expect(changeStrategyPendingTradesSwapper).to.be.revertedWith('TradeFactory: invalid swapper');
+        await expect(changeStrategyPendingTradesSwapper).to.be.revertedWith('InvalidSwapper()');
       });
     });
     when('swapper is valid', () => {

@@ -75,7 +75,7 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPos
   // TradeFactoryExecutor
   function execute(uint256 _id, bytes calldata _data) external override onlyMechanic returns (uint256 _receivedAmount) {
     if (!_pendingTradesIds.contains(_id)) revert InvalidTrade();
-    Trade memory _trade = pendingTradesById[_id];
+    Trade storage _trade = pendingTradesById[_id];
     if (block.timestamp > _trade._deadline) revert ExpiredTrade();
     if (!_swappers.contains(_trade._swapper)) revert InvalidSwapper();
     IERC20(_trade._tokenIn).safeTransferFrom(_trade._strategy, _trade._swapper, _trade._amountIn);
@@ -87,14 +87,13 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPos
       _trade._maxSlippage,
       _data
     );
-
     _removePendingTrade(_trade._strategy, _id);
     emit AsyncTradeExecuted(_id, _receivedAmount);
   }
 
   function expire(uint256 _id) external override onlyMechanic returns (uint256 _freedAmount) {
     if (!_pendingTradesIds.contains(_id)) revert InvalidTrade();
-    Trade memory _trade = pendingTradesById[_id];
+    Trade storage _trade = pendingTradesById[_id];
     if (block.timestamp < _trade._deadline) revert OngoingTrade();
     _freedAmount = _trade._amountIn;
     // We have to take tokens from strategy, to decrease the allowance

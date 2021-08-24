@@ -25,7 +25,7 @@ interface ITradeFactorySwapperHandler {
 
   function swappers() external view returns (address[] memory _swappersList);
 
-  function isSwapper(address _swapper) external view returns (bool);
+  function isSwapper(address _swapper) external view returns (bool _isSwapper);
 
   function swapperStrategies(address _swapper) external view returns (address[] memory _strategies);
 
@@ -65,22 +65,16 @@ abstract contract TradeFactorySwapperHandler is ITradeFactorySwapperHandler, Tra
     _setupRole(SWAPPER_SETTER, _swapperSetter);
   }
 
-  function isSwapper(address _swapper) external view override returns (bool) {
-    return _swappers.contains(_swapper);
+  function isSwapper(address _swapper) external view override returns (bool _isSwapper) {
+    _isSwapper = _swappers.contains(_swapper);
   }
 
   function swappers() external view override returns (address[] memory _swappersList) {
-    _swappersList = new address[](_swappers.length());
-    for (uint256 i = 0; i < _swappers.length(); i++) {
-      _swappersList[i] = _swappers.at(i);
-    }
+    _swappersList = _swappers.values();
   }
 
   function swapperStrategies(address _swapper) external view override returns (address[] memory _strategies) {
-    _strategies = new address[](_swapperStrategies[_swapper].length());
-    for (uint256 i = 0; i < _swapperStrategies[_swapper].length(); i++) {
-      _strategies[i] = _swapperStrategies[_swapper].at(i);
-    }
+    _strategies = _swapperStrategies[_swapper].values();
   }
 
   function setStrategySyncSwapper(address _strategy, address _swapper) external override onlyRole(SWAPPER_SETTER) {

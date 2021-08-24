@@ -63,7 +63,6 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPos
     bytes calldata _data
   ) external override onlyRole(STRATEGY) returns (uint256 _receivedAmount) {
     address _swapper = strategySyncSwapper[msg.sender];
-    if (!_swappers.contains(_swapper)) revert InvalidSwapper();
     if (_tokenIn == address(0) || _tokenOut == address(0)) revert CommonErrors.ZeroAddress();
     if (_amountIn == 0) revert CommonErrors.ZeroAmount();
     if (_maxSlippage == 0) revert CommonErrors.ZeroSlippage();

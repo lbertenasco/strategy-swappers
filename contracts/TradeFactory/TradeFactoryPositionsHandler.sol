@@ -99,17 +99,11 @@ abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler,
   }
 
   function pendingTradesIds() external view override returns (uint256[] memory _pendingIds) {
-    _pendingIds = new uint256[](_pendingTradesIds.length());
-    for (uint256 i; i < _pendingTradesIds.length(); i++) {
-      _pendingIds[i] = _pendingTradesIds.at(i);
-    }
+    _pendingIds = _pendingTradesIds.values();
   }
 
   function pendingTradesIds(address _strategy) external view override returns (uint256[] memory _pendingIds) {
-    _pendingIds = new uint256[](_pendingTradesByOwner[_strategy].length());
-    for (uint256 i; i < _pendingTradesByOwner[_strategy].length(); i++) {
-      _pendingIds[i] = _pendingTradesByOwner[_strategy].at(i);
-    }
+    _pendingIds = _pendingTradesByOwner[_strategy].values();
   }
 
   function create(

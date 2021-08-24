@@ -13,6 +13,8 @@ interface IOTCPoolDesk {
   event Deposited(address indexed _depositor, address _offeredTokenToPool, address _wantedTokenFromPool, uint256 _amountToOffer);
   event Withdrew(address indexed _receiver, address _offeredTokenToPool, address _wantedTokenFromPool, uint256 _amountToWithdraw);
 
+  error InvalidWithdraw();
+
   function OTCProvider() external view returns (address);
 
   function availableFor(address _offeredToken, address _wantedtoken) external view returns (uint256 _offeredAmount);
@@ -43,7 +45,7 @@ abstract contract OTCPoolDesk is IOTCPoolDesk, CollectableDustWithTokensManageme
   }
 
   modifier onlyOTCProvider() {
-    require(msg.sender == OTCProvider, 'OTCPool: unauthorized');
+    if (msg.sender != OTCProvider) revert CommonErrors.NotAuthorized();
     _;
   }
 
@@ -52,7 +54,7 @@ abstract contract OTCPoolDesk is IOTCPoolDesk, CollectableDustWithTokensManageme
   }
 
   function _setOTCProvider(address _OTCProvider) internal {
-    require(_OTCProvider != address(0), 'OTCPool: zero address');
+    if (_OTCProvider == address(0)) revert CommonErrors.ZeroAddress();
     OTCProvider = _OTCProvider;
     emit OTCProviderSet(_OTCProvider);
   }
@@ -62,8 +64,8 @@ abstract contract OTCPoolDesk is IOTCPoolDesk, CollectableDustWithTokensManageme
     address _wantedTokenFromPool,
     uint256 _amount
   ) public virtual override onlyOTCProvider {
-    require(_offeredTokenToPool != address(0) && _wantedTokenFromPool != address(0), 'OTCPool: tokens should not be zero');
-    require(_amount > 0, 'OTCPool: should provide more than zero');
+    if (_offeredTokenToPool == address(0) || _wantedTokenFromPool == address(0)) revert CommonErrors.ZeroAddress();
+    if (_amount == 0) revert CommonErrors.ZeroAmount();
     IERC20(_offeredTokenToPool).safeTransferFrom(msg.sender, address(this), _amount);
     availableFor[_offeredTokenToPool][_wantedTokenFromPool] += _amount;
     _addTokenUnderManagement(_offeredTokenToPool, _amount);
@@ -75,9 +77,9 @@ abstract contract OTCPoolDesk is IOTCPoolDesk, CollectableDustWithTokensManageme
     address _wantedTokenFromPool,
     uint256 _amount
   ) public virtual override onlyOTCProvider {
-    require(_offeredTokenToPool != address(0) && _wantedTokenFromPool != address(0), 'OTCPool: tokens should not be zero');
-    require(_amount > 0, 'OTCPool: should withdraw more than zero');
-    require(availableFor[_offeredTokenToPool][_wantedTokenFromPool] >= _amount, 'OTCPool: not enough provided');
+    if (_offeredTokenToPool == address(0) || _wantedTokenFromPool == address(0)) revert CommonErrors.ZeroAddress();
+    if (_amount == 0) revert CommonErrors.ZeroAmount();
+    if (availableFor[_offeredTokenToPool][_wantedTokenFromPool] < _amount) revert InvalidWithdraw();
     availableFor[_offeredTokenToPool][_wantedTokenFromPool] -= _amount;
     IERC20(_offeredTokenToPool).safeTransfer(msg.sender, _amount);
     _subTokenUnderManagement(_offeredTokenToPool, _amount);

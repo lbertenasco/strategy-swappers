@@ -113,7 +113,7 @@ contract('TradeFactorySwapperHandler', () => {
         addSwapperTx = tradeFactory.connect(swapperAdder).addSwapper(constants.ZERO_ADDRESS);
       });
       then('tx is reverted with reason', async () => {
-        await expect(addSwapperTx).to.be.revertedWith('TF: zero address');
+        await expect(addSwapperTx).to.be.revertedWith('ZeroAddress()');
       });
     });
     when('swapper was already added', () => {
@@ -125,7 +125,7 @@ contract('TradeFactorySwapperHandler', () => {
         addSwapperTx = tradeFactory.connect(swapperAdder).addSwapper(swapper);
       });
       then('tx is reverted with reason', async () => {
-        await expect(addSwapperTx).to.be.revertedWith('TF: swapper already added');
+        await expect(addSwapperTx).to.be.revertedWith('AlreadyASwapper()');
       });
     });
     when('adding valid swapper', () => {
@@ -155,7 +155,7 @@ contract('TradeFactorySwapperHandler', () => {
         removeSwapperTx = tradeFactory.connect(swapperAdder).removeSwapper(wallet.generateRandomAddress());
       });
       then('tx is reverted with reason', async () => {
-        await expect(removeSwapperTx).to.be.revertedWith('TF: swapper not added');
+        await expect(removeSwapperTx).to.be.revertedWith('NotASwapper()');
       });
     });
     when('swapper was in registry', () => {

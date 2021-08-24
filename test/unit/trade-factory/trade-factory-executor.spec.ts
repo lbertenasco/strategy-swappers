@@ -74,7 +74,7 @@ contract('TradeFactoryExecutor', () => {
       then('tx is reverted with reason', async () => {
         await expect(
           executor.connect(strategy)['execute(address,address,uint256,uint256,bytes)'](token.address, tokenOut, amountIn, maxSlippage, data)
-        ).to.be.revertedWith('TradeFactory: invalid swapper');
+        ).to.be.revertedWith('InvalidSwapper()');
       });
     });
     when('token in is zero address', () => {
@@ -83,7 +83,7 @@ contract('TradeFactoryExecutor', () => {
           executor
             .connect(strategy)
             ['execute(address,address,uint256,uint256,bytes)'](constants.ZERO_ADDRESS, tokenOut, amountIn, maxSlippage, data)
-        ).to.be.revertedWith('TradeFactory: zero address');
+        ).to.be.revertedWith('ZeroAddress()');
       });
     });
     when('token out is zero address', () => {
@@ -92,7 +92,7 @@ contract('TradeFactoryExecutor', () => {
           executor
             .connect(strategy)
             ['execute(address,address,uint256,uint256,bytes)'](token.address, constants.ZERO_ADDRESS, amountIn, maxSlippage, data)
-        ).to.be.revertedWith('TradeFactory: zero address');
+        ).to.be.revertedWith('ZeroAddress()');
       });
     });
     when('amount in is zero', () => {
@@ -101,14 +101,14 @@ contract('TradeFactoryExecutor', () => {
           executor
             .connect(strategy)
             ['execute(address,address,uint256,uint256,bytes)'](token.address, tokenOut, constants.ZERO, maxSlippage, data)
-        ).to.be.revertedWith('TradeFactory: zero amount');
+        ).to.be.revertedWith('ZeroAmount()');
       });
     });
     when('max slippage is zero', () => {
       then('tx is reverted with reason', async () => {
         await expect(
           executor.connect(strategy)['execute(address,address,uint256,uint256,bytes)'](token.address, tokenOut, amountIn, constants.ZERO, data)
-        ).to.be.revertedWith('TradeFactory: zero slippage');
+        ).to.be.revertedWith('ZeroSlippage()');
       });
     });
     when('is not the first trade being executed of token in & swapper', async () => {
@@ -164,7 +164,7 @@ contract('TradeFactoryExecutor', () => {
     // TODO: Only mechanic
     when('executing a trade thats not pending', () => {
       then('tx is reverted with reason', async () => {
-        await expect(executor['execute(uint256,bytes)'](tradeId.add(1), data)).to.be.revertedWith('TradeFactory: trade not pending');
+        await expect(executor['execute(uint256,bytes)'](tradeId.add(1), data)).to.be.revertedWith('InvalidTrade()');
       });
     });
     when('trade has expired', () => {
@@ -172,7 +172,7 @@ contract('TradeFactoryExecutor', () => {
         await evm.advanceToTimeAndBlock(deadline + 1);
       });
       then('tx is reverted with reason', async () => {
-        await expect(executor['execute(uint256,bytes)'](tradeId, data)).to.be.revertedWith('TradeFactory: trade has expired');
+        await expect(executor['execute(uint256,bytes)'](tradeId, data)).to.be.revertedWith('ExpiredTrade()');
       });
     });
     when('executing a trade where swapper has been removed', () => {
@@ -180,7 +180,7 @@ contract('TradeFactoryExecutor', () => {
         await executor.connect(swapperAdder).removeSwapper(asyncSwapper.address);
       });
       then('tx is reverted with reason', async () => {
-        await expect(executor['execute(uint256,bytes)'](tradeId, data)).to.be.revertedWith('TradeFactory: invalid swapper');
+        await expect(executor['execute(uint256,bytes)'](tradeId, data)).to.be.revertedWith('InvalidSwapper()');
       });
     });
     when('is not the first trade being executed of token in & swapper', () => {
@@ -236,12 +236,12 @@ contract('TradeFactoryExecutor', () => {
     // TODO: Only mechanic
     when('expiring a trade thats not pending', () => {
       then('tx is reverted with reason', async () => {
-        await expect(executor.expire(tradeId.add(1))).to.be.revertedWith('TradeFactory: trade not pending');
+        await expect(executor.expire(tradeId.add(1))).to.be.revertedWith('InvalidTrade()');
       });
     });
     when('trade has not expired', () => {
       then('tx is reverted with reason', async () => {
-        await expect(executor.expire(tradeId)).to.be.revertedWith('TradeFactory: trade not expired');
+        await expect(executor.expire(tradeId)).to.be.revertedWith('OngoingTrade()');
       });
     });
     when('trade can be expired', () => {

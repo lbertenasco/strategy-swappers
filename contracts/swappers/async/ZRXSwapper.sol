@@ -4,6 +4,8 @@ pragma solidity >=0.8.4 <0.9.0;
 import '../../Swapper.sol';
 
 interface IZRXSwapper is ISwapper {
+  error TradeReverted();
+
   // solhint-disable-next-line func-name-mixedcase
   function ZRX() external view returns (address);
 }
@@ -39,13 +41,13 @@ contract ZRXSwapper is IZRXSwapper, Swapper {
     IERC20(_tokenIn).approve(ZRX, 0);
     IERC20(_tokenIn).approve(ZRX, _amountIn);
     (bool success, ) = ZRX.call{value: 0}(_data);
-    require(success, 'Swapper: ZRX trade reverted');
+    if (!success) revert TradeReverted();
     // Check that token in & amount in was correct
-    require(_initialBalanceTokenIn - IERC20(_tokenIn).balanceOf(address(this)) >= _amountIn, 'Swapper: incorrect swap information');
+    if (_initialBalanceTokenIn - IERC20(_tokenIn).balanceOf(address(this)) < _amountIn) revert CommonErrors.IncorrectSwapInformation();
     // Check that token out was correct
     uint256 _finalBalanceOfTokenOut = IERC20(_tokenOut).balanceOf(address(this));
     _receivedAmount = _finalBalanceOfTokenOut - _initialBalanceOfTokenOut;
-    require(_receivedAmount > 0, 'Swapper: incorrect swap information');
+    if (_receivedAmount == 0) revert CommonErrors.IncorrectSwapInformation();
     IERC20(_tokenOut).safeTransfer(_receiver, _receivedAmount);
   }
 }

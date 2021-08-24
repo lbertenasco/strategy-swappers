@@ -22,7 +22,7 @@ const checkTxRevertedWithMessage = async ({ tx, message }: { tx: Promise<Transac
 const checkTxRevertedWithZeroAddress = async (tx: Promise<TransactionResponse>): Promise<void> => {
   await checkTxRevertedWithMessage({
     tx,
-    message: /zero\saddress/,
+    message: 'ZeroAddress()',
   });
 };
 
@@ -201,7 +201,7 @@ const shouldBeExecutableOnlyByTradeFactory = ({
         [funcAndSignature](...params!, { gasPrice: 0 });
     });
     then('tx is reverted with reason', async () => {
-      await expect(onlyTradeFactoryAllowedTx).to.be.revertedWith('Swapper: not trade factory');
+      await expect(onlyTradeFactoryAllowedTx).to.be.revertedWith('NotAuthorized()');
     });
   });
   when('called from factory', () => {
@@ -212,7 +212,7 @@ const shouldBeExecutableOnlyByTradeFactory = ({
         [funcAndSignature](...params!, { gasPrice: 0 });
     });
     then('tx is not reverted or not reverted with reason only trade factory', async () => {
-      await expect(onlyTradeFactoryAllowedTx).to.not.be.revertedWith('Swapper: not trade factory');
+      await expect(onlyTradeFactoryAllowedTx).to.not.be.revertedWith('NotAuthorized()');
     });
   });
 };
@@ -226,7 +226,7 @@ const shouldBeCheckPreAssetSwap = ({ contract, func, withData }: { contract: () 
       tx = contract()[func](...args);
     });
     then('tx is reverted with reason', async () => {
-      await expect(tx).to.be.revertedWith('Swapper: zero address');
+      await expect(tx).to.be.revertedWith('ZeroAddress()');
     });
   });
   when('token in is zero address', () => {
@@ -237,7 +237,7 @@ const shouldBeCheckPreAssetSwap = ({ contract, func, withData }: { contract: () 
       tx = contract()[func](...args);
     });
     then('tx is reverted with reason', async () => {
-      await expect(tx).to.be.revertedWith('Swapper: zero address');
+      await expect(tx).to.be.revertedWith('ZeroAddress()');
     });
   });
   when('token out is zero address', () => {
@@ -248,7 +248,7 @@ const shouldBeCheckPreAssetSwap = ({ contract, func, withData }: { contract: () 
       tx = contract()[func](...args);
     });
     then('tx is reverted with reason', async () => {
-      await expect(tx).to.be.revertedWith('Swapper: zero address');
+      await expect(tx).to.be.revertedWith('ZeroAddress()');
     });
   });
   when('amount is zero', () => {
@@ -259,7 +259,7 @@ const shouldBeCheckPreAssetSwap = ({ contract, func, withData }: { contract: () 
       tx = contract()[func](...args);
     });
     then('tx is reverted with reason', async () => {
-      await expect(tx).to.be.revertedWith('Swapper: zero amount');
+      await expect(tx).to.be.revertedWith('ZeroAmount()');
     });
   });
   when('max slippage is zero', () => {
@@ -270,7 +270,7 @@ const shouldBeCheckPreAssetSwap = ({ contract, func, withData }: { contract: () 
       tx = contract()[func](...args);
     });
     then('tx is reverted with reason', async () => {
-      await expect(tx).to.be.revertedWith('Swapper: zero slippage');
+      await expect(tx).to.be.revertedWith('ZeroSlippage()');
     });
   });
 };

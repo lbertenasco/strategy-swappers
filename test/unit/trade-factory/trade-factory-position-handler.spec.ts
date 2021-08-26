@@ -17,6 +17,7 @@ contract('TradeFactoryPositionsHandler', () => {
   let swapperAdder: SignerWithAddress;
   let swapperSetter: SignerWithAddress;
   let strategyAdder: SignerWithAddress;
+  let tradesModifier: SignerWithAddress;
   let positionsHandlerFactory: ModifiableContractFactory;
   let positionsHandler: ModifiableContract;
   let defaultSwapperAddress: MockContract;
@@ -26,7 +27,7 @@ contract('TradeFactoryPositionsHandler', () => {
   const STRATEGY_ADDER_ROLE: string = new Web3().utils.soliditySha3('STRATEGY_ADDER') as string;
 
   before(async () => {
-    [deployer, masterAdmin, swapperAdder, swapperSetter, strategyAdder, strategy] = await ethers.getSigners();
+    [deployer, masterAdmin, swapperAdder, swapperSetter, strategyAdder, tradesModifier, strategy] = await ethers.getSigners();
     positionsHandlerFactory = await smoddit(
       'contracts/mock/TradeFactory/TradeFactoryPositionsHandler.sol:TradeFactoryPositionsHandlerMock',
       strategy
@@ -39,7 +40,8 @@ contract('TradeFactoryPositionsHandler', () => {
       masterAdmin.address,
       swapperAdder.address,
       swapperSetter.address,
-      strategyAdder.address
+      strategyAdder.address,
+      tradesModifier.address
     );
     defaultSwapperAddress = await smockit(swapperABI);
     await positionsHandler.connect(swapperAdder).addSwappers([defaultSwapperAddress.address]);
@@ -230,7 +232,7 @@ contract('TradeFactoryPositionsHandler', () => {
     // TODO: only strategy
     when('pending trade does not exist', () => {
       then('tx is reverted with reason', async () => {
-        await expect(positionsHandler.cancelPending(BigNumber.from('12'))).to.be.revertedWith('InvalidTrade()');
+        await expect(positionsHandler.cancelPendingTrades([BigNumber.from('12')])).to.be.revertedWith('InvalidTrade()');
       });
     });
     when('trying to cancel trades not owned', () => {
@@ -239,7 +241,7 @@ contract('TradeFactoryPositionsHandler', () => {
     when('pending trade exists', () => {
       let cancelTx: TransactionResponse;
       given(async () => {
-        cancelTx = await positionsHandler.cancelPending(1);
+        cancelTx = await positionsHandler.cancelPendingTrades([1]);
       });
       then('removes trade from trades', async () => {
         expect((await positionsHandler.pendingTradesById(1))._id).to.equal(0);
@@ -251,7 +253,7 @@ contract('TradeFactoryPositionsHandler', () => {
         expect(await positionsHandler['pendingTradesIds()']()).to.be.empty;
       });
       then('emits event', async () => {
-        await expect(cancelTx).to.emit(positionsHandler, 'TradeCanceled').withArgs(strategy.address, 1);
+        await expect(cancelTx).to.emit(positionsHandler, 'TradesCanceled').withArgs(strategy.address, [1]);
       });
     });
   });

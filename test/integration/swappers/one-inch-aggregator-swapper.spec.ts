@@ -96,7 +96,7 @@ describe('OneInchAggregatorSwapper', function () {
       });
 
       await tradeFactory.connect(strategyAdder).grantRole(await tradeFactory.STRATEGY(), strategy.address, { gasPrice: 0 });
-      await tradeFactory.connect(swapperAdder).addSwapper(oneInchAggregatorSwapper.address, { gasPrice: 0 });
+      await tradeFactory.connect(swapperAdder).addSwappers([oneInchAggregatorSwapper.address], { gasPrice: 0 });
       await tradeFactory.connect(swapperSetter).setStrategyAsyncSwapper(strategy.address, oneInchAggregatorSwapper.address);
 
       await CRV.connect(strategy).approve(tradeFactory.address, AMOUNT_IN, { gasPrice: 0 });
@@ -193,7 +193,7 @@ describe('OneInchAggregatorSwapper', function () {
       });
 
       await tradeFactory.connect(strategyAdder).grantRole(await tradeFactory.STRATEGY(), strategy.address, { gasPrice: 0 });
-      await tradeFactory.connect(swapperAdder).addSwapper(oneInchAggregatorSwapper.address, { gasPrice: 0 });
+      await tradeFactory.connect(swapperAdder).addSwappers([oneInchAggregatorSwapper.address], { gasPrice: 0 });
       await tradeFactory.connect(swapperSetter).setStrategyAsyncSwapper(strategy.address, oneInchAggregatorSwapper.address, { gasPrice: 0 });
 
       await WMATIC.connect(strategy).approve(tradeFactory.address, AMOUNT_IN, { gasPrice: 0 });

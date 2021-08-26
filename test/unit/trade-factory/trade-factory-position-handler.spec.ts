@@ -42,7 +42,7 @@ contract('TradeFactoryPositionsHandler', () => {
       strategyAdder.address
     );
     defaultSwapperAddress = await smockit(swapperABI);
-    await positionsHandler.connect(swapperAdder).addSwapper(defaultSwapperAddress.address);
+    await positionsHandler.connect(swapperAdder).addSwappers([defaultSwapperAddress.address]);
     await positionsHandler.connect(swapperSetter).setStrategyAsyncSwapper(strategy.address, defaultSwapperAddress.address);
     await positionsHandler.connect(strategyAdder).grantRole(STRATEGY_ROLE, strategy.address);
   });
@@ -193,7 +193,7 @@ contract('TradeFactoryPositionsHandler', () => {
     const deadline = moment().add('30', 'minutes').unix();
     given(async () => {
       swapper = await smockit(swapperABI);
-      await positionsHandler.connect(swapperAdder).addSwapper(swapper.address);
+      await positionsHandler.connect(swapperAdder).addSwappers([swapper.address]);
       await positionsHandler.connect(swapperSetter).setStrategyAsyncSwapper(strategy.address, swapper.address);
     });
     when('strategy is not registered', () => {
@@ -441,7 +441,7 @@ contract('TradeFactoryPositionsHandler', () => {
       let changeStrategyPendingTradesSwapper: TransactionResponse;
       const newSwapper = wallet.generateRandomAddress();
       given(async () => {
-        await positionsHandler.connect(swapperAdder).addSwapper(newSwapper);
+        await positionsHandler.connect(swapperAdder).addSwappers([newSwapper]);
         changeStrategyPendingTradesSwapper = await positionsHandler
           .connect(swapperSetter)
           .changeStrategyPendingTradesSwapper(strategy.address, newSwapper);

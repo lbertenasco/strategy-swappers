@@ -10,14 +10,13 @@ import './TradeFactoryAccessManager.sol';
 interface ITradeFactorySwapperHandler {
   event SyncStrategySwapperSet(address indexed _strategy, address _swapper);
   event AsyncStrategySwapperSet(address indexed _strategy, address _swapper);
-  event SwapperAdded(address _swapper);
-  event SwapperRemoved(address _swapper);
+  event SwappersAdded(address[] _swappers);
+  event SwappersRemoved(address[] _swapper);
 
   error NotAsyncSwapper();
   error NotSyncSwapper();
   error InvalidSwapper();
-  error AlreadyASwapper();
-  error NotASwapper();
+  error SwapperInUse();
 
   function strategySyncSwapper(address _strategy) external view returns (address _swapper);
 
@@ -33,11 +32,7 @@ interface ITradeFactorySwapperHandler {
 
   function setStrategyAsyncSwapper(address _strategy, address _swapper) external;
 
-  function addSwapper(address _swapper) external;
-
   function addSwappers(address[] memory __swappers) external;
-
-  function removeSwapper(address _swapper) external;
 
   function removeSwappers(address[] memory __swappers) external;
 }
@@ -78,6 +73,7 @@ abstract contract TradeFactorySwapperHandler is ITradeFactorySwapperHandler, Tra
   }
 
   function setStrategySyncSwapper(address _strategy, address _swapper) external override onlyRole(SWAPPER_SETTER) {
+    if (_strategy == address(0) || _swapper == address(0)) revert CommonErrors.ZeroAddress();
     // we check that swapper being added is async
     if (ISwapper(_swapper).SWAPPER_TYPE() != ISwapper.SwapperType.SYNC) revert NotSyncSwapper();
     // we check that swapper is not already added
@@ -92,6 +88,7 @@ abstract contract TradeFactorySwapperHandler is ITradeFactorySwapperHandler, Tra
   }
 
   function setStrategyAsyncSwapper(address _strategy, address _swapper) external override onlyRole(SWAPPER_SETTER) {
+    if (_strategy == address(0) || _swapper == address(0)) revert CommonErrors.ZeroAddress();
     // we check that swapper being added is async
     if (ISwapper(_swapper).SWAPPER_TYPE() != ISwapper.SwapperType.ASYNC) revert NotAsyncSwapper();
     // we check that swapper is not already added
@@ -105,35 +102,19 @@ abstract contract TradeFactorySwapperHandler is ITradeFactorySwapperHandler, Tra
     emit AsyncStrategySwapperSet(_strategy, _swapper);
   }
 
-  function _addSwapper(address _swapper) internal {
-    if (_swapper == address(0)) revert CommonErrors.ZeroAddress();
-    if (!_swappers.add(_swapper)) revert AlreadyASwapper();
-    emit SwapperAdded(_swapper);
-  }
-
-  function addSwapper(address _swapper) external override onlyRole(SWAPPER_ADDER) {
-    _addSwapper(_swapper);
-  }
-
   function addSwappers(address[] memory __swappers) external override onlyRole(SWAPPER_ADDER) {
-    for (uint256 i = 0; i < __swappers.length; i++) {
-      _addSwapper(__swappers[i]);
+    for (uint256 i; i < __swappers.length; i++) {
+      if (__swappers[i] == address(0)) revert CommonErrors.ZeroAddress();
+      _swappers.add(__swappers[i]);
     }
-  }
-
-  function _removeSwapper(address _swapper) internal {
-    if (!_swappers.remove(_swapper)) revert NotASwapper();
-    // TODO: SHOULD NOT BE ABLE TO REMOVE SWAPPER IF SWAPPER IS ASSIGNED TO STRAT
-    emit SwapperRemoved(_swapper);
-  }
-
-  function removeSwapper(address _swapper) external override onlyRole(SWAPPER_ADDER) {
-    _removeSwapper(_swapper);
+    emit SwappersAdded(__swappers);
   }
 
   function removeSwappers(address[] memory __swappers) external override onlyRole(SWAPPER_ADDER) {
-    for (uint256 i = 0; i < __swappers.length; i++) {
-      _removeSwapper(__swappers[i]);
+    for (uint256 i; i < __swappers.length; i++) {
+      if (_swapperStrategies[__swappers[i]].length() > 0) revert SwapperInUse();
+      _swappers.remove(__swappers[i]);
     }
+    emit SwappersRemoved(__swappers);
   }
 }

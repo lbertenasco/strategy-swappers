@@ -1,24 +1,21 @@
-import moment from 'moment';
 import { Contract, ContractFactory } from '@ethersproject/contracts';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signers';
 import { TransactionResponse } from '@ethersproject/abstract-provider';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
-import { constants, fixtures, wallet } from '../../utils';
+import { constants, wallet } from '../../utils';
 import { contract, given, then, when } from '../../utils/bdd';
-import { BigNumber } from '@ethersproject/bignumber';
 
 contract('TradeFactorySwapperHandler', () => {
   let masterAdmin: SignerWithAddress;
   let swapperAdder: SignerWithAddress;
   let swapperSetter: SignerWithAddress;
-  let mechanic: SignerWithAddress;
 
   let tradeFactoryFactory: ContractFactory;
   let tradeFactory: Contract;
 
   before(async () => {
-    [masterAdmin, swapperAdder, swapperSetter, mechanic] = await ethers.getSigners();
+    [masterAdmin, swapperAdder, swapperSetter] = await ethers.getSigners();
     tradeFactoryFactory = await ethers.getContractFactory(
       'contracts/mock/TradeFactory/TradeFactorySwapperHandler.sol:TradeFactorySwapperHandlerMock'
     );
@@ -29,7 +26,18 @@ contract('TradeFactorySwapperHandler', () => {
   });
 
   describe('constructor', () => {
-    // checks deployment
+    when('swapper adder is zero address', () => {
+      then('tx is reverted with message');
+    });
+    when('swapper setter is zero address', () => {
+      then('tx is reverted with message');
+    });
+    when('all arguments are valid', () => {
+      then('role admin of SWAPPER_ADDER is MASTER_ADMIN');
+      then('role admin of SWAPPER_SETTER is MASTER_ADMIN');
+      then('SWAPPER_ADDER is set correctly');
+      then('SWAPPER_SETTER is set correctly');
+    });
   });
 
   describe('swappers', () => {
@@ -42,7 +50,7 @@ contract('TradeFactorySwapperHandler', () => {
       let swappers: string[];
       given(async () => {
         swappers = [wallet.generateRandomAddress(), wallet.generateRandomAddress(), wallet.generateRandomAddress()];
-        await tradeFactory.connect(swapperAdder).connect(swapperAdder).addSwappers(swappers);
+        await tradeFactory.connect(swapperAdder).addSwappers(swappers);
       });
       then('returns array with correct swappers', async () => {
         expect(await tradeFactory.swappers()).to.eql(swappers);
@@ -50,132 +58,179 @@ contract('TradeFactorySwapperHandler', () => {
     });
   });
 
-  describe('activeSwappers', () => {
+  describe('swappers', () => {
     when('there are no swappers', () => {
       then('returns empty array', async () => {
         expect(await tradeFactory.swappers()).to.be.empty;
       });
     });
-    when('all current swapper are actives', () => {
+    when('there are swappers', () => {
       let swappers: string[];
       given(async () => {
         swappers = [wallet.generateRandomAddress(), wallet.generateRandomAddress(), wallet.generateRandomAddress()];
-        await tradeFactory.connect(swapperAdder).connect(swapperAdder).addSwappers(swappers);
+        await tradeFactory.connect(swapperAdder).addSwappers(swappers);
       });
       then('returns array with correct swappers', async () => {
         expect(await tradeFactory.swappers()).to.eql(swappers);
       });
     });
-    when('some swappers were removed', () => {
-      let swappers: string[];
-      let activeSwappers: string[];
-      given(async () => {
-        swappers = [wallet.generateRandomAddress(), wallet.generateRandomAddress(), wallet.generateRandomAddress()];
-        await tradeFactory.connect(swapperAdder).connect(swapperAdder).addSwappers(swappers);
-        await tradeFactory.connect(swapperAdder).removeSwappers([swappers[1]]);
-        activeSwappers = await tradeFactory.swappers();
-      });
-      then('array has same length as total swappers minus 1', () => {
-        expect(activeSwappers).to.be.length(swappers.length - 1);
-      });
-      then('returns only active swappers', () => {
-        expect(activeSwappers).to.include.members([swappers[0], swappers[2]]);
-      });
-    });
   });
 
-  describe('isSwapper(address)', () => {
+  describe('isSwapper', () => {
     when('is not a swapper', () => {
       then('returns false', async () => {
-        expect(await tradeFactory['isSwapper(address)'](wallet.generateRandomAddress())).to.be.false;
+        expect(await tradeFactory.isSwapper(wallet.generateRandomAddress())).to.be.false;
       });
     });
     when('is a swapper', () => {
       let swapper: string;
       given(async () => {
         swapper = wallet.generateRandomAddress();
-        await tradeFactory.connect(swapperAdder).connect(swapperAdder).addSwappers([swapper]);
+        await tradeFactory.connect(swapperAdder).addSwappers([swapper]);
       });
       then('returns true', async () => {
-        expect(await tradeFactory['isSwapper(address)'](swapper)).to.be.true;
+        expect(await tradeFactory.isSwapper(swapper)).to.be.true;
       });
     });
   });
 
-  describe('addSwapper', () => {
-    // only SWAPPER_ADDER
+  describe('swapperStrategies', () => {
+    when('there are no strategies assigned to swapper', () => {
+      then('returns empty array');
+    });
+    when('there are strategies assigned to swapper', () => {
+      then('returns array of strategies');
+    });
   });
 
-  describe('_addSwapper', () => {
-    when('adding swapper with zero address', () => {
-      let addSwapperTx: Promise<TransactionResponse>;
+  describe('setStrategySyncSwapper', () => {
+    // ONLY SWAPPER SETTER
+    when('strategy is zero address', () => {
+      then('tx is reverted with message');
+    });
+    when('swapper is zero address', () => {
+      then('tx is reverted with message');
+    });
+    when('trying to set an async swapper', () => {
+      then('tx is reverted with message');
+    });
+    when('swapper is not an added swapper', () => {
+      then('tx is reverted with message');
+    });
+    when(`strategy didn't have any sync swapper set`, () => {
+      then('sets sync swapper of strategy');
+      then('adds strategy to swapper strategies');
+      then('emits event');
+    });
+    when('strategy had a sync swapper set', () => {
+      then('removes strategy from old swapper strategies');
+      then('sets sync swapper of strategy');
+      then('adds strategy to swapper strategies');
+      then('emits event');
+    });
+  });
+
+  describe('setStrategyAsyncSwapper', () => {
+    // ONLY SWAPPER SETTER
+    when('strategy is zero address', () => {
+      then('tx is reverted with message');
+    });
+    when('swapper is zero address', () => {
+      then('tx is reverted with message');
+    });
+    when('trying to set an sync swapper', () => {
+      then('tx is reverted with message');
+    });
+    when('swapper is not an added swapper', () => {
+      then('tx is reverted with message');
+    });
+    when(`strategy didn't have any async swapper set`, () => {
+      then('sets async swapper of strategy');
+      then('adds strategy to swapper strategies');
+      then('emits event');
+    });
+    when('strategy had an async swapper set', () => {
+      then('removes strategy from old swapper strategies');
+      then('sets async swapper of strategy');
+      then('adds strategy to swapper strategies');
+      then('emits event');
+    });
+  });
+
+  describe('addSwappers', () => {
+    // ONLY SWAPPER ADDER
+    when('adding swappers with zero address', () => {
+      let addSwappersTx: Promise<TransactionResponse>;
       given(async () => {
-        addSwapperTx = tradeFactory.connect(swapperAdder).addSwapper(constants.ZERO_ADDRESS);
+        addSwappersTx = tradeFactory.connect(swapperAdder).addSwappers([constants.ZERO_ADDRESS]);
       });
       then('tx is reverted with reason', async () => {
-        await expect(addSwapperTx).to.be.revertedWith('ZeroAddress()');
+        await expect(addSwappersTx).to.be.revertedWith('ZeroAddress()');
       });
     });
     when('swapper was already added', () => {
-      let swapper: string;
-      let addSwapperTx: Promise<TransactionResponse>;
+      const swapper: string = wallet.generateRandomAddress();
       given(async () => {
-        swapper = wallet.generateRandomAddress();
-        await tradeFactory.connect(swapperAdder).connect(swapperAdder).addSwappers([swapper]);
-        addSwapperTx = tradeFactory.connect(swapperAdder).addSwapper(swapper);
+        await tradeFactory.connect(swapperAdder).addSwappers([swapper]);
+        await tradeFactory.connect(swapperAdder).addSwappers([swapper]);
       });
-      then('tx is reverted with reason', async () => {
-        await expect(addSwapperTx).to.be.revertedWith('AlreadyASwapper()');
+      then('does not change swappers', async () => {
+        expect(await tradeFactory.swappers()).to.eql([swapper]);
       });
     });
     when('adding valid swapper', () => {
-      let swapper: string;
+      const swappers = [wallet.generateRandomAddress(), wallet.generateRandomAddress()];
       let addSwapperTx: TransactionResponse;
       given(async () => {
-        swapper = wallet.generateRandomAddress();
-        addSwapperTx = await tradeFactory.connect(swapperAdder).addSwapper(swapper);
+        addSwapperTx = await tradeFactory.connect(swapperAdder).addSwappers(swappers);
       });
       then('gets added to swappers', async () => {
-        expect(await tradeFactory['isSwapper(address)'](swapper)).to.be.true;
+        expect(await tradeFactory.isSwapper(swappers[0])).to.be.true;
+        expect(await tradeFactory.isSwapper(swappers[1])).to.be.true;
       });
       then('emits event with correct information', async () => {
-        await expect(addSwapperTx).to.emit(tradeFactory, 'SwapperAdded').withArgs(swapper);
+        await expect(addSwapperTx).to.emit(tradeFactory, 'SwappersAdded').withArgs(swappers);
       });
     });
   });
 
-  describe('removeSwapper', () => {
+  describe('removeSwappers', () => {
+    const swappers = [wallet.generateRandomAddress(), wallet.generateRandomAddress()];
+    given(async () => {
+      await tradeFactory.connect(swapperAdder).addSwappers(swappers);
+    });
     // only SWAPPER_ADDER
-  });
-
-  describe('_removeSwapper', () => {
     when('swapper was not in registry', () => {
-      let removeSwapperTx: Promise<TransactionResponse>;
+      let removeSwappersTx: Promise<TransactionResponse>;
       given(async () => {
-        removeSwapperTx = tradeFactory.connect(swapperAdder).removeSwapper(wallet.generateRandomAddress());
+        removeSwappersTx = tradeFactory.connect(swapperAdder).removeSwappers([wallet.generateRandomAddress()]);
       });
-      then('tx is reverted with reason', async () => {
-        await expect(removeSwapperTx).to.be.revertedWith('NotASwapper()');
+      then('tx is not reverted', async () => {
+        await expect(removeSwappersTx).to.not.be.reverted;
+      });
+    });
+    when('swapper is assigned to a strategy', () => {
+      let removeSwappersTx: Promise<TransactionResponse>;
+      given(async () => {
+        await tradeFactory.connect(swapperSetter).addSwapperToStrategyInternal(swappers[0], wallet.generateRandomAddress());
+        removeSwappersTx = tradeFactory.connect(swapperAdder).removeSwappers(swappers);
+      });
+      then('tx is reverted with message', async () => {
+        await expect(removeSwappersTx).to.be.revertedWith('SwapperInUse()');
       });
     });
     when('swapper was in registry', () => {
-      let swapper: string;
       let removeSwapperTx: TransactionResponse;
       given(async () => {
-        swapper = wallet.generateRandomAddress();
-        await tradeFactory.connect(swapperAdder).connect(swapperAdder).addSwappers([swapper]);
-        removeSwapperTx = await tradeFactory.connect(swapperAdder).removeSwapper(swapper);
+        removeSwapperTx = await tradeFactory.connect(swapperAdder).removeSwappers(swappers);
       });
       then('sets removed to true', async () => {
-        expect(await tradeFactory.isSwapper(swapper)).to.be.false;
+        expect(await tradeFactory.isSwapper(swappers[0])).to.be.false;
+        expect(await tradeFactory.isSwapper(swappers[1])).to.be.false;
       });
       then('emits event with correct information', async () => {
-        await expect(removeSwapperTx).to.emit(tradeFactory, 'SwapperRemoved').withArgs(swapper);
+        await expect(removeSwapperTx).to.emit(tradeFactory, 'SwappersRemoved').withArgs(swappers);
       });
     });
-  });
-
-  describe('sendDust', () => {
-    // only MASTER_ADMIN
   });
 });

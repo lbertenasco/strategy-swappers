@@ -23,9 +23,13 @@ interface ITradeFactoryExecutor {
 
   event AsyncTradeExecuted(uint256 indexed _id, uint256 _receivedAmount);
 
+  event AsyncTradesExecuted(uint256 indexed _id, uint256 _receivedAmountIn, uint256 _receivedAmountOut);
+
   event AsyncTradeExpired(uint256 indexed _id);
 
   event SwapperAndTokenEnabled(address indexed _swapper, address _token);
+
+  error NoTrades();
 
   error OngoingTrade();
 
@@ -103,30 +107,22 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPos
     onlyMechanic
     returns (uint256[] memory _receivedAmountIn, uint256[] memory _receivedAmountOut)
   {
-    require(_ids.length > 0, 'TradeFactory: no ids');
+    if (_ids.length == 0) revert NoTrades();
 
-    // address[] _strategies = new address[](_ids.length);
     ITrade.Trade[] memory _trades = new ITrade.Trade[](_ids.length);
-    require(_pendingTradesIds.contains(_ids[0]), 'TradeFactory: trade not pending');
-    require(block.timestamp <= pendingTradesById[_ids[0]]._deadline, 'TradeFactory: trade has expired');
+    if (!_pendingTradesIds.contains(_ids[0])) revert InvalidTrade();
+    if (pendingTradesById[_ids[0]]._deadline > block.timestamp) revert ExpiredTrade();
     address _swapper = pendingTradesById[_ids[0]]._swapper;
-    require(_swappers.contains(_swapper), 'TradeFactory: invalid swapper');
-    // address _tokenIn = pendingTradesById[_ids[0]]._tokenIn;
-    // address _tokenOut = pendingTradesById[_ids[0]]._tokenOut;
-    // uint256 _amountIn = pendingTradesById[_ids[0]]._amountIn;
+    if (!_swappers.contains(_swapper)) revert InvalidSwapper();
     _trades[0] = pendingTradesById[_ids[0]];
 
     // skips index 0
     for (uint256 i = 1; i < _ids.length; i++) {
-      require(_pendingTradesIds.contains(_ids[i]), 'TradeFactory: trade not pending');
+      if (!_pendingTradesIds.contains(_ids[i])) revert InvalidTrade();
       ITrade.Trade memory _trade = pendingTradesById[_ids[i]];
-      require(_trade._swapper == _swapper, 'TradeFactory: invalid swapper');
-      require(block.timestamp <= _trade._deadline, 'TradeFactory: trade has expired');
-      // if (!_approvedTokensBySwappers[_trade._swapper].contains(_trade._tokenIn)) {
-      //   _enableSwapperToken(_trade._swapper, _trade._tokenIn);
-      // }
+      if (_trade._deadline > block.timestamp) revert ExpiredTrade();
+      if (_trade._swapper != _swapper) revert InvalidSwapper();
       IERC20(_trade._tokenIn).safeTransferFrom(_trade._strategy, _trade._swapper, _trade._amountIn);
-      // _strategies[i] = _trade._strategy;
       _trades[i] = _trade;
     }
 
@@ -135,7 +131,7 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPos
     for (uint256 i; i < _ids.length; i++) {
       _removePendingTrade(_trades[i]._strategy, _ids[i]);
     }
-    // emit AsyncTradesExecuted(_ids, _receivedAmountIn, _receivedAmountOut);
+    emit AsyncTradesExecuted(_ids, _receivedAmountIn, _receivedAmountOut);
   }
 
   function expire(uint256 _id) external override onlyMechanic returns (uint256 _freedAmount) {

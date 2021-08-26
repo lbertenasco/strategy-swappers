@@ -70,6 +70,19 @@ contract SushiswapPolygonSwapper is ISushiswapPolygonSwapper, Swapper {
     )[_path.length - 1];
   }
 
+  function _executeSwapMultiple(ITradeFactoryPositionsHandler.Trade[] memory _trades, bytes calldata _data)
+    internal
+    virtual
+    override
+    returns (uint256[] memory _receivedAmountsIn, uint256[] memory _receivedAmountsOut)
+  {
+    _trades; // shh
+    _data; // shh
+    _receivedAmountsIn; // shh
+    _receivedAmountsOut; // shh
+    revert ExecuteSwapMultipleNotImplemented();
+  }
+
   function _getPathAndAmountOut(
     address _tokenIn,
     address _tokenOut,

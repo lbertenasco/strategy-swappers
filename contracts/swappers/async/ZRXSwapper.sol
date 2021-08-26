@@ -50,4 +50,17 @@ contract ZRXSwapper is IZRXSwapper, Swapper {
     if (_receivedAmount == 0) revert CommonErrors.IncorrectSwapInformation();
     IERC20(_tokenOut).safeTransfer(_receiver, _receivedAmount);
   }
+
+  function _executeSwapMultiple(ITradeFactoryPositionsHandler.Trade[] memory _trades, bytes calldata _data)
+    internal
+    virtual
+    override
+    returns (uint256[] memory _receivedAmountsIn, uint256[] memory _receivedAmountsOut)
+  {
+    _trades; // shh
+    _data; // shh
+    _receivedAmountsIn; // shh
+    _receivedAmountsOut; // shh
+    revert ExecuteSwapMultipleNotImplemented();
+  }
 }

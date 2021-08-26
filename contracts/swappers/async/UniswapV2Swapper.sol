@@ -63,4 +63,17 @@ contract UniswapV2Swapper is IUniswapV2Swapper, Swapper {
       block.timestamp
     )[_path.length - 1];
   }
+
+  function _executeSwapMultiple(ITradeFactoryPositionsHandler.Trade[] memory _trades, bytes calldata _data)
+    internal
+    virtual
+    override
+    returns (uint256[] memory _receivedAmountsIn, uint256[] memory _receivedAmountsOut)
+  {
+    _trades; // shh
+    _data; // shh
+    _receivedAmountsIn; // shh
+    _receivedAmountsOut; // shh
+    revert ExecuteSwapMultipleNotImplemented();
+  }
 }

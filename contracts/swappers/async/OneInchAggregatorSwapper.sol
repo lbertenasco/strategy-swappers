@@ -103,4 +103,17 @@ contract OneInchAggregatorSwapper is IOneInchAggregatorSwapper, Swapper {
     IERC20(_tokenIn).approve(AGGREGATION_ROUTER_V3, _amountIn);
     (_receivedAmount, ) = IOneInchExchange(AGGREGATION_ROUTER_V3).swap(_caller, _swapDescription, _tradeData);
   }
+
+  function _executeSwapMultiple(ITradeFactoryPositionsHandler.Trade[] memory _trades, bytes calldata _data)
+    internal
+    virtual
+    override
+    returns (uint256[] memory _receivedAmountsIn, uint256[] memory _receivedAmountsOut)
+  {
+    _trades; // shh
+    _data; // shh
+    _receivedAmountsIn; // shh
+    _receivedAmountsOut; // shh
+    revert ExecuteSwapMultipleNotImplemented();
+  }
 }

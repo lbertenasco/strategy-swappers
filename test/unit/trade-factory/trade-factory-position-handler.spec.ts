@@ -20,7 +20,7 @@ contract('TradeFactoryPositionsHandler', () => {
   let tradesModifier: SignerWithAddress;
   let positionsHandlerFactory: ModifiableContractFactory;
   let positionsHandler: ModifiableContract;
-  let defaultSwapperAddress: MockContract;
+  let asyncSwapper: MockContract;
 
   const MASTER_ADMIN_ROLE: string = new Web3().utils.soliditySha3('MASTER_ADMIN') as string;
   const STRATEGY_ROLE: string = new Web3().utils.soliditySha3('STRATEGY') as string;
@@ -43,9 +43,9 @@ contract('TradeFactoryPositionsHandler', () => {
       strategyAdder.address,
       tradesModifier.address
     );
-    defaultSwapperAddress = await smockit(swapperABI);
-    await positionsHandler.connect(swapperAdder).addSwappers([defaultSwapperAddress.address]);
-    await positionsHandler.connect(swapperSetter).setStrategyAsyncSwapper(strategy.address, defaultSwapperAddress.address);
+    asyncSwapper = await smockit(swapperABI);
+    await positionsHandler.connect(swapperAdder).addSwappers([asyncSwapper.address]);
+    await positionsHandler.connect(swapperSetter).setStrategyAsyncSwapper(strategy.address, asyncSwapper.address);
     await positionsHandler.connect(strategyAdder).grantRole(STRATEGY_ROLE, strategy.address);
   });
 
@@ -236,7 +236,14 @@ contract('TradeFactoryPositionsHandler', () => {
       });
     });
     when('trying to cancel trades not owned', () => {
-      then('tx is reverted with reason');
+      let randomStrategy: Wallet;
+      given(async () => {
+        randomStrategy = await wallet.generateRandom();
+        await positionsHandler.connect(strategyAdder).grantRole(STRATEGY_ROLE, randomStrategy.address);
+      });
+      then('tx is reverted with reason', async () => {
+        await expect(positionsHandler.connect(randomStrategy).cancelPendingTrades([1])).to.be.revertedWith('NotAuthorized()');
+      });
     });
     when('pending trade exists', () => {
       let cancelTx: TransactionResponse;
@@ -246,7 +253,7 @@ contract('TradeFactoryPositionsHandler', () => {
       then('removes trade from trades', async () => {
         expect((await positionsHandler.pendingTradesById(1))._id).to.equal(0);
       });
-      then("removes trade from pending strategy's trade", async () => {
+      then(`removes trade from pending strategy's trade`, async () => {
         expect(await positionsHandler['pendingTradesIds(address)'](strategy.address)).to.be.empty;
       });
       then('removes trade from pending trades ids', async () => {
@@ -259,18 +266,70 @@ contract('TradeFactoryPositionsHandler', () => {
   });
 
   describe('changePendingTradesSwapper', () => {
-    when('trying to change to a sync swapper', () => {
-      then('tx is reverted with reason');
+    given(async () => {
+      await positionsHandler.create(
+        wallet.generateRandomAddress(),
+        wallet.generateRandomAddress(),
+        utils.parseEther('100'),
+        1000,
+        moment().add('30', 'minutes').unix()
+      );
+    });
+    // ONLY TRADE MODIFIER
+    when('setting sync swapper', () => {
+      let syncSwapper: MockContract;
+      given(async () => {
+        syncSwapper = await smockit(swapperABI);
+        syncSwapper.smocked.SWAPPER_TYPE.will.return.with(1);
+      });
+      then('tx is reverted with reason', async () => {
+        await expect(positionsHandler.connect(tradesModifier).changePendingTradesSwapper([1], syncSwapper.address)).to.be.revertedWith(
+          'NotAsyncSwapper()'
+        );
+      });
     });
     when('swapper is not added', () => {
-      then('tx is reverted with reason');
+      let randomAsyncSwapper: MockContract;
+      given(async () => {
+        randomAsyncSwapper = await smockit(swapperABI);
+        randomAsyncSwapper.smocked.SWAPPER_TYPE.will.return.with(0);
+      });
+      then('tx is reverted with reason', async () => {
+        await expect(positionsHandler.connect(tradesModifier).changePendingTradesSwapper([1], randomAsyncSwapper.address)).to.be.revertedWith(
+          'InvalidSwapper()'
+        );
+      });
     });
     when('any of the trades is not pending', () => {
-      then('tx is reverted with reason');
+      then('tx is reverted with reason', async () => {
+        await expect(positionsHandler.connect(tradesModifier).changePendingTradesSwapper([99, 1], asyncSwapper.address)).to.be.revertedWith(
+          'InvalidTrade()'
+        );
+      });
     });
     when('arguments are valid', () => {
-      then('changes pending trades swappers');
-      then('emits event');
+      let randomAsyncSwapper: MockContract;
+      let changeTx: TransactionResponse;
+      given(async () => {
+        randomAsyncSwapper = await smockit(swapperABI);
+        randomAsyncSwapper.smocked.SWAPPER_TYPE.will.return.with(0);
+        await positionsHandler.connect(swapperAdder).addSwappers([randomAsyncSwapper.address]);
+        await create({
+          tokenIn: wallet.generateRandomAddress(),
+          tokenOut: wallet.generateRandomAddress(),
+          amountIn: utils.parseEther('100'),
+          maxSlippage: 1000,
+          deadline: moment().add('30', 'minutes').unix(),
+        });
+        changeTx = await positionsHandler.connect(tradesModifier).changePendingTradesSwapper([1, 2], randomAsyncSwapper.address);
+      });
+      then('changes pending trades swappers', async () => {
+        expect((await positionsHandler.pendingTradesById(1))._swapper).to.equal(randomAsyncSwapper.address);
+        expect((await positionsHandler.pendingTradesById(2))._swapper).to.equal(randomAsyncSwapper.address);
+      });
+      then('emits event', async () => {
+        await expect(changeTx).to.emit(positionsHandler, 'TradesSwapperChanged').withArgs([1, 2], randomAsyncSwapper.address);
+      });
     });
   });
 

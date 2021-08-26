@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.4;
+pragma solidity >=0.8.4 <0.9.0;
 
 import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 import './TradeFactorySwapperHandler.sol';
@@ -23,6 +23,10 @@ interface ITradeFactoryPositionsHandler {
   event TradesCanceled(address indexed _strategy, uint256[] _ids);
 
   event TradesSwapperChanged(address indexed _strategy, uint256[] _ids, address _newSwapper);
+
+  error InvalidTrade();
+
+  error InvalidDeadline();
 
   function pendingTradesById(uint256)
     external
@@ -85,17 +89,11 @@ abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler,
   }
 
   function pendingTradesIds() external view override returns (uint256[] memory _pendingIds) {
-    _pendingIds = new uint256[](_pendingTradesIds.length());
-    for (uint256 i; i < _pendingTradesIds.length(); i++) {
-      _pendingIds[i] = _pendingTradesIds.at(i);
-    }
+    _pendingIds = _pendingTradesIds.values();
   }
 
   function pendingTradesIds(address _strategy) external view override returns (uint256[] memory _pendingIds) {
-    _pendingIds = new uint256[](_pendingTradesByOwner[_strategy].length());
-    for (uint256 i; i < _pendingTradesByOwner[_strategy].length(); i++) {
-      _pendingIds[i] = _pendingTradesByOwner[_strategy].at(i);
-    }
+    _pendingIds = _pendingTradesByOwner[_strategy].values();
   }
 
   function create(
@@ -105,11 +103,11 @@ abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler,
     uint256 _maxSlippage,
     uint256 _deadline
   ) external override onlyRole(STRATEGY) returns (uint256 _id) {
-    require(strategyAsyncSwapper[msg.sender] != address(0), 'TF: no strategy swapper');
-    require(_tokenIn != address(0) && _tokenOut != address(0), 'TradeFactory: zero address');
-    require(_amountIn > 0, 'TradeFactory: zero amount');
-    require(_maxSlippage > 0, 'TradeFactory: zero slippage');
-    require(_deadline > block.timestamp, 'TradeFactory: deadline too soon');
+    if (strategyAsyncSwapper[msg.sender] == address(0)) revert InvalidSwapper();
+    if (_tokenIn == address(0) || _tokenOut == address(0)) revert CommonErrors.ZeroAddress();
+    if (_amountIn == 0) revert CommonErrors.ZeroAmount();
+    if (_maxSlippage == 0) revert CommonErrors.ZeroSlippage();
+    if (_deadline <= block.timestamp) revert InvalidDeadline();
     _id = _tradeCounter;
     ITrade.Trade memory _trade = ITrade.Trade(
       _tradeCounter,
@@ -138,15 +136,14 @@ abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler,
   }
 
   function cancelPending(uint256 _id) external override onlyRole(STRATEGY) {
-    require(_pendingTradesIds.contains(_id), 'TradeFactory: trade not pending');
-    require(pendingTradesById[_id]._strategy == msg.sender, 'TradeFactory: does not own trade');
-    ITrade.Trade memory _trade = pendingTradesById[_id];
+    if (!_pendingTradesIds.contains(_id)) revert InvalidTrade();
+    if (pendingTradesById[_id]._strategy != msg.sender) revert CommonErrors.NotAuthorized();
+    Trade memory _trade = pendingTradesById[_id];
     _removePendingTrade(_trade._strategy, _id);
     emit TradeCanceled(msg.sender, _id);
   }
 
   function cancelAllPending() external override onlyRole(STRATEGY) returns (uint256[] memory _canceledTradesIds) {
-    require(_pendingTradesByOwner[msg.sender].length() > 0, 'TradeFactory: no trades pending from strategy');
     _canceledTradesIds = new uint256[](_pendingTradesByOwner[msg.sender].length());
     for (uint256 i; i < _pendingTradesByOwner[msg.sender].length(); i++) {
       _canceledTradesIds[i] = _pendingTradesByOwner[msg.sender].at(i);
@@ -174,7 +171,7 @@ abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler,
     onlyRole(SWAPPER_SETTER)
     returns (uint256[] memory _changedSwapperIds)
   {
-    require(_swappers.contains(_swapper), 'TradeFactory: invalid swapper');
+    if (!_swappers.contains(_swapper)) revert InvalidSwapper();
     return _changeStrategyPendingTradesSwapper(_strategy, _swapper);
   }
 

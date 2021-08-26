@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.4;
+pragma solidity >=0.8.4 <0.9.0;
 
 import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 
@@ -16,6 +16,14 @@ contract TradeFactorySwapperHandlerMock is TradeFactorySwapperHandler {
 
   function removeSwapperInternal(address _swapper) external {
     _swappers.remove(_swapper);
+  }
+
+  function addSwapperToStrategyInternal(address _swapper, address _strategy) external {
+    _swapperStrategies[_swapper].add(_strategy);
+  }
+
+  function removeSwapperFromStrategyInternal(address _swapper, address _strategy) external {
+    _swapperStrategies[_swapper].remove(_strategy);
   }
 
 }

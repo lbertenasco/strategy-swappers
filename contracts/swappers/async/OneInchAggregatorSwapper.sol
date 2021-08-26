@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.4;
+pragma solidity >=0.8.4 <0.9.0;
 
 import '../../Swapper.sol';
 
@@ -92,15 +92,13 @@ contract OneInchAggregatorSwapper is IOneInchAggregatorSwapper, Swapper {
       _data[4:],
       (IAggregationExecutor, IOneInchExchange.SwapDescription, bytes)
     );
-    require(
-      _swapDescription.dstReceiver == _receiver &&
-        address(_swapDescription.srcToken) == _tokenIn &&
-        address(_swapDescription.dstToken) == _tokenOut &&
-        _swapDescription.amount == _amountIn &&
-        _swapDescription.flags == _SHOULD_CLAIM_FLAG,
-      'Swapper: incorrect swap information'
-    );
-    // Using safe approve is not neccesary when resetting allowance
+    if (
+      _swapDescription.dstReceiver != _receiver ||
+      address(_swapDescription.srcToken) != _tokenIn ||
+      address(_swapDescription.dstToken) != _tokenOut ||
+      _swapDescription.amount != _amountIn ||
+      _swapDescription.flags != _SHOULD_CLAIM_FLAG
+    ) revert CommonErrors.IncorrectSwapInformation();
     IERC20(_tokenIn).approve(AGGREGATION_ROUTER_V3, 0);
     IERC20(_tokenIn).approve(AGGREGATION_ROUTER_V3, _amountIn);
     (_receivedAmount, ) = IOneInchExchange(AGGREGATION_ROUTER_V3).swap(_caller, _swapDescription, _tradeData);

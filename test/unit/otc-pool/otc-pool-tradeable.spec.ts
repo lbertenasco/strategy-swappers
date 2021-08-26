@@ -43,7 +43,7 @@ contract('OTCPoolTradeable', () => {
       machinery.address
     );
     OTCPoolTradeable = await OTCPoolTradeableFactory.deploy(OTCProvider.address, tradeFactory.address);
-    await tradeFactory.connect(swapperAdder).addSwapper(swapper.address);
+    await tradeFactory.connect(swapperAdder).addSwappers([swapper.address]);
     machinery.smocked.isMechanic.will.return.with(true);
   });
 
@@ -76,7 +76,7 @@ contract('OTCPoolTradeable', () => {
         setSwapperTx = OTCPoolTradeable.setTradeFactory(constants.ZERO_ADDRESS);
       });
       then('tx is reverted with reason', async () => {
-        await expect(setSwapperTx).to.be.revertedWith('OTCPool: zero address');
+        await expect(setSwapperTx).to.be.revertedWith('ZeroAddress()');
       });
     });
     when('tradeFactory is not zero address', () => {
@@ -111,7 +111,7 @@ contract('OTCPoolTradeable', () => {
         claimTx = OTCPoolTradeable.connect(OTCProvider).claim(constants.ZERO_ADDRESS, 1);
       });
       then('tx is reverted with reason', async () => {
-        await expect(claimTx).to.be.revertedWith('OTCPool: zero address');
+        await expect(claimTx).to.be.revertedWith('ZeroAddress()');
       });
     });
     when('amount to claim is more than available', () => {
@@ -120,7 +120,7 @@ contract('OTCPoolTradeable', () => {
         claimTx = OTCPoolTradeable.connect(OTCProvider).claim(constants.NOT_ZERO_ADDRESS, 1);
       });
       then('tx is reverted with reason', async () => {
-        await expect(claimTx).to.be.revertedWith('OTCPool: zero claim');
+        await expect(claimTx).to.be.revertedWith('InvalidClaim()');
       });
     });
     when('parameters are valid', () => {

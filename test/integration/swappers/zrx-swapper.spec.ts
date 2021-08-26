@@ -74,7 +74,7 @@ describe('ZRXSwapper', function () {
       yMech = await wallet.impersonate(namedAccounts.yMech);
 
       await setTestChainId(CHAIN_ID);
-      await deployments.fixture('ZRXSwapper');
+      await deployments.fixture(['TradeFactory', 'ZRXSwapper'], { keepExistingDeployments: false });
 
       CRV = await ethers.getContractAt(IERC20_ABI, CRV_ADDRESS);
       DAI = await ethers.getContractAt(IERC20_ABI, DAI_ADDRESS);
@@ -87,7 +87,7 @@ describe('ZRXSwapper', function () {
       });
 
       await tradeFactory.connect(strategyAdder).grantRole(await tradeFactory.STRATEGY(), strategy.address, { gasPrice: 0 });
-      await tradeFactory.connect(swapperAdder).addSwapper(ZRXSwapper.address, { gasPrice: 0 });
+      await tradeFactory.connect(swapperAdder).addSwappers([ZRXSwapper.address], { gasPrice: 0 });
       await tradeFactory.connect(swapperSetter).setStrategyAsyncSwapper(strategy.address, ZRXSwapper.address, { gasPrice: 0 });
 
       await CRV.connect(strategy).approve(tradeFactory.address, AMOUNT_IN, { gasPrice: 0 });
@@ -165,7 +165,7 @@ describe('ZRXSwapper', function () {
       yMech = await wallet.impersonate(namedAccounts.yMech);
 
       setTestChainId(CHAIN_ID);
-      await deployments.fixture('ZRXSwapper');
+      await deployments.fixture(['TradeFactory', 'ZRXSwapper'], { keepExistingDeployments: false });
 
       WMATIC = await ethers.getContractAt(IERC20_ABI, WMATIC_ADDRESS);
       DAI = await ethers.getContractAt(IERC20_ABI, DAI_ADDRESS);
@@ -178,7 +178,7 @@ describe('ZRXSwapper', function () {
       });
 
       await tradeFactory.connect(strategyAdder).grantRole(await tradeFactory.STRATEGY(), strategy.address, { gasPrice: 0 });
-      await tradeFactory.connect(swapperAdder).addSwapper(ZRXSwapper.address, { gasPrice: 0 });
+      await tradeFactory.connect(swapperAdder).addSwappers([ZRXSwapper.address], { gasPrice: 0 });
       await tradeFactory.connect(swapperSetter).setStrategyAsyncSwapper(strategy.address, ZRXSwapper.address, { gasPrice: 0 });
 
       await WMATIC.connect(strategy).approve(tradeFactory.address, AMOUNT_IN, { gasPrice: 0 });

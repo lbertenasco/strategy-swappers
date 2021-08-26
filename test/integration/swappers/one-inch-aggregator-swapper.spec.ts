@@ -83,7 +83,7 @@ describe('OneInchAggregatorSwapper', function () {
       yMech = await wallet.impersonate(namedAccounts.yMech);
 
       await setTestChainId(CHAIN_ID);
-      await deployments.fixture('OneInchAggregatorSwapper');
+      await deployments.fixture(['TradeFactory', 'OneInchAggregatorSwapper'], { keepExistingDeployments: false });
 
       CRV = await ethers.getContractAt(IERC20_ABI, CRV_ADDRESS);
       DAI = await ethers.getContractAt(IERC20_ABI, DAI_ADDRESS);
@@ -96,7 +96,7 @@ describe('OneInchAggregatorSwapper', function () {
       });
 
       await tradeFactory.connect(strategyAdder).grantRole(await tradeFactory.STRATEGY(), strategy.address, { gasPrice: 0 });
-      await tradeFactory.connect(swapperAdder).addSwapper(oneInchAggregatorSwapper.address, { gasPrice: 0 });
+      await tradeFactory.connect(swapperAdder).addSwappers([oneInchAggregatorSwapper.address], { gasPrice: 0 });
       await tradeFactory.connect(swapperSetter).setStrategyAsyncSwapper(strategy.address, oneInchAggregatorSwapper.address);
 
       await CRV.connect(strategy).approve(tradeFactory.address, AMOUNT_IN, { gasPrice: 0 });
@@ -180,7 +180,7 @@ describe('OneInchAggregatorSwapper', function () {
       yMech = await wallet.impersonate(namedAccounts.yMech);
 
       setTestChainId(CHAIN_ID);
-      await deployments.fixture('OneInchAggregatorSwapper');
+      await deployments.fixture(['TradeFactory', 'OneInchAggregatorSwapper'], { keepExistingDeployments: false });
 
       WMATIC = await ethers.getContractAt(IERC20_ABI, WMATIC_ADDRESS);
       DAI = await ethers.getContractAt(IERC20_ABI, DAI_ADDRESS);
@@ -193,7 +193,7 @@ describe('OneInchAggregatorSwapper', function () {
       });
 
       await tradeFactory.connect(strategyAdder).grantRole(await tradeFactory.STRATEGY(), strategy.address, { gasPrice: 0 });
-      await tradeFactory.connect(swapperAdder).addSwapper(oneInchAggregatorSwapper.address, { gasPrice: 0 });
+      await tradeFactory.connect(swapperAdder).addSwappers([oneInchAggregatorSwapper.address], { gasPrice: 0 });
       await tradeFactory.connect(swapperSetter).setStrategyAsyncSwapper(strategy.address, oneInchAggregatorSwapper.address, { gasPrice: 0 });
 
       await WMATIC.connect(strategy).approve(tradeFactory.address, AMOUNT_IN, { gasPrice: 0 });

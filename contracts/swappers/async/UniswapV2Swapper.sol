@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.4;
+pragma solidity >=0.8.4 <0.9.0;
 
 import '@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol';
 import '@uniswap/v2-core/contracts/interfaces/IUniswapV2Factory.sol';
@@ -51,7 +51,7 @@ contract UniswapV2Swapper is IUniswapV2Swapper, Swapper {
     bytes calldata _data
   ) internal override returns (uint256 _receivedAmount) {
     address[] memory _path = abi.decode(_data, (address[]));
-    require(_tokenIn == _path[0] && _tokenOut == _path[_path.length - 1], 'Swapper: incorrect swap information');
+    if (_tokenIn != _path[0] || _tokenOut != _path[_path.length - 1]) revert CommonErrors.IncorrectSwapInformation();
     uint256 _amountOut = IUniswapV2Router02(UNISWAP_ROUTER).getAmountsOut(_amountIn, _path)[_path.length - 1];
     IERC20(_path[0]).approve(UNISWAP_ROUTER, 0);
     IERC20(_path[0]).approve(UNISWAP_ROUTER, _amountIn);

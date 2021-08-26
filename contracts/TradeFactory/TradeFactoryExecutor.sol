@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.4;
+pragma solidity >=0.8.4 <0.9.0;
 
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
@@ -27,7 +27,9 @@ interface ITradeFactoryExecutor {
 
   event SwapperAndTokenEnabled(address indexed _swapper, address _token);
 
-  // function approvedTokensBySwappers(address _swapper) external view returns (address[] memory _tokens);
+  error OngoingTrade();
+
+  error ExpiredTrade();
 
   function execute(
     address _tokenIn,
@@ -53,15 +55,6 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPos
 
   constructor(address _mechanicsRegistry) Machinery(_mechanicsRegistry) {}
 
-  // mapping(address => EnumerableSet.AddressSet) internal _approvedTokensBySwappers;
-
-  // function approvedTokensBySwappers(address _swapper) external view override returns (address[] memory _tokens) {
-  //   _tokens = new address[](_approvedTokensBySwappers[_swapper].length());
-  //   for (uint256 i = 0; i < _approvedTokensBySwappers[_swapper].length(); i++) {
-  //     _tokens[i] = _approvedTokensBySwappers[_swapper].at(i);
-  //   }
-  // }
-
   // Machinery
   function setMechanicsRegistry(address _mechanicsRegistry) external virtual override onlyRole(MASTER_ADMIN) {
     _setMechanicsRegistry(_mechanicsRegistry);
@@ -76,13 +69,9 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPos
   ) external override onlyRole(STRATEGY) returns (uint256 _receivedAmount) {
     address _strategy = msg.sender; // not really needed but improves readability
     address _swapper = strategySyncSwapper[_strategy];
-    require(_swappers.contains(_swapper), 'TradeFactory: invalid swapper');
-    require(_tokenIn != address(0) && _tokenOut != address(0), 'TradeFactory: zero address');
-    require(_amountIn > 0, 'TradeFactory: zero amount');
-    require(_maxSlippage > 0, 'TradeFactory: zero slippage');
-    // if (!_approvedTokensBySwappers[_swapper].contains(_tokenIn)) {
-    //   _enableSwapperToken(_swapper, _tokenIn);
-    // }
+    if (_tokenIn == address(0) || _tokenOut == address(0)) revert CommonErrors.ZeroAddress();
+    if (_amountIn == 0) revert CommonErrors.ZeroAmount();
+    if (_maxSlippage == 0) revert CommonErrors.ZeroSlippage();
     IERC20(_tokenIn).safeTransferFrom(_strategy, _swapper, _amountIn);
     _receivedAmount = ISwapper(_swapper).swap(_strategy, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _data);
     emit SyncTradeExecuted(_strategy, _swapper, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _data, _receivedAmount);
@@ -90,15 +79,11 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPos
 
   // TradeFactoryExecutor
   function execute(uint256 _id, bytes calldata _data) external override onlyMechanic returns (uint256 _receivedAmount) {
-    require(_pendingTradesIds.contains(_id), 'TradeFactory: trade not pending');
-    ITrade.Trade memory _trade = pendingTradesById[_id];
-    require(block.timestamp <= _trade._deadline, 'TradeFactory: trade has expired');
-    require(_swappers.contains(_trade._swapper), 'TradeFactory: invalid swapper');
-    // if (!_approvedTokensBySwappers[_trade._swapper].contains(_trade._tokenIn)) {
-    //   _enableSwapperToken(_trade._swapper, _trade._tokenIn);
-    // }
+    if (!_pendingTradesIds.contains(_id)) revert InvalidTrade();
+    Trade memory _trade = pendingTradesById[_id];
+    if (block.timestamp > _trade._deadline) revert ExpiredTrade();
+    if (!_swappers.contains(_trade._swapper)) revert InvalidSwapper();
     IERC20(_trade._tokenIn).safeTransferFrom(_trade._strategy, _trade._swapper, _trade._amountIn);
-
     _receivedAmount = ISwapper(_trade._swapper).swap(
       _trade._strategy,
       _trade._tokenIn,
@@ -154,9 +139,9 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPos
   }
 
   function expire(uint256 _id) external override onlyMechanic returns (uint256 _freedAmount) {
-    require(_pendingTradesIds.contains(_id), 'TradeFactory: trade not pending');
-    ITrade.Trade memory _trade = pendingTradesById[_id];
-    require(_trade._deadline <= block.timestamp, 'TradeFactory: trade not expired');
+    if (!_pendingTradesIds.contains(_id)) revert InvalidTrade();
+    Trade memory _trade = pendingTradesById[_id];
+    if (_trade._deadline < block.timestamp) revert OngoingTrade();
     _freedAmount = _trade._amountIn;
     // TODO Check: not entirely sure all ERC20 support same _from & _to on transfer. might brick on some tokens :/
     // We have to take tokens from strategy, to decrease the allowance, and send them back to strategy.
@@ -167,11 +152,4 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPos
     _removePendingTrade(_trade._strategy, _id);
     emit AsyncTradeExpired(_id);
   }
-
-  // Deprecated
-  // function _enableSwapperToken(address _swapper, address _token) internal {
-  //   IERC20(_token).safeApprove(_swapper, type(uint256).max);
-  //   _approvedTokensBySwappers[_swapper].add(_token);
-  //   emit SwapperAndTokenEnabled(_swapper, _token);
-  // }
 }

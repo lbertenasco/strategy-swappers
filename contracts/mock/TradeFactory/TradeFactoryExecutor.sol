@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.4;
+pragma solidity >=0.8.4 <0.9.0;
 
 import '../../TradeFactory/TradeFactoryExecutor.sol';
 import './TradeFactoryPositionsHandler.sol';
@@ -14,8 +14,4 @@ contract TradeFactoryExecutorMock is TradeFactoryPositionsHandlerMock, TradeFact
   ) 
     TradeFactoryPositionsHandlerMock(_masterAdmin, _swapperAdder, _swapperSetter, _strategyAdder)
     TradeFactoryExecutor(_mechanicsRegistry) {}
-
-  // function enableSwapperToken(address _swapper, address _token) external {
-  //   _enableSwapperToken(_swapper, _token);
-  // }
 }

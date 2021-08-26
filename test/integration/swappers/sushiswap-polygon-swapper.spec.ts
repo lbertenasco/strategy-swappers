@@ -47,7 +47,7 @@ describe('SushiswapPolygonSwapper', function () {
       blockNumber: FORK_BLOCK_NUMBER,
     });
     await setTestChainId(CHAIN_ID);
-    await deployments.fixture('SushiswapPolygonSwapper');
+    await deployments.fixture(['TradeFactory', 'SushiswapPolygonSwapper'], { keepExistingDeployments: false });
 
     const namedAccounts = await getNamedAccounts();
 
@@ -70,7 +70,7 @@ describe('SushiswapPolygonSwapper', function () {
     });
 
     await tradeFactory.connect(strategyAdder).grantRole(await tradeFactory.STRATEGY(), strategy.address, { gasPrice: 0 });
-    await tradeFactory.connect(swapperAdder).addSwapper(sushiswapPolygonSwapper.address, { gasPrice: 0 });
+    await tradeFactory.connect(swapperAdder).addSwappers([sushiswapPolygonSwapper.address], { gasPrice: 0 });
     await tradeFactory.connect(swapperSetter).setStrategySyncSwapper(strategy.address, sushiswapPolygonSwapper.address, { gasPrice: 0 });
 
     await CRV.connect(strategy).approve(tradeFactory.address, AMOUNT_IN, { gasPrice: 0 });

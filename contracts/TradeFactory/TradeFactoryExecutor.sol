@@ -6,7 +6,6 @@ import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 
 import '@lbertenasco/contract-utils/contracts/utils/Machinery.sol';
 
-import '../utils/ITrade.sol';
 import './TradeFactoryPositionsHandler.sol';
 
 interface ITradeFactoryExecutor {
@@ -23,7 +22,7 @@ interface ITradeFactoryExecutor {
 
   event AsyncTradeExecuted(uint256 indexed _id, uint256 _receivedAmount);
 
-  event AsyncTradesExecuted(uint256 indexed _id, uint256 _receivedAmountIn, uint256 _receivedAmountOut);
+  event AsyncTradesExecuted(uint256[] _ids, uint256[] _receivedAmountsIn, uint256[] _receivedAmountsOut);
 
   event AsyncTradeExpired(uint256 indexed _id);
 
@@ -105,11 +104,11 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPos
     external
     override
     onlyMechanic
-    returns (uint256[] memory _receivedAmountIn, uint256[] memory _receivedAmountOut)
+    returns (uint256[] memory _receivedAmountsIn, uint256[] memory _receivedAmountsOut)
   {
     if (_ids.length == 0) revert NoTrades();
 
-    ITrade.Trade[] memory _trades = new ITrade.Trade[](_ids.length);
+    Trade[] memory _trades = new Trade[](_ids.length);
     if (!_pendingTradesIds.contains(_ids[0])) revert InvalidTrade();
     if (pendingTradesById[_ids[0]]._deadline > block.timestamp) revert ExpiredTrade();
     address _swapper = pendingTradesById[_ids[0]]._swapper;
@@ -119,19 +118,19 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPos
     // skips index 0
     for (uint256 i = 1; i < _ids.length; i++) {
       if (!_pendingTradesIds.contains(_ids[i])) revert InvalidTrade();
-      ITrade.Trade memory _trade = pendingTradesById[_ids[i]];
+      Trade memory _trade = pendingTradesById[_ids[i]];
       if (_trade._deadline > block.timestamp) revert ExpiredTrade();
       if (_trade._swapper != _swapper) revert InvalidSwapper();
       IERC20(_trade._tokenIn).safeTransferFrom(_trade._strategy, _trade._swapper, _trade._amountIn);
       _trades[i] = _trade;
     }
 
-    (_receivedAmountIn, _receivedAmountOut) = ISwapper(_swapper).swapMultiple(_trades, _data);
+    (_receivedAmountsIn, _receivedAmountsOut) = ISwapper(_swapper).swapMultiple(_trades, _data);
 
     for (uint256 i; i < _ids.length; i++) {
       _removePendingTrade(_trades[i]._strategy, _ids[i]);
     }
-    emit AsyncTradesExecuted(_ids, _receivedAmountIn, _receivedAmountOut);
+    emit AsyncTradesExecuted(_ids, _receivedAmountsIn, _receivedAmountsOut);
   }
 
   function expire(uint256 _id) external override onlyMechanic returns (uint256 _freedAmount) {

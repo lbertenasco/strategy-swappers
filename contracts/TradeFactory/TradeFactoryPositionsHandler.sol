@@ -2,70 +2,9 @@
 pragma solidity >=0.8.4 <0.9.0;
 
 import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
+import './ITradeFactoryPositionsHandler.sol';
 import './TradeFactorySwapperHandler.sol';
-import '../utils/ITrade.sol';
 import '../Swapper.sol';
-
-interface ITradeFactoryPositionsHandler {
-  event TradeCreated(
-    uint256 indexed _id,
-    address _strategy,
-    address _swapper,
-    address _tokenIn,
-    address _tokenOut,
-    uint256 _amountIn,
-    uint256 _maxSlippage,
-    uint256 _deadline
-  );
-
-  event TradeCanceled(address indexed _strategy, uint256 indexed _id);
-
-  event TradesCanceled(address indexed _strategy, uint256[] _ids);
-
-  event TradesSwapperChanged(address indexed _strategy, uint256[] _ids, address _newSwapper);
-
-  error InvalidTrade();
-
-  error InvalidDeadline();
-
-  function pendingTradesById(uint256)
-    external
-    view
-    returns (
-      uint256 _id,
-      address _strategy,
-      address _swapper,
-      address _tokenIn,
-      address _tokenOut,
-      uint256 _amountIn,
-      uint256 _maxSlippage,
-      uint256 _deadline
-    );
-
-  function pendingTradesIds() external view returns (uint256[] memory _pendingIds);
-
-  function pendingTradesIds(address _strategy) external view returns (uint256[] memory _pendingIds);
-
-  function create(
-    address _tokenIn,
-    address _tokenOut,
-    uint256 _amountIn,
-    uint256 _maxSlippage,
-    uint256 _deadline
-  ) external returns (uint256 _id);
-
-  function cancelPending(uint256 _id) external;
-
-  function cancelAllPending() external returns (uint256[] memory _canceledTradesIds);
-
-  function setStrategyAsyncSwapperAsAndChangePending(
-    address _strategy,
-    address _swapper,
-    bool _migrateSwaps
-  ) external returns (uint256[] memory _changedSwapperIds);
-
-  function changeStrategyPendingTradesSwapper(address _strategy, address _swapper) external returns (uint256[] memory _changedSwapperIds);
-}
 
 abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler, TradeFactorySwapperHandler {
   using EnumerableSet for EnumerableSet.UintSet;
@@ -76,7 +15,7 @@ abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler,
 
   uint256 private _tradeCounter = 1;
 
-  mapping(uint256 => ITrade.Trade) public override pendingTradesById;
+  mapping(uint256 => Trade) public override pendingTradesById;
 
   EnumerableSet.UintSet internal _pendingTradesIds;
 
@@ -109,7 +48,7 @@ abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler,
     if (_maxSlippage == 0) revert CommonErrors.ZeroSlippage();
     if (_deadline <= block.timestamp) revert InvalidDeadline();
     _id = _tradeCounter;
-    ITrade.Trade memory _trade = ITrade.Trade(
+    Trade memory _trade = Trade(
       _tradeCounter,
       msg.sender,
       strategyAsyncSwapper[msg.sender],

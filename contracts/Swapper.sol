@@ -7,7 +7,7 @@ import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '@lbertenasco/contract-utils/contracts/utils/Governable.sol';
 import '@lbertenasco/contract-utils/contracts/utils/CollectableDust.sol';
 
-import './utils/ITrade.sol';
+import './TradeFactory/ITradeFactoryPositionsHandler.sol';
 import './libraries/CommonErrors.sol';
 
 interface ISwapper {
@@ -46,7 +46,7 @@ interface ISwapper {
     bytes calldata _data
   ) external returns (uint256 _receivedAmount);
 
-  function swapMultiple(ITrade.Trade[] calldata _trades, bytes calldata _data)
+  function swapMultiple(ITradeFactoryPositionsHandler.Trade[] calldata _trades, bytes calldata _data)
     external
     returns (uint256[] memory _receivedAmountsIn, uint256[] memory _receivedAmountsOut);
 }
@@ -91,7 +91,11 @@ abstract contract Swapper is ISwapper, Governable, CollectableDust {
     bytes calldata _data
   ) internal virtual returns (uint256 _receivedAmount);
 
-  function _executeSwapMultiple(ITrade.Trade[] memory _trades, bytes calldata _data) internal virtual returns (uint256 _receivedAmount) {
+  function _executeSwapMultiple(ITradeFactoryPositionsHandler.Trade[] memory _trades, bytes calldata _data)
+    internal
+    virtual
+    returns (uint256 _receivedAmount)
+  {
     _trades; // shh
     _data; // shh
     _receivedAmount; // shh
@@ -111,7 +115,7 @@ abstract contract Swapper is ISwapper, Governable, CollectableDust {
     emit Swapped(_receiver, _tokenIn, _tokenOut, _amountIn, _maxSlippage, _receivedAmount, _data);
   }
 
-  function swapMultiple(ITrade.Trade[] memory _trades, bytes memory _data)
+  function swapMultiple(ITradeFactoryPositionsHandler.Trade[] memory _trades, bytes memory _data)
     external
     virtual
     override

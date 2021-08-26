@@ -141,7 +141,7 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPos
   function expire(uint256 _id) external override onlyMechanic returns (uint256 _freedAmount) {
     if (!_pendingTradesIds.contains(_id)) revert InvalidTrade();
     Trade memory _trade = pendingTradesById[_id];
-    if (_trade._deadline < block.timestamp) revert OngoingTrade();
+    if (_trade._deadline >= block.timestamp) revert OngoingTrade();
     _freedAmount = _trade._amountIn;
     // TODO Check: not entirely sure all ERC20 support same _from & _to on transfer. might brick on some tokens :/
     // We have to take tokens from strategy, to decrease the allowance, and send them back to strategy.

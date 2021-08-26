@@ -82,7 +82,9 @@ describe('OneInchAggregatorSwapper', function () {
       daiWhale = await wallet.impersonate(DAI_WHALE_ADDRESS);
       yMech = await wallet.impersonate(namedAccounts.yMech);
 
-      await setTestChainId(CHAIN_ID);
+      await ethers.provider.send('hardhat_setBalance', [namedAccounts.deployer, '0xffffffffffffffff']);
+      await ethers.provider.send('hardhat_setBalance', [strategy.address, '0xffffffffffffffff']);
+      setTestChainId(CHAIN_ID);
       await deployments.fixture(['TradeFactory', 'OneInchAggregatorSwapper'], { keepExistingDeployments: false });
 
       CRV = await ethers.getContractAt(IERC20_ABI, CRV_ADDRESS);
@@ -91,24 +93,19 @@ describe('OneInchAggregatorSwapper', function () {
       tradeFactory = await ethers.getContract('TradeFactory');
       oneInchAggregatorSwapper = await ethers.getContract('OneInchAggregatorSwapper');
 
-      await CRV.connect(crvWhale).transfer(strategy.address, AMOUNT_IN, {
-        gasPrice: 0,
-      });
+      await CRV.connect(crvWhale).transfer(strategy.address, AMOUNT_IN);
 
-      await tradeFactory.connect(strategyAdder).grantRole(await tradeFactory.STRATEGY(), strategy.address, { gasPrice: 0 });
-      await tradeFactory.connect(swapperAdder).addSwappers([oneInchAggregatorSwapper.address], { gasPrice: 0 });
+      await tradeFactory.connect(strategyAdder).grantRole(await tradeFactory.STRATEGY(), strategy.address);
+      await tradeFactory.connect(swapperAdder).addSwappers([oneInchAggregatorSwapper.address]);
       await tradeFactory.connect(swapperSetter).setStrategyAsyncSwapper(strategy.address, oneInchAggregatorSwapper.address);
 
-      await CRV.connect(strategy).approve(tradeFactory.address, AMOUNT_IN, { gasPrice: 0 });
-      await tradeFactory
-        .connect(strategy)
-        .create(CRV_ADDRESS, DAI_ADDRESS, AMOUNT_IN, MAX_SLIPPAGE, moment().add('30', 'minutes').unix(), { gasPrice: 0 });
+      await CRV.connect(strategy).approve(tradeFactory.address, AMOUNT_IN);
+      await tradeFactory.connect(strategy).create(CRV_ADDRESS, DAI_ADDRESS, AMOUNT_IN, MAX_SLIPPAGE, moment().add('30', 'minutes').unix());
     });
 
     describe('swap', () => {
       beforeEach(async () => {
         await tradeFactory.connect(yMech)['execute(uint256,bytes)'](1, oneInchApiResponse.tx.data, {
-          gasPrice: 0,
           gasLimit: GAS_LIMIT + GAS_LIMIT * 0.25,
         });
       });
@@ -172,6 +169,8 @@ describe('OneInchAggregatorSwapper', function () {
 
       const namedAccounts = await getNamedAccounts();
 
+      await ethers.provider.send('hardhat_setBalance', [namedAccounts.deployer, '0xffffffffffffffff']);
+
       swapperAdder = await wallet.impersonate(SWAPPER_ADDER[CHAIN_ID]);
       swapperSetter = await wallet.impersonate(SWAPPER_SETTER[CHAIN_ID]);
       strategyAdder = await wallet.impersonate(STRATEGY_ADDER[CHAIN_ID]);
@@ -179,6 +178,8 @@ describe('OneInchAggregatorSwapper', function () {
       daiWhale = await wallet.impersonate(DAI_WHALE_ADDRESS);
       yMech = await wallet.impersonate(namedAccounts.yMech);
 
+      await ethers.provider.send('hardhat_setBalance', [namedAccounts.deployer, '0xffffffffffffffff']);
+      await ethers.provider.send('hardhat_setBalance', [strategy.address, '0xffffffffffffffff']);
       setTestChainId(CHAIN_ID);
       await deployments.fixture(['TradeFactory', 'OneInchAggregatorSwapper'], { keepExistingDeployments: false });
 
@@ -188,25 +189,20 @@ describe('OneInchAggregatorSwapper', function () {
       tradeFactory = await ethers.getContract('TradeFactory');
       oneInchAggregatorSwapper = await ethers.getContract('OneInchAggregatorSwapper');
 
-      await WMATIC.connect(crvWhale).transfer(strategy.address, AMOUNT_IN, {
-        gasPrice: 0,
-      });
+      await WMATIC.connect(crvWhale).transfer(strategy.address, AMOUNT_IN);
 
-      await tradeFactory.connect(strategyAdder).grantRole(await tradeFactory.STRATEGY(), strategy.address, { gasPrice: 0 });
-      await tradeFactory.connect(swapperAdder).addSwappers([oneInchAggregatorSwapper.address], { gasPrice: 0 });
-      await tradeFactory.connect(swapperSetter).setStrategyAsyncSwapper(strategy.address, oneInchAggregatorSwapper.address, { gasPrice: 0 });
+      await tradeFactory.connect(strategyAdder).grantRole(await tradeFactory.STRATEGY(), strategy.address);
+      await tradeFactory.connect(swapperAdder).addSwappers([oneInchAggregatorSwapper.address]);
+      await tradeFactory.connect(swapperSetter).setStrategyAsyncSwapper(strategy.address, oneInchAggregatorSwapper.address);
 
-      await WMATIC.connect(strategy).approve(tradeFactory.address, AMOUNT_IN, { gasPrice: 0 });
+      await WMATIC.connect(strategy).approve(tradeFactory.address, AMOUNT_IN);
 
-      await tradeFactory.connect(strategy).create(WMATIC_ADDRESS, DAI_ADDRESS, AMOUNT_IN, MAX_SLIPPAGE, moment().add('30', 'minutes').unix(), {
-        gasPrice: 0,
-      });
+      await tradeFactory.connect(strategy).create(WMATIC_ADDRESS, DAI_ADDRESS, AMOUNT_IN, MAX_SLIPPAGE, moment().add('30', 'minutes').unix());
     });
 
     describe('swap', () => {
       beforeEach(async () => {
         await tradeFactory.connect(yMech)['execute(uint256,bytes)'](1, oneInchApiResponse.tx.data, {
-          gasPrice: 0,
           gasLimit: GAS_LIMIT + GAS_LIMIT * 0.25,
         });
       });

@@ -73,7 +73,9 @@ describe('ZRXSwapper', function () {
       crvWhale = await wallet.impersonate(CRV_WHALE_ADDRESS);
       yMech = await wallet.impersonate(namedAccounts.yMech);
 
-      await setTestChainId(CHAIN_ID);
+      await ethers.provider.send('hardhat_setBalance', [namedAccounts.deployer, '0xffffffffffffffff']);
+      await ethers.provider.send('hardhat_setBalance', [strategy.address, '0xffffffffffffffff']);
+      setTestChainId(CHAIN_ID);
       await deployments.fixture(['TradeFactory', 'ZRXSwapper'], { keepExistingDeployments: false });
 
       CRV = await ethers.getContractAt(IERC20_ABI, CRV_ADDRESS);
@@ -82,25 +84,19 @@ describe('ZRXSwapper', function () {
       tradeFactory = await ethers.getContract('TradeFactory');
       ZRXSwapper = await ethers.getContract('ZRXSwapper');
 
-      await CRV.connect(crvWhale).transfer(strategy.address, AMOUNT_IN, {
-        gasPrice: 0,
-      });
+      await CRV.connect(crvWhale).transfer(strategy.address, AMOUNT_IN);
 
-      await tradeFactory.connect(strategyAdder).grantRole(await tradeFactory.STRATEGY(), strategy.address, { gasPrice: 0 });
-      await tradeFactory.connect(swapperAdder).addSwappers([ZRXSwapper.address], { gasPrice: 0 });
-      await tradeFactory.connect(swapperSetter).setStrategyAsyncSwapper(strategy.address, ZRXSwapper.address, { gasPrice: 0 });
+      await tradeFactory.connect(strategyAdder).grantRole(await tradeFactory.STRATEGY(), strategy.address);
+      await tradeFactory.connect(swapperAdder).addSwappers([ZRXSwapper.address]);
+      await tradeFactory.connect(swapperSetter).setStrategyAsyncSwapper(strategy.address, ZRXSwapper.address);
 
-      await CRV.connect(strategy).approve(tradeFactory.address, AMOUNT_IN, { gasPrice: 0 });
-      await tradeFactory
-        .connect(strategy)
-        .create(CRV_ADDRESS, DAI_ADDRESS, AMOUNT_IN, MAX_SLIPPAGE, moment().add('30', 'minutes').unix(), { gasPrice: 0 });
+      await CRV.connect(strategy).approve(tradeFactory.address, AMOUNT_IN);
+      await tradeFactory.connect(strategy).create(CRV_ADDRESS, DAI_ADDRESS, AMOUNT_IN, MAX_SLIPPAGE, moment().add('30', 'minutes').unix());
     });
 
     describe('swap', () => {
       beforeEach(async () => {
-        await tradeFactory.connect(yMech)['execute(uint256,bytes)'](1, zrxAPIResponse.data, {
-          gasPrice: 0,
-        });
+        await tradeFactory.connect(yMech)['execute(uint256,bytes)'](1, zrxAPIResponse.data);
       });
 
       then('CRV gets taken from strategy', async () => {
@@ -164,6 +160,8 @@ describe('ZRXSwapper', function () {
       wmaticWhale = await wallet.impersonate(WMATIC_WHALE_ADDRESS);
       yMech = await wallet.impersonate(namedAccounts.yMech);
 
+      await ethers.provider.send('hardhat_setBalance', [namedAccounts.deployer, '0xffffffffffffffff']);
+      await ethers.provider.send('hardhat_setBalance', [strategy.address, '0xffffffffffffffff']);
       setTestChainId(CHAIN_ID);
       await deployments.fixture(['TradeFactory', 'ZRXSwapper'], { keepExistingDeployments: false });
 
@@ -173,26 +171,20 @@ describe('ZRXSwapper', function () {
       tradeFactory = await ethers.getContract('TradeFactory');
       ZRXSwapper = await ethers.getContract('ZRXSwapper');
 
-      await WMATIC.connect(wmaticWhale).transfer(strategy.address, AMOUNT_IN, {
-        gasPrice: 0,
-      });
+      await WMATIC.connect(wmaticWhale).transfer(strategy.address, AMOUNT_IN);
 
-      await tradeFactory.connect(strategyAdder).grantRole(await tradeFactory.STRATEGY(), strategy.address, { gasPrice: 0 });
-      await tradeFactory.connect(swapperAdder).addSwappers([ZRXSwapper.address], { gasPrice: 0 });
-      await tradeFactory.connect(swapperSetter).setStrategyAsyncSwapper(strategy.address, ZRXSwapper.address, { gasPrice: 0 });
+      await tradeFactory.connect(strategyAdder).grantRole(await tradeFactory.STRATEGY(), strategy.address);
+      await tradeFactory.connect(swapperAdder).addSwappers([ZRXSwapper.address]);
+      await tradeFactory.connect(swapperSetter).setStrategyAsyncSwapper(strategy.address, ZRXSwapper.address);
 
-      await WMATIC.connect(strategy).approve(tradeFactory.address, AMOUNT_IN, { gasPrice: 0 });
+      await WMATIC.connect(strategy).approve(tradeFactory.address, AMOUNT_IN);
 
-      await tradeFactory.connect(strategy).create(WMATIC_ADDRESS, DAI_ADDRESS, AMOUNT_IN, MAX_SLIPPAGE, moment().add('30', 'minutes').unix(), {
-        gasPrice: 0,
-      });
+      await tradeFactory.connect(strategy).create(WMATIC_ADDRESS, DAI_ADDRESS, AMOUNT_IN, MAX_SLIPPAGE, moment().add('30', 'minutes').unix());
     });
 
     describe('swap', () => {
       beforeEach(async () => {
-        await tradeFactory.connect(yMech)['execute(uint256,bytes)'](1, zrxAPIResponse.data, {
-          gasPrice: 0,
-        });
+        await tradeFactory.connect(yMech)['execute(uint256,bytes)'](1, zrxAPIResponse.data);
       });
 
       then('WMATIC gets taken from strategy and DAI gets airdropped to strategy', async () => {

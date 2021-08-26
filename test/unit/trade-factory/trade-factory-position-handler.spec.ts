@@ -143,9 +143,9 @@ contract('TradeFactoryPositionsHandler', () => {
         await positionsHandler.connect(strategyAdder).grantRole(STRATEGY_ROLE, newRandomStrategy.address);
       });
       then('tx is reverted with reason', async () => {
-        await expect(
-          positionsHandler.connect(newRandomStrategy).create(tokenIn, tokenOut, amountIn, maxSlippage, deadline, { gasPrice: 0 })
-        ).to.be.revertedWith('InvalidSwapper()');
+        await expect(positionsHandler.connect(newRandomStrategy).create(tokenIn, tokenOut, amountIn, maxSlippage, deadline)).to.be.revertedWith(
+          'InvalidSwapper()'
+        );
       });
     });
     when('token in is zero address', () => {

@@ -17,6 +17,7 @@ contract('TradeFactoryPositionsHandler', () => {
   let swapperAdder: SignerWithAddress;
   let swapperSetter: SignerWithAddress;
   let strategyAdder: SignerWithAddress;
+  let tradesModifier: SignerWithAddress;
   let positionsHandlerFactory: ModifiableContractFactory;
   let positionsHandler: ModifiableContract;
   let defaultSwapperAddress: MockContract;
@@ -26,7 +27,7 @@ contract('TradeFactoryPositionsHandler', () => {
   const STRATEGY_ADDER_ROLE: string = new Web3().utils.soliditySha3('STRATEGY_ADDER') as string;
 
   before(async () => {
-    [deployer, masterAdmin, swapperAdder, swapperSetter, strategyAdder, strategy] = await ethers.getSigners();
+    [deployer, masterAdmin, swapperAdder, swapperSetter, strategyAdder, tradesModifier, strategy] = await ethers.getSigners();
     positionsHandlerFactory = await smoddit(
       'contracts/mock/TradeFactory/TradeFactoryPositionsHandler.sol:TradeFactoryPositionsHandlerMock',
       strategy
@@ -39,7 +40,8 @@ contract('TradeFactoryPositionsHandler', () => {
       masterAdmin.address,
       swapperAdder.address,
       swapperSetter.address,
-      strategyAdder.address
+      strategyAdder.address,
+      tradesModifier.address
     );
     defaultSwapperAddress = await smockit(swapperABI);
     await positionsHandler.connect(swapperAdder).addSwappers([defaultSwapperAddress.address]);
@@ -48,91 +50,22 @@ contract('TradeFactoryPositionsHandler', () => {
   });
 
   describe('constructor', () => {
-    // TODO: Make it better
-    when('all data is valid', () => {
-      then('role admin of strategy is strategy admin', async () => {
+    when('strategy adder is zero address', () => {
+      then('tx is reverted with message');
+    });
+    when('trades modifier is zero address', () => {
+      then('tx is reverted with message');
+    });
+    when('all arguments are valid', () => {
+      then('strategy adder is set');
+      then('trades modifier is set');
+      then('admin role of strategy is strategy adder', async () => {
         expect(await positionsHandler.getRoleAdmin(STRATEGY_ROLE)).to.equal(STRATEGY_ADDER_ROLE);
       });
-      then('role admin of strategy admin is master admin', async () => {
+      then('admin role of strategy admin is master admin', async () => {
         expect(await positionsHandler.getRoleAdmin(STRATEGY_ADDER_ROLE)).to.equal(MASTER_ADMIN_ROLE);
       });
-    });
-  });
-
-  describe('grantRole', () => {
-    when('granting STRATEGY_ROLE', () => {
-      const randomStrategy = wallet.generateRandomAddress();
-      when('not called from strategy adder', () => {
-        let grantRoleTx: Promise<TransactionResponse>;
-        given(() => {
-          grantRoleTx = positionsHandler.connect(deployer).grantRole(STRATEGY_ROLE, randomStrategy);
-        });
-        then('tx get reverted with reason', async () => {
-          await expect(grantRoleTx).to.be.reverted;
-        });
-      });
-      when('called from strategy adder', () => {
-        given(async () => {
-          await positionsHandler.connect(strategyAdder).grantRole(STRATEGY_ROLE, randomStrategy);
-        });
-        then('role gets added to address', async () => {
-          expect(await positionsHandler.hasRole(STRATEGY_ROLE, randomStrategy)).to.be.true;
-        });
-      });
-    });
-    when('granting STRATEGY_ADDER_ROLE', () => {
-      let randomGuy: Wallet;
-      beforeEach(async () => {
-        randomGuy = await wallet.generateRandom();
-      });
-      when('not called from master adminx', () => {
-        let grantRoleTx: Promise<TransactionResponse>;
-        given(() => {
-          grantRoleTx = positionsHandler.connect(deployer).grantRole(STRATEGY_ADDER_ROLE, randomGuy.address);
-        });
-        then('tx get reverted with reason', async () => {
-          await expect(grantRoleTx).to.be.reverted;
-        });
-      });
-      when('called from master adminx', () => {
-        given(async () => {
-          await positionsHandler.connect(masterAdmin).grantRole(STRATEGY_ADDER_ROLE, randomGuy.address);
-        });
-        then('role gets added to address', async () => {
-          expect(await positionsHandler.hasRole(STRATEGY_ADDER_ROLE, randomGuy.address)).to.be.true;
-        });
-        then('new strategy admin can add strategies', async () => {
-          const randomStrategy = wallet.generateRandomAddress();
-          await positionsHandler.connect(randomGuy).grantRole(STRATEGY_ROLE, randomStrategy, { gasPrice: 0 });
-          expect(await positionsHandler.hasRole(STRATEGY_ROLE, randomStrategy)).to.be.true;
-        });
-      });
-    });
-  });
-
-  describe('revokeRole', () => {
-    const randomStrategy = wallet.generateRandomAddress();
-    when('revoking STRATEGY_ROLE', () => {
-      given(async () => {
-        await positionsHandler.connect(strategyAdder).grantRole(STRATEGY_ROLE, randomStrategy);
-      });
-      when('not called from master admin', () => {
-        let grantRoleTx: Promise<TransactionResponse>;
-        given(() => {
-          grantRoleTx = positionsHandler.connect(deployer).revokeRole(STRATEGY_ROLE, randomStrategy);
-        });
-        then('tx get reverted with reason', async () => {
-          await expect(grantRoleTx).to.be.reverted;
-        });
-      });
-      when('called from master admin', () => {
-        given(async () => {
-          await positionsHandler.connect(strategyAdder).revokeRole(STRATEGY_ROLE, randomStrategy);
-        });
-        then('role gets removed from address', async () => {
-          expect(await positionsHandler.hasRole(STRATEGY_ROLE, randomStrategy)).to.be.false;
-        });
-      });
+      then('admin role of trades modifier is master admin');
     });
   });
 
@@ -203,16 +136,16 @@ contract('TradeFactoryPositionsHandler', () => {
         );
       });
     });
-    when('swapper is not registered', () => {
+    when('strategy doesnt have async swapper assigned', () => {
       let newRandomStrategy: Wallet;
       given(async () => {
         newRandomStrategy = await wallet.generateRandom();
         await positionsHandler.connect(strategyAdder).grantRole(STRATEGY_ROLE, newRandomStrategy.address);
       });
       then('tx is reverted with reason', async () => {
-        await expect(
-          positionsHandler.connect(newRandomStrategy).create(tokenIn, tokenOut, amountIn, maxSlippage, deadline, { gasPrice: 0 })
-        ).to.be.revertedWith('InvalidSwapper()');
+        await expect(positionsHandler.connect(newRandomStrategy).create(tokenIn, tokenOut, amountIn, maxSlippage, deadline)).to.be.revertedWith(
+          'InvalidSwapper()'
+        );
       });
     });
     when('token in is zero address', () => {
@@ -244,9 +177,6 @@ contract('TradeFactoryPositionsHandler', () => {
         await expect(positionsHandler.create(tokenIn, tokenOut, amountIn, maxSlippage, constants.ZERO_ADDRESS)).to.be.revertedWith(
           'InvalidDeadline()'
         );
-        const staticDeadline = moment().unix() + 1000;
-        await evm.advanceToTimeAndBlock(staticDeadline);
-        await expect(positionsHandler.create(tokenIn, tokenOut, amountIn, maxSlippage, staticDeadline)).to.be.revertedWith('InvalidDeadline()');
       });
     });
     when('all data is correct', () => {
@@ -289,7 +219,7 @@ contract('TradeFactoryPositionsHandler', () => {
     });
   });
 
-  describe('cancelPending', () => {
+  describe('cancelPendingTrades', () => {
     given(async () => {
       await positionsHandler.create(
         wallet.generateRandomAddress(),
@@ -302,13 +232,16 @@ contract('TradeFactoryPositionsHandler', () => {
     // TODO: only strategy
     when('pending trade does not exist', () => {
       then('tx is reverted with reason', async () => {
-        await expect(positionsHandler.cancelPending(BigNumber.from('12'))).to.be.revertedWith('InvalidTrade()');
+        await expect(positionsHandler.cancelPendingTrades([BigNumber.from('12')])).to.be.revertedWith('InvalidTrade()');
       });
+    });
+    when('trying to cancel trades not owned', () => {
+      then('tx is reverted with reason');
     });
     when('pending trade exists', () => {
       let cancelTx: TransactionResponse;
       given(async () => {
-        cancelTx = await positionsHandler.cancelPending(1);
+        cancelTx = await positionsHandler.cancelPendingTrades([1]);
       });
       then('removes trade from trades', async () => {
         expect((await positionsHandler.pendingTradesById(1))._id).to.equal(0);
@@ -320,60 +253,47 @@ contract('TradeFactoryPositionsHandler', () => {
         expect(await positionsHandler['pendingTradesIds()']()).to.be.empty;
       });
       then('emits event', async () => {
-        await expect(cancelTx).to.emit(positionsHandler, 'TradeCanceled').withArgs(strategy.address, 1);
+        await expect(cancelTx).to.emit(positionsHandler, 'TradesCanceled').withArgs(strategy.address, [1]);
       });
     });
   });
 
-  describe('cancelAllPending', () => {
-    // TODO: only strategy
-    when('owner does have pending trades', () => {
-      let tradeIds: BigNumber[];
-      let cancellAllPendingTx: TransactionResponse;
-      given(async () => {
-        tradeIds = [];
-        tradeIds.push(
-          (
-            await create({
-              tokenIn: wallet.generateRandomAddress(),
-              tokenOut: wallet.generateRandomAddress(),
-              amountIn: utils.parseEther('100'),
-              maxSlippage: 1000,
-              deadline: moment().add('30', 'minutes').unix(),
-            })
-          ).id
-        );
-        tradeIds.push(
-          (
-            await create({
-              tokenIn: wallet.generateRandomAddress(),
-              tokenOut: wallet.generateRandomAddress(),
-              amountIn: utils.parseEther('100'),
-              maxSlippage: 1000,
-              deadline: moment().add('30', 'minutes').unix(),
-            })
-          ).id
-        );
-        cancellAllPendingTx = await positionsHandler.cancelAllPending();
-      });
-      then('removes trades from trades', async () => {
-        for (let i = 0; i < tradeIds.length; i++) {
-          expect((await positionsHandler.pendingTradesById(tradeIds[i]))._id).to.equal(0);
-        }
-      });
-      then("removes trades from pending strategy's trade", async () => {
-        expect(await positionsHandler['pendingTradesIds(address)'](strategy.address)).to.be.empty;
-      });
-      then('removes trades from pending trades ids', async () => {
-        expect(await positionsHandler['pendingTradesIds()']()).to.be.empty;
-      });
-      then('emits event', async () => {
-        await expect(cancellAllPendingTx).to.emit(positionsHandler, 'TradesCanceled').withArgs(strategy.address, tradeIds);
-      });
+  describe('changePendingTradesSwapper', () => {
+    when('trying to change to a sync swapper', () => {
+      then('tx is reverted with reason');
+    });
+    when('swapper is not added', () => {
+      then('tx is reverted with reason');
+    });
+    when('any of the trades is not pending', () => {
+      then('tx is reverted with reason');
+    });
+    when('arguments are valid', () => {
+      then('changes pending trades swappers');
+      then('emits event');
     });
   });
 
-  describe('removePendingTrade', () => {
+  describe('mergePendingTrades', () => {
+    when('anchor trade does not exist', () => {
+      then('tx is reverted with reason');
+    });
+    when('any of the trades to merge do not exist', () => {
+      then('tx is reverted with reason');
+    });
+    when('merging trades from different strategies', () => {
+      then('tx is reverted with reason');
+    });
+    when('arguments are vallid', () => {
+      then('anchor trade amount in its the aggregation of merged trades');
+      then('all merged trades are removed from pending trades by strategy');
+      then('all merged trades are removed from pending trades by id');
+      then('all merged trades are removed from pending trades array');
+      then('emits get event');
+    });
+  });
+
+  describe('_removePendingTrade', () => {
     when('pending trade exists', () => {
       let tradeId: BigNumber;
       given(async () => {
@@ -389,72 +309,11 @@ contract('TradeFactoryPositionsHandler', () => {
       then('removes trade from trades', async () => {
         expect((await positionsHandler.pendingTradesById(tradeId))._id).to.equal(0);
       });
-      then("removes trade from pending strategy's trade", async () => {
+      then(`removes trade from pending strategy's trade`, async () => {
         expect(await positionsHandler['pendingTradesIds(address)'](strategy.address)).to.be.empty;
       });
       then('removes trade from pending trades ids', async () => {
         expect(await positionsHandler['pendingTradesIds()']()).to.be.empty;
-      });
-    });
-  });
-
-  describe('changeStrategyPendingTradesSwapper', () => {
-    let tradeIds: BigNumber[];
-    given(async () => {
-      tradeIds = [];
-      tradeIds.push(
-        (
-          await create({
-            tokenIn: wallet.generateRandomAddress(),
-            tokenOut: wallet.generateRandomAddress(),
-            amountIn: utils.parseEther('100'),
-            maxSlippage: 1000,
-            deadline: moment().add('30', 'minutes').unix(),
-          })
-        ).id
-      );
-      tradeIds.push(
-        (
-          await create({
-            tokenIn: wallet.generateRandomAddress(),
-            tokenOut: wallet.generateRandomAddress(),
-            amountIn: utils.parseEther('100'),
-            maxSlippage: 1000,
-            deadline: moment().add('30', 'minutes').unix(),
-          })
-        ).id
-      );
-    });
-    // TODO: only SWAPPER_SETTER
-    when('swapper is not registered', () => {
-      let changeStrategyPendingTradesSwapper: Promise<TransactionResponse>;
-      given(async () => {
-        changeStrategyPendingTradesSwapper = positionsHandler
-          .connect(swapperSetter)
-          .changeStrategyPendingTradesSwapper(strategy.address, wallet.generateRandomAddress());
-      });
-      then('tx is reverted with reason', async () => {
-        await expect(changeStrategyPendingTradesSwapper).to.be.revertedWith('InvalidSwapper()');
-      });
-    });
-    when('swapper is valid', () => {
-      let changeStrategyPendingTradesSwapper: TransactionResponse;
-      const newSwapper = wallet.generateRandomAddress();
-      given(async () => {
-        await positionsHandler.connect(swapperAdder).addSwappers([newSwapper]);
-        changeStrategyPendingTradesSwapper = await positionsHandler
-          .connect(swapperSetter)
-          .changeStrategyPendingTradesSwapper(strategy.address, newSwapper);
-      });
-      then("changes all pending trade's swapper", async () => {
-        for (let i = 0; i < tradeIds.length; i++) {
-          expect((await positionsHandler.pendingTradesById(tradeIds[i]))._swapper).to.equal(newSwapper);
-        }
-      });
-      then('emits event', async () => {
-        await expect(changeStrategyPendingTradesSwapper)
-          .to.emit(positionsHandler, 'TradesSwapperChanged')
-          .withArgs(strategy.address, tradeIds, newSwapper);
       });
     });
   });

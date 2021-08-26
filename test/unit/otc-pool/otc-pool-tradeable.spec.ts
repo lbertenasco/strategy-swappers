@@ -17,6 +17,7 @@ contract('OTCPoolTradeable', () => {
   let swapperAdder: SignerWithAddress;
   let swapperSetter: SignerWithAddress;
   let strategyAdder: SignerWithAddress;
+  let tradesModifier: SignerWithAddress;
   let OTCProvider: SignerWithAddress;
   let swapper: SignerWithAddress;
   let OTCPoolTradeableFactory: ModifiableContractFactory;
@@ -27,7 +28,7 @@ contract('OTCPoolTradeable', () => {
   let OTCPoolTradeable: ModifiableContract;
 
   before(async () => {
-    [masterAdmin, swapperAdder, swapperSetter, strategyAdder, OTCProvider, swapper] = await ethers.getSigners();
+    [masterAdmin, swapperAdder, swapperSetter, strategyAdder, tradesModifier, OTCProvider, swapper] = await ethers.getSigners();
     OTCPoolTradeableFactory = await smoddit('contracts/mock/OTCPool/OTCPoolTradeable.sol:OTCPoolTradeableMock');
     tradeFactoryFactory = await ethers.getContractFactory('contracts/TradeFactory/TradeFactory.sol:TradeFactory');
   });
@@ -40,6 +41,7 @@ contract('OTCPoolTradeable', () => {
       swapperAdder.address,
       swapperSetter.address,
       strategyAdder.address,
+      tradesModifier.address,
       machinery.address
     );
     OTCPoolTradeable = await OTCPoolTradeableFactory.deploy(OTCProvider.address, tradeFactory.address);

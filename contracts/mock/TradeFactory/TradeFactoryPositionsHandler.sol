@@ -9,8 +9,9 @@ contract TradeFactoryPositionsHandlerMock is TradeFactorySwapperHandlerMock, Tra
     address _masterAdmin, 
     address _swapperAdder, 
     address _swapperSetter, 
-    address _strategyAdder
-  ) TradeFactoryPositionsHandler(_strategyAdder) TradeFactorySwapperHandlerMock(_masterAdmin, _swapperAdder, _swapperSetter) {}
+    address _strategyAdder,
+    address _tradesModifier
+  ) TradeFactoryPositionsHandler(_strategyAdder, _tradesModifier) TradeFactorySwapperHandlerMock(_masterAdmin, _swapperAdder, _swapperSetter) {}
 
   function removePendingTrade(address _strategy, uint256 _id) external {
     _removePendingTrade(_strategy, _id);

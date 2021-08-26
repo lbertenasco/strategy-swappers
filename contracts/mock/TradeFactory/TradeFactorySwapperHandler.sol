@@ -18,4 +18,12 @@ contract TradeFactorySwapperHandlerMock is TradeFactorySwapperHandler {
     _swappers.remove(_swapper);
   }
 
+  function addSwapperToStrategyInternal(address _swapper, address _strategy) external {
+    _swapperStrategies[_swapper].add(_strategy);
+  }
+
+  function removeSwapperFromStrategyInternal(address _swapper, address _strategy) external {
+    _swapperStrategies[_swapper].remove(_strategy);
+  }
+
 }

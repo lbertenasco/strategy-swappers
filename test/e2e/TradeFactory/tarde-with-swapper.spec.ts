@@ -50,8 +50,8 @@ contract('TradeFactory', () => {
     ));
 
     await tradeFactory.connect(strategyAdder).grantRole(await tradeFactory.STRATEGY(), strategy.address);
-    await tradeFactory.connect(swapperAdder).addSwapper(uniswapV2AsyncSwapper.address);
-    await tradeFactory.connect(swapperAdder).addSwapper(uniswapV2SyncSwapper.address);
+    await tradeFactory.connect(swapperAdder).addSwappers([uniswapV2AsyncSwapper.address]);
+    await tradeFactory.connect(swapperAdder).addSwappers([uniswapV2SyncSwapper.address]);
     await tradeFactory.connect(swapperSetter).setStrategySyncSwapper(strategy.address, uniswapV2SyncSwapper.address);
     await tradeFactory.connect(swapperSetter).setStrategyAsyncSwapper(strategy.address, uniswapV2AsyncSwapper.address);
 

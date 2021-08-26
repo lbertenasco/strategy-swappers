@@ -87,7 +87,7 @@ describe('ZRXSwapper', function () {
       });
 
       await tradeFactory.connect(strategyAdder).grantRole(await tradeFactory.STRATEGY(), strategy.address, { gasPrice: 0 });
-      await tradeFactory.connect(swapperAdder).addSwapper(ZRXSwapper.address, { gasPrice: 0 });
+      await tradeFactory.connect(swapperAdder).addSwappers([ZRXSwapper.address], { gasPrice: 0 });
       await tradeFactory.connect(swapperSetter).setStrategyAsyncSwapper(strategy.address, ZRXSwapper.address, { gasPrice: 0 });
 
       await CRV.connect(strategy).approve(tradeFactory.address, AMOUNT_IN, { gasPrice: 0 });
@@ -178,7 +178,7 @@ describe('ZRXSwapper', function () {
       });
 
       await tradeFactory.connect(strategyAdder).grantRole(await tradeFactory.STRATEGY(), strategy.address, { gasPrice: 0 });
-      await tradeFactory.connect(swapperAdder).addSwapper(ZRXSwapper.address, { gasPrice: 0 });
+      await tradeFactory.connect(swapperAdder).addSwappers([ZRXSwapper.address], { gasPrice: 0 });
       await tradeFactory.connect(swapperSetter).setStrategyAsyncSwapper(strategy.address, ZRXSwapper.address, { gasPrice: 0 });
 
       await WMATIC.connect(strategy).approve(tradeFactory.address, AMOUNT_IN, { gasPrice: 0 });

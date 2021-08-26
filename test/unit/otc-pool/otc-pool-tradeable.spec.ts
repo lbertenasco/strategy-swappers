@@ -43,7 +43,7 @@ contract('OTCPoolTradeable', () => {
       machinery.address
     );
     OTCPoolTradeable = await OTCPoolTradeableFactory.deploy(OTCProvider.address, tradeFactory.address);
-    await tradeFactory.connect(swapperAdder).addSwapper(swapper.address);
+    await tradeFactory.connect(swapperAdder).addSwappers([swapper.address]);
     machinery.smocked.isMechanic.will.return.with(true);
   });
 

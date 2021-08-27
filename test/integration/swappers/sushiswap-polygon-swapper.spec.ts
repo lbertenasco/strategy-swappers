@@ -46,10 +46,12 @@ describe('SushiswapPolygonSwapper', function () {
       jsonRpcUrl: getNodeUrl('polygon'),
       blockNumber: FORK_BLOCK_NUMBER,
     });
-    await setTestChainId(CHAIN_ID);
-    await deployments.fixture(['TradeFactory', 'SushiswapPolygonSwapper'], { keepExistingDeployments: false });
 
     const namedAccounts = await getNamedAccounts();
+
+    await ethers.provider.send('hardhat_setBalance', [namedAccounts.deployer, '0xffffffffffffffff']);
+    setTestChainId(CHAIN_ID);
+    await deployments.fixture(['TradeFactory', 'SushiswapPolygonSwapper'], { keepExistingDeployments: false });
 
     swapperAdder = await wallet.impersonate(SWAPPER_ADDER[CHAIN_ID]);
     swapperSetter = await wallet.impersonate(SWAPPER_SETTER[CHAIN_ID]);
@@ -65,15 +67,13 @@ describe('SushiswapPolygonSwapper', function () {
     tradeFactory = await ethers.getContract('TradeFactory');
     sushiswapPolygonSwapper = await ethers.getContract('SushiswapPolygonSwapper');
 
-    await CRV.connect(crvWhale).transfer(strategy.address, AMOUNT_IN, {
-      gasPrice: 0,
-    });
+    await CRV.connect(crvWhale).transfer(strategy.address, AMOUNT_IN);
 
-    await tradeFactory.connect(strategyAdder).grantRole(await tradeFactory.STRATEGY(), strategy.address, { gasPrice: 0 });
-    await tradeFactory.connect(swapperAdder).addSwappers([sushiswapPolygonSwapper.address], { gasPrice: 0 });
-    await tradeFactory.connect(swapperSetter).setStrategySyncSwapper(strategy.address, sushiswapPolygonSwapper.address, { gasPrice: 0 });
+    await tradeFactory.connect(strategyAdder).grantRole(await tradeFactory.STRATEGY(), strategy.address);
+    await tradeFactory.connect(swapperAdder).addSwappers([sushiswapPolygonSwapper.address]);
+    await tradeFactory.connect(swapperSetter).setStrategySyncSwapper(strategy.address, sushiswapPolygonSwapper.address);
 
-    await CRV.connect(strategy).approve(tradeFactory.address, AMOUNT_IN, { gasPrice: 0 });
+    await CRV.connect(strategy).approve(tradeFactory.address, AMOUNT_IN);
   });
 
   describe('swap', () => {
@@ -81,7 +81,7 @@ describe('SushiswapPolygonSwapper', function () {
     beforeEach(async () => {
       await tradeFactory
         .connect(strategy)
-        ['execute(address,address,uint256,uint256,bytes)'](CRV_ADDRESS, DAI_ADDRESS, AMOUNT_IN, MAX_SLIPPAGE, data, { gasPrice: 0 });
+        ['execute(address,address,uint256,uint256,bytes)'](CRV_ADDRESS, DAI_ADDRESS, AMOUNT_IN, MAX_SLIPPAGE, data);
     });
 
     then('CRV gets taken from strategy', async () => {

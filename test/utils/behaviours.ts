@@ -7,6 +7,7 @@ import { getStatic } from 'ethers/lib/utils';
 import { given, then, when } from './bdd';
 import { constants, wallet } from '.';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signers';
+import { ethers } from 'hardhat';
 
 chai.use(chaiAsPromised);
 
@@ -198,7 +199,7 @@ const shouldBeExecutableOnlyByTradeFactory = ({
       const notGovernor = await wallet.generateRandom();
       onlyTradeFactoryAllowedTx = contract()
         .connect(notGovernor)
-        [funcAndSignature](...params!, { gasPrice: 0 });
+        [funcAndSignature](...params!);
     });
     then('tx is reverted with reason', async () => {
       await expect(onlyTradeFactoryAllowedTx).to.be.revertedWith('NotAuthorized()');
@@ -209,7 +210,7 @@ const shouldBeExecutableOnlyByTradeFactory = ({
     given(async () => {
       onlyTradeFactoryAllowedTx = contract()
         .connect(tradeFactory())
-        [funcAndSignature](...params!, { gasPrice: 0 });
+        [funcAndSignature](...params!);
     });
     then('tx is not reverted or not reverted with reason only trade factory', async () => {
       await expect(onlyTradeFactoryAllowedTx).to.not.be.revertedWith('NotAuthorized()');

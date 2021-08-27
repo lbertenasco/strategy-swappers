@@ -12,6 +12,7 @@ abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler,
 
   bytes32 public constant STRATEGY = keccak256('STRATEGY');
   bytes32 public constant STRATEGY_ADDER = keccak256('STRATEGY_ADDER');
+  bytes32 public constant TRADES_MODIFIER = keccak256('TRADES_MODIFIER');
 
   uint256 private _tradeCounter = 1;
 
@@ -21,10 +22,13 @@ abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler,
 
   mapping(address => EnumerableSet.UintSet) internal _pendingTradesByOwner;
 
-  constructor(address _strategyAdder) {
+  constructor(address _strategyAdder, address _tradesModifier) {
+    if (_strategyAdder == address(0) || _tradesModifier == address(0)) revert CommonErrors.ZeroAddress();
     _setRoleAdmin(STRATEGY, STRATEGY_ADDER);
     _setRoleAdmin(STRATEGY_ADDER, MASTER_ADMIN);
     _setupRole(STRATEGY_ADDER, _strategyAdder);
+    _setRoleAdmin(TRADES_MODIFIER, MASTER_ADMIN);
+    _setupRole(TRADES_MODIFIER, _tradesModifier);
   }
 
   function pendingTradesIds() external view override returns (uint256[] memory _pendingIds) {
@@ -74,53 +78,40 @@ abstract contract TradeFactoryPositionsHandler is ITradeFactoryPositionsHandler,
     );
   }
 
-  function cancelPending(uint256 _id) external override onlyRole(STRATEGY) {
-    if (!_pendingTradesIds.contains(_id)) revert InvalidTrade();
-    if (pendingTradesById[_id]._strategy != msg.sender) revert CommonErrors.NotAuthorized();
-    Trade memory _trade = pendingTradesById[_id];
-    _removePendingTrade(_trade._strategy, _id);
-    emit TradeCanceled(msg.sender, _id);
+  function cancelPendingTrades(uint256[] calldata _ids) external override onlyRole(STRATEGY) {
+    for (uint256 i; i < _ids.length; i++) {
+      if (!_pendingTradesIds.contains(_ids[i])) revert InvalidTrade();
+      if (pendingTradesById[_ids[i]]._strategy != msg.sender) revert CommonErrors.NotAuthorized();
+      _removePendingTrade(msg.sender, _ids[i]);
+    }
+    emit TradesCanceled(msg.sender, _ids);
   }
 
-  function cancelAllPending() external override onlyRole(STRATEGY) returns (uint256[] memory _canceledTradesIds) {
-    _canceledTradesIds = new uint256[](_pendingTradesByOwner[msg.sender].length());
-    for (uint256 i; i < _pendingTradesByOwner[msg.sender].length(); i++) {
-      _canceledTradesIds[i] = _pendingTradesByOwner[msg.sender].at(i);
-    }
-    for (uint256 i; i < _canceledTradesIds.length; i++) {
-      _removePendingTrade(msg.sender, _canceledTradesIds[i]);
-    }
-    emit TradesCanceled(msg.sender, _canceledTradesIds);
-  }
-
-  function setStrategyAsyncSwapperAsAndChangePending(
-    address _strategy,
-    address _swapper,
-    bool _migrateSwaps
-  ) external override onlyRole(SWAPPER_SETTER) returns (uint256[] memory _changedSwapperIds) {
-    this.setStrategyAsyncSwapper(_strategy, _swapper);
-    if (_migrateSwaps) {
-      return _changeStrategyPendingTradesSwapper(_strategy, _swapper);
-    }
-  }
-
-  function changeStrategyPendingTradesSwapper(address _strategy, address _swapper)
-    external
-    override
-    onlyRole(SWAPPER_SETTER)
-    returns (uint256[] memory _changedSwapperIds)
-  {
+  // onlyStrategyHandler or master admin ?
+  function changePendingTradesSwapper(uint256[] calldata _ids, address _swapper) external override onlyRole(TRADES_MODIFIER) {
+    if (ISwapper(_swapper).SWAPPER_TYPE() != ISwapper.SwapperType.ASYNC) revert NotAsyncSwapper();
     if (!_swappers.contains(_swapper)) revert InvalidSwapper();
-    return _changeStrategyPendingTradesSwapper(_strategy, _swapper);
+    for (uint256 i; i < _ids.length; i++) {
+      if (!_pendingTradesIds.contains(_ids[i])) revert InvalidTrade();
+      pendingTradesById[_ids[i]]._swapper = _swapper;
+    }
+    emit TradesSwapperChanged(_ids, _swapper);
   }
 
-  function _changeStrategyPendingTradesSwapper(address _strategy, address _swapper) internal returns (uint256[] memory _changedSwapperIds) {
-    _changedSwapperIds = new uint256[](_pendingTradesByOwner[_strategy].length());
-    for (uint256 i; i < _pendingTradesByOwner[_strategy].length(); i++) {
-      pendingTradesById[_pendingTradesByOwner[_strategy].at(i)]._swapper = _swapper;
-      _changedSwapperIds[i] = _pendingTradesByOwner[_strategy].at(i);
+  function mergePendingTrades(uint256 _anchorTradeId, uint256[] calldata _toMergeIds) external override onlyRole(TRADES_MODIFIER) {
+    Trade storage _anchorTrade = pendingTradesById[_anchorTradeId];
+    for (uint256 i; i < _toMergeIds.length; i++) {
+      Trade storage _trade = pendingTradesById[_toMergeIds[i]];
+      if (
+        _anchorTrade._id == _trade._id ||
+        _anchorTrade._strategy != _trade._strategy ||
+        _anchorTrade._tokenIn != _trade._tokenIn ||
+        _anchorTrade._tokenOut != _trade._tokenOut
+      ) revert InvalidTrade();
+      _anchorTrade._amountIn += _trade._amountIn;
+      _removePendingTrade(_trade._strategy, _trade._id);
     }
-    emit TradesSwapperChanged(_strategy, _changedSwapperIds, _swapper);
+    emit TradesMerged(_anchorTradeId, _toMergeIds);
   }
 
   function _removePendingTrade(address _strategy, uint256 _id) internal {

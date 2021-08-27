@@ -17,6 +17,7 @@ contract('TradeFactoryExecutor', () => {
   let swapperAdder: SignerWithAddress;
   let swapperSetter: SignerWithAddress;
   let strategyAdder: SignerWithAddress;
+  let tradeModifier: SignerWithAddress;
   let mechanic: SignerWithAddress;
   let machinery: MockContract;
   let asyncSwapper: MockContract;
@@ -27,7 +28,7 @@ contract('TradeFactoryExecutor', () => {
   let token: Contract;
 
   before(async () => {
-    [masterAdmin, swapperAdder, swapperSetter, strategyAdder, strategy, mechanic] = await ethers.getSigners();
+    [masterAdmin, swapperAdder, swapperSetter, strategyAdder, tradeModifier, strategy, mechanic] = await ethers.getSigners();
     executorFactory = await smoddit('contracts/mock/TradeFactory/TradeFactoryExecutor.sol:TradeFactoryExecutorMock', mechanic);
   });
 
@@ -41,6 +42,7 @@ contract('TradeFactoryExecutor', () => {
       swapperAdder.address,
       swapperSetter.address,
       strategyAdder.address,
+      tradeModifier.address,
       machinery.address
     );
     executor = modifiableExecutor.connect(mechanic);

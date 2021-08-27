@@ -24,11 +24,11 @@ interface ITradeFactoryPositionsHandler {
     uint256 _deadline
   );
 
-  event TradeCanceled(address indexed _strategy, uint256 indexed _id);
-
   event TradesCanceled(address indexed _strategy, uint256[] _ids);
 
-  event TradesSwapperChanged(address indexed _strategy, uint256[] _ids, address _newSwapper);
+  event TradesSwapperChanged(uint256[] _ids, address _newSwapper);
+
+  event TradesMerged(uint256 indexed _anchorTrade, uint256[] _ids);
 
   error InvalidTrade();
 
@@ -60,15 +60,9 @@ interface ITradeFactoryPositionsHandler {
     uint256 _deadline
   ) external returns (uint256 _id);
 
-  function cancelPending(uint256 _id) external;
+  function cancelPendingTrades(uint256[] calldata _ids) external;
 
-  function cancelAllPending() external returns (uint256[] memory _canceledTradesIds);
+  function changePendingTradesSwapper(uint256[] calldata _ids, address _swapper) external;
 
-  function setStrategyAsyncSwapperAsAndChangePending(
-    address _strategy,
-    address _swapper,
-    bool _migrateSwaps
-  ) external returns (uint256[] memory _changedSwapperIds);
-
-  function changeStrategyPendingTradesSwapper(address _strategy, address _swapper) external returns (uint256[] memory _changedSwapperIds);
+  function mergePendingTrades(uint256 _anchorTradeId, uint256[] calldata _toMergeIds) external;
 }

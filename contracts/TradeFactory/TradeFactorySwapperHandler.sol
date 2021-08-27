@@ -84,6 +84,7 @@ abstract contract TradeFactorySwapperHandler is ITradeFactorySwapperHandler, Tra
     strategySyncSwapper[_strategy] = _swapper;
     // add strategy into new swapper
     _swapperStrategies[_swapper].add(_strategy);
+    // emit event
     emit SyncStrategySwapperSet(_strategy, _swapper);
   }
 
@@ -99,6 +100,7 @@ abstract contract TradeFactorySwapperHandler is ITradeFactorySwapperHandler, Tra
     strategyAsyncSwapper[_strategy] = _swapper;
     // add strategy into new swapper
     _swapperStrategies[_swapper].add(_strategy);
+    // emit event
     emit AsyncStrategySwapperSet(_strategy, _swapper);
   }
 

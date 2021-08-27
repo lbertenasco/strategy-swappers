@@ -93,28 +93,10 @@ abstract contract Swapper is ISwapper, Governable, CollectableDust {
     bytes calldata _data
   ) internal virtual returns (uint256 _receivedAmount);
 
-  //   _receiver; // shh
-  //   _tokenIn; // shh
-  //   _tokenOut; // shh
-  //   _amountIn; // shh
-  //   _maxSlippage; // shh
-  //   _data; // shh
-  //   _receivedAmount; // shh
-  //   revert ExecuteSwapNotImplemented();
-  // }
-
   function _executeSwapMultiple(ITradeFactoryPositionsHandler.Trade[] memory _trades, bytes calldata _data)
     internal
     virtual
     returns (uint256[] memory _receivedAmountsIn, uint256[] memory _receivedAmountsOut);
-
-  // {
-  //   _trades; // shh
-  //   _data; // shh
-  //   _receivedAmountsIn; // shh
-  //   _receivedAmountsOut; // shh
-  //   revert ExecuteSwapMultipleNotImplemented();
-  // }
 
   function swap(
     address _receiver,

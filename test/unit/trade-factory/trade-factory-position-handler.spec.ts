@@ -245,6 +245,9 @@ contract('TradeFactoryPositionsHandler', () => {
         await expect(positionsHandler.connect(randomStrategy).cancelPendingTrades([1])).to.be.revertedWith('NotAuthorized()');
       });
     });
+    when('trying to cancel trades not owned', () => {
+      then('tx is reverted with reason');
+    });
     when('pending trade exists', () => {
       let cancelTx: TransactionResponse;
       given(async () => {

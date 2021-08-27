@@ -334,21 +334,85 @@ contract('TradeFactoryPositionsHandler', () => {
   });
 
   describe('mergePendingTrades', () => {
+    const tokenIn = wallet.generateRandomAddress();
+    const tokenOut = wallet.generateRandomAddress();
+    const amountIn1 = utils.parseEther('100');
+    const amountIn2 = utils.parseEther('0.23958');
+    const amountIn3 = utils.parseEther('12.74958');
+    const maxSlippage = 1000;
+    const deadline = moment().add('30', 'minutes').unix();
+    given(async () => {
+      await create({
+        tokenIn,
+        tokenOut,
+        amountIn: amountIn1,
+        maxSlippage,
+        deadline,
+      });
+    });
     when('anchor trade does not exist', () => {
-      then('tx is reverted with reason');
+      then('tx is reverted with reason', async () => {
+        await expect(positionsHandler.connect(tradesModifier).mergePendingTrades(99, [1])).to.be.revertedWith('InvalidTrade()');
+      });
     });
     when('any of the trades to merge do not exist', () => {
-      then('tx is reverted with reason');
+      then('tx is reverted with reason', async () => {
+        await expect(positionsHandler.connect(tradesModifier).mergePendingTrades(1, [99])).to.be.revertedWith('InvalidTrade()');
+      });
     });
     when('merging trades from different strategies', () => {
-      then('tx is reverted with reason');
+      given(async () => {
+        const randomStrategy = await wallet.generateRandom();
+        await positionsHandler.connect(strategyAdder).grantRole(STRATEGY_ROLE, randomStrategy.address);
+        await positionsHandler.connect(swapperSetter).setStrategyAsyncSwapper(randomStrategy.address, asyncSwapper.address);
+        await positionsHandler
+          .connect(randomStrategy)
+          .create(
+            wallet.generateRandomAddress(),
+            wallet.generateRandomAddress(),
+            utils.parseEther('100'),
+            1000,
+            moment().add('30', 'minutes').unix()
+          );
+      });
+      then('tx is reverted with reason', async () => {
+        await expect(positionsHandler.connect(tradesModifier).mergePendingTrades(1, [2])).to.be.revertedWith('InvalidTrade()');
+      });
     });
     when('arguments are vallid', () => {
-      then('anchor trade amount in its the aggregation of merged trades');
-      then('all merged trades are removed from pending trades by strategy');
-      then('all merged trades are removed from pending trades by id');
-      then('all merged trades are removed from pending trades array');
-      then('emits get event');
+      let mergeTx: TransactionResponse;
+      given(async () => {
+        await create({
+          tokenIn,
+          tokenOut,
+          amountIn: amountIn2,
+          maxSlippage,
+          deadline,
+        });
+        await create({
+          tokenIn,
+          tokenOut,
+          amountIn: amountIn3,
+          maxSlippage,
+          deadline,
+        });
+        mergeTx = await positionsHandler.connect(tradesModifier).mergePendingTrades(1, [2, 3]);
+      });
+      then('anchor trade amount in its the aggregation of merged trades', async () => {
+        expect((await positionsHandler.pendingTradesById(1))._amountIn).to.be.equal(amountIn1.add(amountIn2).add(amountIn3));
+      });
+      then('all merged trades are removed from pending trades by strategy', async () => {
+        expect(await positionsHandler['pendingTradesIds(address)'](strategy.address)).to.not.include([2, 3]);
+      });
+      then('all merged trades are removed from pending trades by id', async () => {
+        expect((await positionsHandler['pendingTradesById(uint256)'](2))._swapper).to.equal(constants.ZERO_ADDRESS);
+      });
+      then('all merged trades are removed from pending trades array', async () => {
+        expect(await positionsHandler['pendingTradesIds()']()).to.not.include([2, 3]);
+      });
+      then('emits event', async () => {
+        await expect(mergeTx).to.emit(positionsHandler, 'TradesMerged').withArgs(1, [2, 3]);
+      });
     });
   });
 

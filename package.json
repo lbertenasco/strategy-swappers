@@ -37,7 +37,7 @@
   },
   "dependencies": {
     "@nomiclabs/ethereumjs-vm": "4.2.2",
-    "@openzeppelin/contracts": "4.3.0",
+    "@openzeppelin/contracts": "4.3.1",
     "@uniswap/v2-periphery": "1.1.0-beta.0",
     "qs": "6.10.1"
   },
@@ -54,18 +54,18 @@
     "@types/lodash": "4.14.172",
     "@types/mocha": "9.0.0",
     "@types/moment": "2.13.0",
-    "@types/node": "^16.7.2",
+    "@types/node": "^16.7.6",
     "@uniswap/v2-core": "1.0.1",
     "@uniswap/v2-periphery": "1.1.0-beta.0",
     "@uniswap/v3-periphery": "1.1.1",
-    "aws-sdk": "2.976.0",
+    "aws-sdk": "2.978.0",
     "axios": "0.21.1",
     "axios-retry": "3.1.9",
     "chai": "4.3.4",
     "chai-as-promised": "7.1.1",
     "dotenv": "10.0.0",
     "ethereum-waffle": "3.4.0",
-    "ethers": "5.4.5",
+    "ethers": "5.4.6",
     "hardhat": "2.6.1",
     "hardhat-deploy": "0.9.0",
     "hardhat-gas-reporter": "1.0.4",
@@ -79,11 +79,11 @@
     "prettier-plugin-solidity": "1.0.0-beta.17",
     "solhint": "3.3.6",
     "solhint-plugin-prettier": "0.0.5",
-    "solidity-coverage": "0.7.16",
+    "solidity-coverage": "0.7.17",
     "sort-package-json": "1.50.0",
     "standard-version": "9.3.1",
     "ts-node": "10.2.1",
-    "typescript": "4.3.5"
+    "typescript": "4.4.2"
   },
   "authors": [
     {

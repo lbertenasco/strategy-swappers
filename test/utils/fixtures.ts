@@ -42,6 +42,7 @@ export const tradeFactoryFixture = async (
   swapperSetter: string,
   strategyAdder: string,
   tradeModifier: string,
+  tradeSettler: string,
   mechanicsRegistry: string
 ): Promise<TradeFactoryFixture> => {
   const tradeFactoryFactory = await ethers.getContractFactory('contracts/TradeFactory/TradeFactory.sol:TradeFactory');
@@ -51,6 +52,7 @@ export const tradeFactoryFixture = async (
     swapperSetter,
     strategyAdder,
     tradeModifier,
+    tradeSettler,
     mechanicsRegistry
   );
   return {
@@ -72,9 +74,18 @@ export const uniswapV2SwapperFixture = async (
   swapperSetter: string,
   strategyAdder: string,
   tradeModifier: string,
+  tradeSettler: string,
   mechanicsRegistry: string
 ): Promise<UniswapV2SwapperFixture> => {
-  const { tradeFactory } = await tradeFactoryFixture(masterAdmin, swapperAdder, swapperSetter, strategyAdder, tradeModifier, mechanicsRegistry);
+  const { tradeFactory } = await tradeFactoryFixture(
+    masterAdmin,
+    swapperAdder,
+    swapperSetter,
+    strategyAdder,
+    tradeModifier,
+    tradeSettler,
+    mechanicsRegistry
+  );
   const uniswapV2AsyncSwapperFactory = await ethers.getContractFactory('contracts/swappers/async/UniswapV2Swapper.sol:UniswapV2Swapper');
   const uniswapV2SyncSwapperFactory = await ethers.getContractFactory('contracts/swappers/sync/UniswapV2Swapper.sol:UniswapV2Swapper');
   const owner = await wallet.generateRandom();

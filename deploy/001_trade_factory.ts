@@ -44,6 +44,13 @@ export const TRADE_MODIFIER: { [chainId: string]: string } = {
   '137': '0x31ABE8B1A645ac2d81201869d6eC77CF192e7d7F',
 };
 
+export const TRADE_SETTLER: { [chainId: string]: string } = {
+  // Mainnet
+  '1': '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266', // TODO: Change and put the real address
+  // Polygon
+  '137': '0x31ABE8B1A645ac2d81201869d6eC77CF192e7d7F',
+};
+
 const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployer } = await hre.getNamedAccounts();
 
@@ -58,6 +65,7 @@ const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnviro
       SWAPPER_SETTER[chainId],
       STRATEGY_ADDER[chainId],
       TRADE_MODIFIER[chainId],
+      TRADE_SETTLER[chainId],
       MECHANICS_REGISTRY[chainId],
     ],
     log: true,
@@ -72,6 +80,7 @@ const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnviro
         SWAPPER_SETTER[chainId],
         STRATEGY_ADDER[chainId],
         TRADE_MODIFIER[chainId],
+        TRADE_SETTLER[chainId],
         MECHANICS_REGISTRY[chainId],
       ],
     });

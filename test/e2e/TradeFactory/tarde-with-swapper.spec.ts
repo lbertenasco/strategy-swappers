@@ -17,6 +17,7 @@ contract('TradeFactory', () => {
   let swapperSetter: SignerWithAddress;
   let strategyAdder: SignerWithAddress;
   let tradeModifier: SignerWithAddress;
+  let tradeSettler: SignerWithAddress;
 
   let tokenIn: Contract;
   let tokenOut: Contract;
@@ -36,7 +37,7 @@ contract('TradeFactory', () => {
   const INITIAL_LIQUIDITY = utils.parseEther('100000');
 
   before('create fixture loader', async () => {
-    [masterAdmin, swapperAdder, swapperSetter, strategyAdder, tradeModifier, mechanic, strategy, hodler, swapperSetter] =
+    [masterAdmin, swapperAdder, swapperSetter, strategyAdder, tradeModifier, tradeSettler, mechanic, strategy, hodler, swapperSetter] =
       await ethers.getSigners();
   });
 
@@ -49,6 +50,7 @@ contract('TradeFactory', () => {
       swapperSetter.address,
       strategyAdder.address,
       tradeModifier.address,
+      tradeSettler.address,
       mechanicsRegistry.address
     ));
 

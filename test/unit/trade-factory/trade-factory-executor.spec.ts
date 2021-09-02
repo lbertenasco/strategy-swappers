@@ -1,7 +1,9 @@
 import { Contract } from '@ethersproject/contracts';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signers';
 import { abi as machineryABI } from '@lbertenasco/contract-utils/artifacts/interfaces/utils/IMachinery.sol/IMachinery.json';
+import { abi as IERC20ABI } from '../../../artifacts/@openzeppelin/contracts/token/ERC20/IERC20.sol/IERC20.json';
 import { abi as swapperABI } from '../../../artifacts/contracts/Swapper.sol/ISwapper.json';
+import { abi as otcPoolABI } from '../../../artifacts/contracts/OTCPool.sol/IOTCPool.json';
 import { TransactionResponse } from '@ethersproject/abstract-provider';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
@@ -22,6 +24,7 @@ contract('TradeFactoryExecutor', () => {
   let machinery: MockContract;
   let asyncSwapper: MockContract;
   let syncSwapper: MockContract;
+  let otcPool: MockContract;
   let executorFactory: ModifiableContractFactory;
   let modifiableExecutor: ModifiableContract;
   let executor: Contract;
@@ -37,6 +40,7 @@ contract('TradeFactoryExecutor', () => {
     machinery = await smockit(machineryABI);
     asyncSwapper = await smockit(swapperABI);
     syncSwapper = await smockit(swapperABI);
+    otcPool = await smockit(otcPoolABI);
     modifiableExecutor = await executorFactory.deploy(
       masterAdmin.address,
       swapperAdder.address,
@@ -54,6 +58,7 @@ contract('TradeFactoryExecutor', () => {
     });
     await executor.connect(strategyAdder).grantRole(await executor.STRATEGY(), strategy.address);
     await executor.connect(swapperAdder).addSwappers([asyncSwapper.address, syncSwapper.address]);
+    await executor.connect(swapperAdder).setOTCPool(otcPool.address);
     machinery.smocked.isMechanic.will.return.with(true);
     asyncSwapper.smocked.SWAPPER_TYPE.will.return.with(0);
     syncSwapper.smocked.SWAPPER_TYPE.will.return.with(1);
@@ -263,6 +268,133 @@ contract('TradeFactoryExecutor', () => {
     });
   });
 
+  describe('execute otc', () => {
+    const amountIn = utils.parseEther('100');
+    const deadline = moment().add('30', 'minutes').unix();
+    const tokenOut = wallet.generateRandomAddress();
+    const maxSlippage = BigNumber.from('1000');
+    const governor = wallet.generateRandomAddress();
+    given(async () => {
+      otcPool.smocked.governor.will.return.with(governor);
+      await executor.connect(swapperSetter).setStrategyPermissions(strategy.address, [1]);
+      await create({
+        tokenIn: token.address,
+        tokenOut,
+        amountIn,
+        maxSlippage,
+        deadline,
+      });
+    });
+    // TODO: Only mechanic
+    when('executing a trade that is not pending', () => {
+      then('tx is reverted', async () => {
+        await expect(executor['execute(uint256[],uint256)']([2], 1)).to.be.reverted;
+      });
+    });
+    when('executing trades with zero rate', () => {
+      then('tx is reverted with reason', async () => {
+        await expect(executor['execute(uint256[],uint256)']([1], 0)).to.be.revertedWith('ZeroRate()');
+      });
+    });
+    when('some trades being executed have different token in', () => {
+      given(async () => {
+        const tokenIn = await smockit(IERC20ABI);
+        await create({
+          tokenIn: tokenIn.address,
+          tokenOut,
+          amountIn,
+          maxSlippage,
+          deadline,
+        });
+      });
+      then('tx is reverted with reason', async () => {
+        await expect(executor['execute(uint256[],uint256)']([1, 2], 1)).to.be.revertedWith('InvalidTrade()');
+      });
+    });
+    when('some trades being executed have different token out', () => {
+      given(async () => {
+        await create({
+          tokenIn: token.address,
+          tokenOut: (await smockit(IERC20ABI)).address,
+          amountIn,
+          maxSlippage,
+          deadline,
+        });
+      });
+      then('tx is reverted with reason', async () => {
+        await expect(executor['execute(uint256[],uint256)']([1, 2], 1)).to.be.revertedWith('InvalidTrade()');
+      });
+    });
+    when('a trade has expired', () => {
+      given(async () => {
+        await evm.advanceToTimeAndBlock(deadline + 1);
+      });
+      then('tx is reverted with reason', async () => {
+        await expect(executor['execute(uint256[],uint256)']([1], 1)).to.be.revertedWith('ExpiredTrade()');
+      });
+    });
+    when('trade strategy did not have OTC enabled', () => {
+      given(async () => {
+        await executor.connect(swapperSetter).setStrategyPermissions(strategy.address, [0]);
+      });
+      then('tx is reverted with reason', async () => {
+        await expect(executor['execute(uint256[],uint256)']([1], 1)).to.be.revertedWith('NotAuthorized()');
+      });
+    });
+    when('safe transfer to governor reverts', () => {
+      given(async () => {
+        await token.connect(strategy).approve(executor.address, 0);
+      });
+      then('tx is reverted', async () => {
+        await expect(executor['execute(uint256[],uint256)']([2], 1)).to.be.reverted;
+      });
+    });
+    when.skip('taking funds from otc pool reverts', () => {
+      given(async () => {
+        otcPool.smocked.take.will.revert.with('take error');
+      });
+      then('tx is reverted', async () => {
+        await expect(executor['execute(uint256[],uint256)']([1], 1)).to.be.revertedWith('take error');
+      });
+    });
+    when('arguments are valid', () => {
+      let executeTx: TransactionResponse;
+      const rate = utils.parseEther('0.5');
+      given(async () => {
+        await create({
+          tokenIn: token.address,
+          tokenOut,
+          amountIn,
+          maxSlippage,
+          deadline,
+        });
+        executeTx = await executor['execute(uint256[],uint256)']([1, 2], rate);
+      });
+      then('all funds of trades are sent to otc pool governor', async () => {
+        expect(await token.balanceOf(governor)).to.be.equal(amountIn.mul(2));
+      });
+      then('otc pool take is called correctly', async () => {
+        expect(otcPool.smocked.take.calls[0]).to.haveOwnProperty('_wantedToken').to.equal(tokenOut);
+        expect(otcPool.smocked.take.calls[0]).to.haveOwnProperty('_amount').to.equal(amountIn.div(2));
+        expect(otcPool.smocked.take.calls[0]).to.haveOwnProperty('_receiver').to.equal(strategy.address);
+        expect(otcPool.smocked.take.calls[1]).to.haveOwnProperty('_wantedToken').to.equal(tokenOut);
+        expect(otcPool.smocked.take.calls[1]).to.haveOwnProperty('_amount').to.equal(amountIn.div(2));
+        expect(otcPool.smocked.take.calls[1]).to.haveOwnProperty('_receiver').to.equal(strategy.address);
+      });
+      then('all trades get removed', async () => {
+        expect(await executor.pendingTradesById(1))
+          .to.haveOwnProperty('_id')
+          .to.equal(0);
+        expect(await executor.pendingTradesById(2))
+          .to.haveOwnProperty('_id')
+          .to.equal(0);
+      });
+      then('emits event with correct information', async () => {
+        await expect(executeTx).to.emit(executor, 'AsyncOTCTradesExecuted').withArgs([1, 2], rate);
+      });
+    });
+  });
+
   async function create({
     tokenIn,
     tokenOut,
@@ -276,7 +408,7 @@ contract('TradeFactoryExecutor', () => {
     maxSlippage: BigNumber | number;
     deadline: number;
   }): Promise<{ tx: TransactionResponse; id: BigNumber }> {
-    await token.connect(strategy).approve(executor.address, amountIn);
+    await token.connect(strategy).increaseAllowance(executor.address, amountIn);
     const tx = await executor.connect(strategy).create(tokenIn, tokenOut, amountIn, maxSlippage, deadline);
     const txReceipt = await tx.wait();
     const parsedEvent = executor.interface.parseLog(txReceipt.logs[0]);

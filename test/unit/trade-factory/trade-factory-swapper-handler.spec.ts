@@ -103,6 +103,27 @@ contract('TradeFactorySwapperHandler', () => {
     });
   });
 
+  describe('setStrategyPermissions', () => {
+    // ONLY SWAPPER SETTER
+    when('strategy is zero address', () => {
+      then('tx is reverted with message');
+    });
+    when('arguments are valid', () => {
+      then('sets strategy permissions');
+      then('emits event');
+    });
+  });
+
+  describe('setOTCPool', () => {
+    when('otc pool is zero address', () => {
+      then('tx is reverted with message');
+    });
+    when('arguments are valid', () => {
+      then('sets otc pool');
+      then('emits event');
+    });
+  });
+
   describe('setStrategySyncSwapper', () => {
     // ONLY SWAPPER SETTER
     when('strategy is zero address', () => {

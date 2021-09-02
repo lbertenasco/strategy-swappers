@@ -58,7 +58,31 @@ export const tradeFactoryFixture = async (
   };
 };
 
-interface UniswapV2SwapperFixture extends TradeFactoryFixture {
+interface OTCPoolFixture extends TradeFactoryFixture {
+  otcPool: Contract;
+}
+
+export const otcPoolFixture = async (
+  masterAdmin: string,
+  swapperAdder: string,
+  swapperSetter: string,
+  strategyAdder: string,
+  tradeModifier: string,
+  mechanicsRegistry: string,
+  otcPoolGovernor: string
+): Promise<OTCPoolFixture> => {
+  const { tradeFactory } = await tradeFactoryFixture(masterAdmin, swapperAdder, swapperSetter, strategyAdder, tradeModifier, mechanicsRegistry);
+  const otcPoolFactory = await ethers.getContractFactory('contracts/OTCPool.sol:OTCPool');
+  const swapperAdderSigner = await wallet.impersonate(swapperAdder);
+  const otcPool = await otcPoolFactory.deploy(otcPoolGovernor, tradeFactory.address);
+  await tradeFactory.connect(swapperAdderSigner).setOTCPool(otcPool.address);
+  return {
+    tradeFactory,
+    otcPool,
+  };
+};
+
+interface UniswapV2SwapperFixture extends OTCPoolFixture {
   WETH: Contract;
   uniswapV2Factory: Contract;
   uniswapV2Router02: Contract;
@@ -72,9 +96,18 @@ export const uniswapV2SwapperFixture = async (
   swapperSetter: string,
   strategyAdder: string,
   tradeModifier: string,
-  mechanicsRegistry: string
+  mechanicsRegistry: string,
+  otcPoolGovernor: string
 ): Promise<UniswapV2SwapperFixture> => {
-  const { tradeFactory } = await tradeFactoryFixture(masterAdmin, swapperAdder, swapperSetter, strategyAdder, tradeModifier, mechanicsRegistry);
+  const { tradeFactory, otcPool } = await otcPoolFixture(
+    masterAdmin,
+    swapperAdder,
+    swapperSetter,
+    strategyAdder,
+    tradeModifier,
+    mechanicsRegistry,
+    otcPoolGovernor
+  );
   const uniswapV2AsyncSwapperFactory = await ethers.getContractFactory('contracts/swappers/async/UniswapV2Swapper.sol:UniswapV2Swapper');
   const uniswapV2SyncSwapperFactory = await ethers.getContractFactory('contracts/swappers/sync/UniswapV2Swapper.sol:UniswapV2Swapper');
   const owner = await wallet.generateRandom();
@@ -96,6 +129,7 @@ export const uniswapV2SwapperFixture = async (
   );
   return {
     tradeFactory,
+    otcPool,
     uniswapV2AsyncSwapper,
     uniswapV2SyncSwapper,
     ...uniswapDeployment,

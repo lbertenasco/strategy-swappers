@@ -8,7 +8,11 @@ import '../../TradeFactory/TradeFactorySwapperHandler.sol';
 contract TradeFactorySwapperHandlerMock is TradeFactorySwapperHandler {
   using EnumerableSet for EnumerableSet.AddressSet;
   
-  constructor(address _masterAdmin, address _swapperAdder, address _swapperSetter) TradeFactorySwapperHandler(_swapperAdder, _swapperSetter) TradeFactoryAccessManager(_masterAdmin) {}
+  constructor(
+    address _masterAdmin, 
+    address _swapperAdder, 
+    address _swapperSetter
+  ) TradeFactorySwapperHandler(_swapperAdder, _swapperSetter) TradeFactoryAccessManager(_masterAdmin) {}
 
   function addSwapperInternal(address _swapper) external {
     _swappers.add(_swapper);

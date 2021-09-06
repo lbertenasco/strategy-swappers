@@ -11,7 +11,7 @@ import { getNodeUrl } from '../../../../utils/network';
 import zrx, { QuoteResponse } from '../../../../scripts/libraries/zrx';
 import { STRATEGY_ADDER, SWAPPER_ADDER, SWAPPER_SETTER } from '../../../../deploy/001_trade_factory';
 
-describe('ZRXSwapper', function () {
+describe('ZRX', function () {
   let swapperAdder: JsonRpcSigner;
   let swapperSetter: JsonRpcSigner;
   let strategyAdder: JsonRpcSigner;
@@ -163,13 +163,13 @@ describe('ZRXSwapper', function () {
       await ethers.provider.send('hardhat_setBalance', [namedAccounts.deployer, '0xffffffffffffffff']);
       await ethers.provider.send('hardhat_setBalance', [strategy.address, '0xffffffffffffffff']);
       setTestChainId(CHAIN_ID);
-      await deployments.fixture(['TradeFactory', 'ZRXSwapper'], { keepExistingDeployments: false });
+      await deployments.fixture(['TradeFactory', 'ZRX'], { keepExistingDeployments: false });
 
       WMATIC = await ethers.getContractAt(IERC20_ABI, WMATIC_ADDRESS);
       DAI = await ethers.getContractAt(IERC20_ABI, DAI_ADDRESS);
 
       tradeFactory = await ethers.getContract('TradeFactory');
-      ZRXSwapper = await ethers.getContract('ZRXSwapper');
+      ZRXSwapper = await ethers.getContract('ZRX');
 
       await WMATIC.connect(wmaticWhale).transfer(strategy.address, AMOUNT_IN);
 

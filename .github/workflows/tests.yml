@@ -99,3 +99,4 @@ jobs:
         env:
           ETH_NODE_URI_MAINNET: ${{ secrets.ETH_NODE_URI_MAINNET }}
           ETH_NODE_URI_POLYGON: ${{ secrets.ETH_NODE_URI_POLYGON }}
+          ETH_NODE_URI_FANTOM: https://rpc.ftm.tools/

@@ -1,10 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.4 <0.9.0;
 
+import 'hardhat/console.sol';
+
+import '@openzeppelin/contracts/utils/math/Math.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
+import '@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol';
 import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 
 import '@lbertenasco/contract-utils/contracts/utils/Machinery.sol';
+
+import '../OTCPool.sol';
 
 import './TradeFactoryPositionsHandler.sol';
 
@@ -22,6 +28,8 @@ interface ITradeFactoryExecutor {
 
   event AsyncTradeExecuted(uint256 indexed _id, uint256 _receivedAmount);
 
+  event AsyncOTCTradesExecuted(uint256[] _ids, uint256 _rateTokenInToOut);
+
   event AsyncTradeExpired(uint256 indexed _id);
 
   event SwapperAndTokenEnabled(address indexed _swapper, address _token);
@@ -29,6 +37,8 @@ interface ITradeFactoryExecutor {
   error OngoingTrade();
 
   error ExpiredTrade();
+
+  error ZeroRate();
 
   function execute(
     address _tokenIn,
@@ -102,5 +112,23 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPos
     // Remove trade
     _removePendingTrade(_trade._strategy, _id);
     emit AsyncTradeExpired(_id);
+  }
+
+  function execute(uint256[] calldata _ids, uint256 _rateTokenInToOut) external onlyMechanic {
+    if (_rateTokenInToOut == 0) revert ZeroRate();
+    address _tokenIn = pendingTradesById[_ids[0]]._tokenIn;
+    address _tokenOut = pendingTradesById[_ids[0]]._tokenOut;
+    uint256 _magnitudeIn = 10**IERC20Metadata(_tokenIn).decimals();
+    for (uint256 i; i < _ids.length; i++) {
+      Trade storage _trade = pendingTradesById[_ids[i]];
+      if (i > 0 && (_trade._tokenIn != _tokenIn || _trade._tokenOut != _tokenOut)) revert InvalidTrade();
+      if (block.timestamp > _trade._deadline) revert ExpiredTrade();
+      if (uint8(strategyPermissions[_trade._strategy][_OTC_PERMISSION_INDEX]) != 1) revert CommonErrors.NotAuthorized();
+      uint256 _consumedOut = (_trade._amountIn * _rateTokenInToOut) / _magnitudeIn;
+      IERC20(_trade._tokenIn).safeTransferFrom(_trade._strategy, IOTCPool(otcPool).governor(), _trade._amountIn);
+      IOTCPool(otcPool).take(_trade._tokenOut, _consumedOut, _trade._strategy);
+      _removePendingTrade(_trade._strategy, _trade._id);
+    }
+    emit AsyncOTCTradesExecuted(_ids, _rateTokenInToOut);
   }
 }

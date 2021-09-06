@@ -73,9 +73,9 @@ export const otcPoolFixture = async (
 ): Promise<OTCPoolFixture> => {
   const { tradeFactory } = await tradeFactoryFixture(masterAdmin, swapperAdder, swapperSetter, strategyAdder, tradeModifier, mechanicsRegistry);
   const otcPoolFactory = await ethers.getContractFactory('contracts/OTCPool.sol:OTCPool');
-  const swapperAdderSigner = await wallet.impersonate(swapperAdder);
+  const masterAdminSigner = await wallet.impersonate(masterAdmin);
   const otcPool = await otcPoolFactory.deploy(otcPoolGovernor, tradeFactory.address);
-  await tradeFactory.connect(swapperAdderSigner).setOTCPool(otcPool.address);
+  await tradeFactory.connect(masterAdminSigner).setOTCPool(otcPool.address);
   return {
     tradeFactory,
     otcPool,

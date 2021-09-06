@@ -97,7 +97,7 @@ abstract contract TradeFactorySwapperHandler is ITradeFactorySwapperHandler, Tra
     emit StrategyPermissionsSet(_strategy, _permissions);
   }
 
-  function setOTCPool(address _otcPool) external override onlyRole(SWAPPER_ADDER) {
+  function setOTCPool(address _otcPool) external override onlyRole(MASTER_ADMIN) {
     if (_otcPool == address(0)) revert CommonErrors.ZeroAddress();
     otcPool = _otcPool;
     emit OTCPoolSet(_otcPool);

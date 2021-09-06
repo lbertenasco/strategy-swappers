@@ -115,6 +115,7 @@ contract('TradeFactorySwapperHandler', () => {
   });
 
   describe('setOTCPool', () => {
+    // ONLY MASTER ADMIN
     when('otc pool is zero address', () => {
       then('tx is reverted with message');
     });

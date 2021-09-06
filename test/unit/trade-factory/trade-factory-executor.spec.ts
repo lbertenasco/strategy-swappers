@@ -58,7 +58,7 @@ contract('TradeFactoryExecutor', () => {
     });
     await executor.connect(strategyAdder).grantRole(await executor.STRATEGY(), strategy.address);
     await executor.connect(swapperAdder).addSwappers([asyncSwapper.address, syncSwapper.address]);
-    await executor.connect(swapperAdder).setOTCPool(otcPool.address);
+    await executor.connect(masterAdmin).setOTCPool(otcPool.address);
     machinery.smocked.isMechanic.will.return.with(true);
     asyncSwapper.smocked.SWAPPER_TYPE.will.return.with(0);
     syncSwapper.smocked.SWAPPER_TYPE.will.return.with(1);

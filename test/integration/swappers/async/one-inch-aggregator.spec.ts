@@ -3,13 +3,13 @@ import { abi as IERC20_ABI } from '@openzeppelin/contracts/build/contracts/IERC2
 import { JsonRpcSigner } from '@ethersproject/providers';
 import { Contract, utils, Wallet } from 'ethers';
 import { deployments, ethers, getNamedAccounts } from 'hardhat';
-import { contracts, evm, wallet } from '../../utils';
-import { then, when } from '../../utils/bdd';
+import { contracts, evm, wallet } from '../../../utils';
+import { then, when } from '../../../utils/bdd';
 import moment from 'moment';
-import { setTestChainId } from '../../../utils/deploy';
-import { getNodeUrl } from '../../../utils/network';
-import oneinch, { SwapResponse } from '../../../scripts/libraries/oneinch';
-import { STRATEGY_ADDER, SWAPPER_ADDER, SWAPPER_SETTER } from '../../../deploy/001_trade_factory';
+import { setTestChainId } from '../../../../utils/deploy';
+import { getNodeUrl } from '../../../../utils/network';
+import oneinch, { SwapResponse } from '../../../../scripts/libraries/oneinch';
+import { STRATEGY_ADDER, SWAPPER_ADDER, SWAPPER_SETTER } from '../../../../deploy/001_trade_factory';
 
 describe('OneInchAggregatorSwapper', function () {
   let swapperAdder: JsonRpcSigner;
@@ -85,13 +85,13 @@ describe('OneInchAggregatorSwapper', function () {
       await ethers.provider.send('hardhat_setBalance', [namedAccounts.deployer, '0xffffffffffffffff']);
       await ethers.provider.send('hardhat_setBalance', [strategy.address, '0xffffffffffffffff']);
       setTestChainId(CHAIN_ID);
-      await deployments.fixture(['TradeFactory', 'OneInchAggregatorSwapper'], { keepExistingDeployments: false });
+      await deployments.fixture(['Common', 'OneInchAggregator'], { keepExistingDeployments: false });
 
       CRV = await ethers.getContractAt(IERC20_ABI, CRV_ADDRESS);
       DAI = await ethers.getContractAt(IERC20_ABI, DAI_ADDRESS);
 
       tradeFactory = await ethers.getContract('TradeFactory');
-      oneInchAggregatorSwapper = await ethers.getContract('OneInchAggregatorSwapper');
+      oneInchAggregatorSwapper = await ethers.getContract('OneInchAggregator');
 
       await CRV.connect(crvWhale).transfer(strategy.address, AMOUNT_IN);
 

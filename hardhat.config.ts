@@ -18,7 +18,6 @@ const networks: NetworksUserConfig = process.env.TEST
           enabled: process.env.FORK ? true : false,
           url: getNodeUrl('mainnet'),
         },
-        // accounts: [{ privateKey: process.env.POLYGON_PRIVATE_KEY as string, balance: utils.parseEther('1000000').toString() }],
       },
       localhost: {
         url: getNodeUrl('localhost'),
@@ -35,6 +34,12 @@ const networks: NetworksUserConfig = process.env.TEST
       polygon: {
         url: getNodeUrl('polygon'),
         accounts: [(process.env.POLYGON_PRIVATE_KEY as string) || DEFAULT_ACCOUNT],
+        gasPrice: utils.parseUnits('40', 'gwei').toNumber(),
+        tags: ['production'],
+      },
+      fantom: {
+        url: getNodeUrl('fantom'),
+        accounts: [(process.env.FANTOM_PRIVATE_KEY as string) || DEFAULT_ACCOUNT],
         gasPrice: utils.parseUnits('40', 'gwei').toNumber(),
         tags: ['production'],
       },

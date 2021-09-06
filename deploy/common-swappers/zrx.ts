@@ -16,7 +16,7 @@ const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnviro
 
   const chainId = await getChainId(hre);
 
-  const deploy = await hre.deployments.deploy('ZRXSwapper', {
+  const deploy = await hre.deployments.deploy('ZRX', {
     contract: 'contracts/swappers/async/ZRXSwapper.sol:ZRXSwapper',
     from: deployer,
     args: [governor, tradeFactory.address, ZRX[chainId]],
@@ -31,5 +31,5 @@ const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnviro
   }
 };
 deployFunction.dependencies = ['TradeFactory'];
-deployFunction.tags = ['Common', 'ZRXSwapper'];
+deployFunction.tags = ['Mainnet', 'Polygon', 'ZRX'];
 export default deployFunction;

@@ -7,6 +7,8 @@ const OTC_PROVIDER: { [chainId: string]: string } = {
   '1': '0xfeb4acf3df3cdea7399794d0869ef76a6efaff52', // ychad.eth
   // Polygon
   '137': '0xB82193725471dC7bfaAB1a3AB93c7b42963F3265', // yMech alejo
+  // Fantom
+  '250': '0xB82193725471dC7bfaAB1a3AB93c7b42963F3265', // yMech alejo
 };
 
 const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
@@ -31,5 +33,5 @@ const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnviro
   }
 };
 deployFunction.dependencies = ['TradeFactory'];
-deployFunction.tags = ['OTCPool'];
+deployFunction.tags = ['Common', 'OTCPool'];
 export default deployFunction;

@@ -33,7 +33,8 @@
     "test:integration": "yarn test ./test/integration/**/*.spec.ts",
     "test:gas": "REPORT_GAS=1 npx hardhat test",
     "test:unit": "yarn test 'test/unit/**/*.spec.ts'",
-    "deploy:polygon": "npx hardhat deploy --tags Common,Polygon --network polygon"
+    "deploy:polygon": "npx hardhat deploy --tags Common,Polygon --network polygon",
+    "deploy:fantom": "npx hardhat deploy --tags Common,Fantom --network fantom"
   },
   "dependencies": {
     "@nomiclabs/ethereumjs-vm": "4.2.2",

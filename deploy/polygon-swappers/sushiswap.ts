@@ -12,20 +12,34 @@ const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnviro
 
   const tradeFactory = await hre.deployments.get('TradeFactory');
 
-  const deploy = await hre.deployments.deploy('SushiswapPolygonSwapper', {
-    contract: 'contracts/swappers/sync/SushiswapPolygonSwapper.sol:SushiswapPolygonSwapper',
+  const asyncDeploy = await hre.deployments.deploy('AsyncSushiswap', {
+    contract: 'contracts/swappers/async/UniswapV2Swapper.sol:UniswapV2Swapper',
+    from: deployer,
+    args: [governor, tradeFactory.address, WMATIC, SUSHISWAP_FACTORY, SUSHISWAP_ROUTER],
+    log: true,
+  });
+
+  if (await shouldVerifyContract(asyncDeploy)) {
+    await hre.run('verify:verify', {
+      address: asyncDeploy.address,
+      constructorArguments: [governor, tradeFactory.address, WMATIC, SUSHISWAP_FACTORY, SUSHISWAP_ROUTER],
+    });
+  }
+
+  const syncDeploy = await hre.deployments.deploy('SyncSushiswap', {
+    contract: 'contracts/swappers/sync/UniswapV2AnchorSwapper.sol:UniswapV2AnchorSwapper',
     from: deployer,
     args: [governor, tradeFactory.address, WETH, WMATIC, SUSHISWAP_FACTORY, SUSHISWAP_ROUTER],
     log: true,
   });
 
-  if (await shouldVerifyContract(deploy)) {
+  if (await shouldVerifyContract(syncDeploy)) {
     await hre.run('verify:verify', {
-      address: deploy.address,
+      address: syncDeploy.address,
       constructorArguments: [governor, tradeFactory.address, WETH, WMATIC, SUSHISWAP_FACTORY, SUSHISWAP_ROUTER],
     });
   }
 };
 deployFunction.dependencies = ['TradeFactory'];
-deployFunction.tags = ['SushiswapPolygonSwapper', 'Polygon'];
+deployFunction.tags = ['Sushiswap', 'Polygon'];
 export default deployFunction;

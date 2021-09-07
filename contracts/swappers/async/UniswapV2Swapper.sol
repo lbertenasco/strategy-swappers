@@ -11,10 +11,10 @@ interface IUniswapV2Swapper is ISwapper {
   function WETH() external view returns (address);
 
   // solhint-disable-next-line func-name-mixedcase
-  function UNISWAP_FACTORY() external view returns (address);
+  function FACTORY() external view returns (address);
 
   // solhint-disable-next-line func-name-mixedcase
-  function UNISWAP_ROUTER() external view returns (address);
+  function ROUTER() external view returns (address);
 }
 
 contract UniswapV2Swapper is IUniswapV2Swapper, Swapper {
@@ -26,9 +26,9 @@ contract UniswapV2Swapper is IUniswapV2Swapper, Swapper {
   // solhint-disable-next-line var-name-mixedcase
   address public immutable override WETH;
   // solhint-disable-next-line var-name-mixedcase
-  address public immutable override UNISWAP_FACTORY;
+  address public immutable override FACTORY;
   // solhint-disable-next-line var-name-mixedcase
-  address public immutable override UNISWAP_ROUTER;
+  address public immutable override ROUTER;
 
   constructor(
     address _governor,
@@ -38,8 +38,8 @@ contract UniswapV2Swapper is IUniswapV2Swapper, Swapper {
     address _uniswapRouter
   ) Swapper(_governor, _tradeFactory) {
     WETH = _weth;
-    UNISWAP_FACTORY = _uniswapFactory;
-    UNISWAP_ROUTER = _uniswapRouter;
+    FACTORY = _uniswapFactory;
+    ROUTER = _uniswapRouter;
   }
 
   function _executeSwap(
@@ -52,10 +52,10 @@ contract UniswapV2Swapper is IUniswapV2Swapper, Swapper {
   ) internal override returns (uint256 _receivedAmount) {
     address[] memory _path = abi.decode(_data, (address[]));
     if (_tokenIn != _path[0] || _tokenOut != _path[_path.length - 1]) revert CommonErrors.IncorrectSwapInformation();
-    uint256 _amountOut = IUniswapV2Router02(UNISWAP_ROUTER).getAmountsOut(_amountIn, _path)[_path.length - 1];
-    IERC20(_path[0]).approve(UNISWAP_ROUTER, 0);
-    IERC20(_path[0]).approve(UNISWAP_ROUTER, _amountIn);
-    _receivedAmount = IUniswapV2Router02(UNISWAP_ROUTER).swapExactTokensForTokens(
+    uint256 _amountOut = IUniswapV2Router02(ROUTER).getAmountsOut(_amountIn, _path)[_path.length - 1];
+    IERC20(_path[0]).approve(ROUTER, 0);
+    IERC20(_path[0]).approve(ROUTER, _amountIn);
+    _receivedAmount = IUniswapV2Router02(ROUTER).swapExactTokensForTokens(
       _amountIn,
       _amountOut - ((_amountOut * _maxSlippage) / SLIPPAGE_PRECISION / 100), // slippage calcs
       _path,

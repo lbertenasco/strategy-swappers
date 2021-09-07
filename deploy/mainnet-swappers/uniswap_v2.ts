@@ -4,30 +4,43 @@ import { abi as UNISWAP_V2_ROUTER_ABI } from '@uniswap/v2-periphery/build/Uniswa
 import { ethers } from 'hardhat';
 import { shouldVerifyContract } from '../../utils/deploy';
 
+const UNISWAP_V2_FACTORY = '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f';
+const UNISWAP_V2_ROUTER = '0x7a250d5630b4cf539739df2c5dacb4c659f2488d';
+const WETH = '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2';
+
 const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployer, governor } = await hre.getNamedAccounts();
 
-  const UNISWAP_V2_FACTORY = '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f';
-  const UNISWAP_V2_ROUTER = '0x7a250d5630b4cf539739df2c5dacb4c659f2488d';
-
-  const uniswap = await ethers.getContractAt(UNISWAP_V2_ROUTER_ABI, '0x7a250d5630b4cf539739df2c5dacb4c659f2488d');
   const tradeFactory = await hre.deployments.get('TradeFactory');
-  const WETH = await uniswap.WETH();
 
-  const deploy = await hre.deployments.deploy('UniswapV2Swapper', {
+  const asyncDeploy = await hre.deployments.deploy('AsyncUniswapV2', {
+    contract: 'contracts/swappers/async/UniswapV2Swapper.sol:UniswapV2Swapper',
+    from: deployer,
+    args: [governor, tradeFactory.address, UNISWAP_V2_FACTORY, UNISWAP_V2_ROUTER],
+    log: true,
+  });
+
+  if (await shouldVerifyContract(asyncDeploy)) {
+    await hre.run('verify:verify', {
+      address: asyncDeploy.address,
+      constructorArguments: [governor, tradeFactory.address, UNISWAP_V2_FACTORY, UNISWAP_V2_ROUTER],
+    });
+  }
+
+  const syncDeploy = await hre.deployments.deploy('SyncUniswapV2', {
     contract: 'contracts/swappers/sync/UniswapV2Swapper.sol:UniswapV2Swapper',
     from: deployer,
     args: [governor, tradeFactory.address, WETH, UNISWAP_V2_FACTORY, UNISWAP_V2_ROUTER],
     log: true,
   });
 
-  if (await shouldVerifyContract(deploy)) {
+  if (await shouldVerifyContract(syncDeploy)) {
     await hre.run('verify:verify', {
-      address: deploy.address,
+      address: syncDeploy.address,
       constructorArguments: [governor, tradeFactory.address, WETH, UNISWAP_V2_FACTORY, UNISWAP_V2_ROUTER],
     });
   }
 };
 deployFunction.dependencies = ['TradeFactory'];
-deployFunction.tags = ['UniswapV2Swapper', 'Mainnet'];
+deployFunction.tags = ['UniswapV2', 'Mainnet'];
 export default deployFunction;

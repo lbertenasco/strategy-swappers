@@ -5,6 +5,7 @@
   - Can add STRATEGY ADDERS
   - Can add STRATEGY HANDLERS
   - Can sets mechanics registry
+  - Can set OTC Pool
 
 - SWAPPER ADDER
   - Can async and sync swappers
@@ -14,9 +15,11 @@
   - Can set sync swapper to a strategy
 
 - STRATEGY
+
   - Execute sync trade
   - Create async trade
   - Cancel async trade
+
 - STRATEGY ADDER
 
   - Can add strategies

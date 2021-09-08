@@ -11,10 +11,10 @@ interface IUniswapV2Swapper is ISwapper {
   function WETH() external view returns (address);
 
   // solhint-disable-next-line func-name-mixedcase
-  function UNISWAP_FACTORY() external view returns (address);
+  function FACTORY() external view returns (address);
 
   // solhint-disable-next-line func-name-mixedcase
-  function UNISWAP_ROUTER() external view returns (address);
+  function ROUTER() external view returns (address);
 }
 
 contract UniswapV2Swapper is IUniswapV2Swapper, Swapper {
@@ -26,20 +26,20 @@ contract UniswapV2Swapper is IUniswapV2Swapper, Swapper {
   // solhint-disable-next-line var-name-mixedcase
   address public immutable override WETH;
   // solhint-disable-next-line var-name-mixedcase
-  address public immutable override UNISWAP_FACTORY;
+  address public immutable override FACTORY;
   // solhint-disable-next-line var-name-mixedcase
-  address public immutable override UNISWAP_ROUTER;
+  address public immutable override ROUTER;
 
   constructor(
     address _governor,
     address _tradeFactory,
     address _weth,
-    address _uniswapFactory,
-    address _uniswapRouter
+    address _factory,
+    address _router
   ) Swapper(_governor, _tradeFactory) {
     WETH = _weth;
-    UNISWAP_FACTORY = _uniswapFactory;
-    UNISWAP_ROUTER = _uniswapRouter;
+    FACTORY = _factory;
+    ROUTER = _router;
   }
 
   function _executeSwap(
@@ -51,9 +51,9 @@ contract UniswapV2Swapper is IUniswapV2Swapper, Swapper {
     bytes calldata
   ) internal override returns (uint256 _receivedAmount) {
     (address[] memory _path, uint256 _amountOut) = _getPathAndAmountOut(_tokenIn, _tokenOut, _amountIn);
-    IERC20(_path[0]).approve(UNISWAP_ROUTER, 0);
-    IERC20(_path[0]).approve(UNISWAP_ROUTER, _amountIn);
-    _receivedAmount = IUniswapV2Router02(UNISWAP_ROUTER).swapExactTokensForTokens(
+    IERC20(_path[0]).approve(ROUTER, 0);
+    IERC20(_path[0]).approve(ROUTER, _amountIn);
+    _receivedAmount = IUniswapV2Router02(ROUTER).swapExactTokensForTokens(
       _amountIn,
       _amountOut - ((_amountOut * _maxSlippage) / SLIPPAGE_PRECISION / 100), // slippage calcs
       _path,
@@ -70,25 +70,22 @@ contract UniswapV2Swapper is IUniswapV2Swapper, Swapper {
     uint256 _amountOutByDirectPath;
     address[] memory _directPath;
 
-    if (IUniswapV2Factory(UNISWAP_FACTORY).getPair(_tokenIn, _tokenOut) != address(0)) {
+    if (IUniswapV2Factory(FACTORY).getPair(_tokenIn, _tokenOut) != address(0)) {
       _directPath = new address[](2);
       _directPath[0] = _tokenIn;
       _directPath[1] = _tokenOut;
-      _amountOutByDirectPath = IUniswapV2Router02(UNISWAP_ROUTER).getAmountsOut(_amountIn, _directPath)[1];
+      _amountOutByDirectPath = IUniswapV2Router02(ROUTER).getAmountsOut(_amountIn, _directPath)[1];
     }
 
     uint256 _amountOutByWETHHopPath;
     // solhint-disable-next-line var-name-mixedcase
     address[] memory _WETHHopPath;
-    if (
-      IUniswapV2Factory(UNISWAP_FACTORY).getPair(_tokenIn, WETH) != address(0) &&
-      IUniswapV2Factory(UNISWAP_FACTORY).getPair(WETH, _tokenOut) != address(0)
-    ) {
+    if (IUniswapV2Factory(FACTORY).getPair(_tokenIn, WETH) != address(0) && IUniswapV2Factory(FACTORY).getPair(WETH, _tokenOut) != address(0)) {
       _WETHHopPath = new address[](3);
       _WETHHopPath[0] = _tokenIn;
       _WETHHopPath[1] = WETH;
       _WETHHopPath[2] = _tokenOut;
-      _amountOutByWETHHopPath = IUniswapV2Router02(UNISWAP_ROUTER).getAmountsOut(_amountIn, _WETHHopPath)[2];
+      _amountOutByWETHHopPath = IUniswapV2Router02(ROUTER).getAmountsOut(_amountIn, _WETHHopPath)[2];
     }
 
     if (_amountOutByDirectPath >= _amountOutByWETHHopPath) return (_directPath, _amountOutByDirectPath);

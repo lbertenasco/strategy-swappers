@@ -3,11 +3,14 @@ pragma solidity >=0.8.4 <0.9.0;
 
 import 'hardhat/console.sol';
 
-import '@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol';
+import '@openzeppelin/contracts/utils/math/Math.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
+import '@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol';
 import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 
 import '@lbertenasco/contract-utils/contracts/utils/Machinery.sol';
+
+import '../OTCPool.sol';
 
 import './TradeFactoryPositionsHandler.sol';
 
@@ -34,6 +37,8 @@ interface ITradeFactoryExecutor {
     uint256 _againstAmountOutGot
   );
 
+  event AsyncOTCTradesExecuted(uint256[] _ids, uint256 _rateTokenInToOut);
+
   event AsyncTradeExpired(uint256 indexed _id);
 
   event SwapperAndTokenEnabled(address indexed _swapper, address _token);
@@ -41,6 +46,8 @@ interface ITradeFactoryExecutor {
   error OngoingTrade();
 
   error ExpiredTrade();
+
+  error ZeroRate();
 
   function execute(
     address _tokenIn,
@@ -121,76 +128,52 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPos
     emit AsyncTradeExpired(_id);
   }
 
+  function execute(uint256[] calldata _ids, uint256 _rateTokenInToOut) external onlyMechanic {
+    if (_rateTokenInToOut == 0) revert ZeroRate();
+    address _tokenIn = pendingTradesById[_ids[0]]._tokenIn;
+    address _tokenOut = pendingTradesById[_ids[0]]._tokenOut;
+    uint256 _magnitudeIn = 10**IERC20Metadata(_tokenIn).decimals();
+    for (uint256 i; i < _ids.length; i++) {
+      Trade storage _trade = pendingTradesById[_ids[i]];
+      if (i > 0 && (_trade._tokenIn != _tokenIn || _trade._tokenOut != _tokenOut)) revert InvalidTrade();
+      if (block.timestamp > _trade._deadline) revert ExpiredTrade();
+      if (uint8(strategyPermissions[_trade._strategy][_OTC_PERMISSION_INDEX]) != 1) revert CommonErrors.NotAuthorized();
+      uint256 _consumedOut = (_trade._amountIn * _rateTokenInToOut) / _magnitudeIn;
+      IERC20(_trade._tokenIn).safeTransferFrom(_trade._strategy, IOTCPool(otcPool).governor(), _trade._amountIn);
+      IOTCPool(otcPool).take(_trade._tokenOut, _consumedOut, _trade._strategy);
+      _removePendingTrade(_trade._strategy, _trade._id);
+    }
+    emit AsyncOTCTradesExecuted(_ids, _rateTokenInToOut);
+  }
+
   function execute(
-    uint256 _anchorTradeId,
-    uint256 _againstTradeId,
-    uint256 _rateAnchorTokenInToTokenOut
+    uint256 _firstTradeId,
+    uint256 _secondTradeId,
+    uint256 _consumedFirstTrade,
+    uint256 _consumedSecondTrade
   ) external onlyRole(TRADES_SETTLER) returns (uint256 _receivedAmountAnchorTrade, uint256 _receivedAmountAgainstTrade) {
-    Trade storage _anchorTrade = pendingTradesById[_anchorTradeId];
-    Trade storage _againstTrade = pendingTradesById[_againstTradeId];
-    if (_anchorTrade._tokenIn != _againstTrade._tokenOut || _anchorTrade._tokenOut != _againstTrade._tokenIn) revert InvalidTrade();
-    if (block.timestamp > _anchorTrade._deadline || block.timestamp > _againstTrade._deadline) revert ExpiredTrade();
+    Trade storage _firstTrade = pendingTradesById[_firstTradeId];
+    Trade storage _secondTrade = pendingTradesById[_secondTradeId];
+    if (_firstTrade._tokenIn != _secondTrade._tokenOut || _firstTrade._tokenOut != _secondTrade._tokenIn) revert InvalidTrade();
+    if (block.timestamp > _firstTrade._deadline || block.timestamp > _secondTrade._deadline) revert ExpiredTrade();
+    if (
+      uint8(strategyPermissions[_firstTrade._strategy][_COW_PERMISSION_INDEX]) != 1 ||
+      uint8(strategyPermissions[_secondTrade._strategy][_COW_PERMISSION_INDEX]) != 1
+    ) revert CommonErrors.NotAuthorized();
 
-    uint256 _magnitudeAnchorIn = 10**IERC20Metadata(_anchorTrade._tokenIn).decimals();
-    uint256 _totalAnchorOut = (_anchorTrade._amountIn * _rateAnchorTokenInToTokenOut) / _magnitudeAnchorIn;
+    IERC20(_firstTrade._tokenIn).safeTransferFrom(_firstTrade._strategy, _secondTrade._strategy, _consumedFirstTrade);
+    IERC20(_secondTrade._tokenIn).safeTransferFrom(_secondTrade._strategy, _firstTrade._strategy, _consumedSecondTrade);
 
-    if (_totalAnchorOut < _againstTrade._amountIn) {
-      // Anchor trade gets fully consumed
-      IERC20(_anchorTrade._tokenIn).safeTransferFrom(_anchorTrade._strategy, _againstTrade._strategy, _anchorTrade._amountIn);
-      // Anchor trade gets fully filled
-      IERC20(_anchorTrade._tokenOut).safeTransferFrom(_againstTrade._strategy, _anchorTrade._strategy, _totalAnchorOut);
-      // Update against
-      _againstTrade._amountIn = _againstTrade._amountIn - _totalAnchorOut;
-      // Emit event (before removing trade, since we are using storage)
-      emit AsyncTradesMatched(
-        _anchorTradeId,
-        _againstTradeId,
-        _anchorTrade._amountIn, //_anchorAmountInConsumed
-        _totalAnchorOut, // _anchorAmountOutGot
-        _totalAnchorOut, // _againstAmountInConsumed
-        _anchorTrade._amountIn // _againstAmountOutGot
-      );
-      // Remove anchor (executed)
-      _removePendingTrade(_anchorTrade._strategy, _anchorTradeId);
-    } else if (_totalAnchorOut > _againstTrade._amountIn) {
-      uint256 _magnitudeAnchorOut = 10**IERC20Metadata(_anchorTrade._tokenOut).decimals();
-      uint256 _rateAnchorTokenOutToTokenIn = (_magnitudeAnchorIn * _magnitudeAnchorOut) / _rateAnchorTokenInToTokenOut;
-      uint256 _totalAgainstOut = (_againstTrade._amountIn * _rateAnchorTokenOutToTokenIn) / _magnitudeAnchorOut;
-      // Against trade gets fully consumed
-      IERC20(_againstTrade._tokenIn).safeTransferFrom(_againstTrade._strategy, _anchorTrade._strategy, _againstTrade._amountIn);
-      // Against trade gets fully filled
-      IERC20(_againstTrade._tokenOut).safeTransferFrom(_anchorTrade._strategy, _againstTrade._strategy, _totalAgainstOut);
-      // Update anchor
-      _anchorTrade._amountIn = _anchorTrade._amountIn - _totalAgainstOut;
-      // Emit event (before removing trade, since we are using storage)
-      emit AsyncTradesMatched(
-        _anchorTradeId,
-        _againstTradeId,
-        _totalAgainstOut, //_anchorAmountInConsumed
-        _againstTrade._amountIn, // _anchorAmountOutGot
-        _againstTrade._amountIn, // _againstAmountInConsumed
-        _totalAgainstOut // _againstAmountOutGot
-      );
-      // Remove against (executed)
-      _removePendingTrade(_againstTrade._strategy, _againstTradeId);
+    if (_consumedFirstTrade != _firstTrade._amountIn) {
+      _firstTrade._amountIn -= _consumedFirstTrade;
     } else {
-      // Anchor gets consumed
-      IERC20(_anchorTrade._tokenIn).safeTransferFrom(_anchorTrade._strategy, _againstTrade._strategy, _anchorTrade._amountIn);
-      // Against gets consumed
-      IERC20(_againstTrade._tokenIn).safeTransferFrom(_againstTrade._strategy, _anchorTrade._strategy, _againstTrade._amountIn);
-      // Emit event (before removing trade, since we are using storage)
-      emit AsyncTradesMatched(
-        _anchorTradeId,
-        _againstTradeId,
-        _anchorTrade._amountIn, //_anchorAmountInConsumed
-        _totalAnchorOut, // _anchorAmountOutGot
-        _againstTrade._amountIn, // _againstAmountInConsumed
-        _anchorTrade._amountIn // _againstAmountOutGot
-      );
-      // Remove anchor (executed)
-      _removePendingTrade(_anchorTrade._strategy, _anchorTradeId);
-      // Remove against (executed)
-      _removePendingTrade(_againstTrade._strategy, _againstTradeId);
+      _removePendingTrade(_firstTrade._strategy, _firstTradeId);
+    }
+
+    if (_consumedSecondTrade != _secondTrade._amountIn) {
+      _secondTrade._amountIn -= _consumedSecondTrade;
+    } else {
+      _removePendingTrade(_secondTrade._strategy, _secondTradeId);
     }
   }
 }

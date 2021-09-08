@@ -5,6 +5,7 @@
   - Can add STRATEGY ADDERS
   - Can add STRATEGY HANDLERS
   - Can sets mechanics registry
+  - Can set OTC Pool
 
 - SWAPPER ADDER
   - Can async and sync swappers

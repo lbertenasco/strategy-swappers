@@ -63,7 +63,7 @@ export const quote = async (quoteRequest: QuoteRequest): Promise<QuoteResponse> 
   let response: any;
   try {
     response = await axios.get(`https://${API_URL[quoteRequest.chainId]}/swap/v1/quote?${qs.stringify(quoteRequest)}`);
-  } catch (err) {
+  } catch (err: any) {
     console.log(err.response.data);
     throw new Error(`Error code: ${err.response.data.code}. Reason: ${err.response.data.reason}`);
   }

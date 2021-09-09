@@ -27,12 +27,10 @@ interface ITradeFactoryExecutor {
   event AsyncTradeExecuted(uint256 indexed _id, uint256 _receivedAmount);
 
   event AsyncTradesMatched(
-    uint256 indexed _anchorTradeId,
-    uint256 indexed _againstTradeId,
-    uint256 _anchorAmountInConsumed,
-    uint256 _anchorAmountOutGot,
-    uint256 _againstAmountInConsumed,
-    uint256 _againstAmountOutGot
+    uint256 indexed _firstTradeId,
+    uint256 indexed _secondTradeId,
+    uint256 _consumedFirstTrade,
+    uint256 _consumedSecondTrade
   );
 
   event AsyncOTCTradesExecuted(uint256[] _ids, uint256 _rateTokenInToOut);
@@ -173,5 +171,7 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPos
     } else {
       _removePendingTrade(_secondTrade._strategy, _secondTradeId);
     }
+
+    emit AsyncTradesMatched(_firstTradeId, _secondTradeId, _consumedFirstTrade, _consumedSecondTrade);
   }
 }

@@ -2,7 +2,7 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { getChainId, shouldVerifyContract } from '../../utils/deploy';
 
-const ZRX: { [chainId: string]: string } = {
+export const ZRX: { [chainId: string]: string } = {
   // Mainnet
   '1': '0xdef1c0ded9bec7f1a1670819833240f027b25eff',
   // Polygon

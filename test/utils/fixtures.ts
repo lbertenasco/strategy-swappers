@@ -129,7 +129,6 @@ export const uniswapV2SwapperFixture = async (
   const uniswapV2AsyncSwapper = await uniswapV2AsyncSwapperFactory.deploy(
     masterAdmin,
     tradeFactory.address,
-    uniswapDeployment.WETH.address,
     uniswapDeployment.uniswapV2Factory.address,
     uniswapDeployment.uniswapV2Router02.address
   );

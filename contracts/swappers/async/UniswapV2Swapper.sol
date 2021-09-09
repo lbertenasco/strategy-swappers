@@ -8,9 +8,6 @@ import '../../Swapper.sol';
 
 interface IUniswapV2Swapper is ISwapper {
   // solhint-disable-next-line func-name-mixedcase
-  function WETH() external view returns (address);
-
-  // solhint-disable-next-line func-name-mixedcase
   function FACTORY() external view returns (address);
 
   // solhint-disable-next-line func-name-mixedcase
@@ -24,8 +21,6 @@ contract UniswapV2Swapper is IUniswapV2Swapper, Swapper {
   SwapperType public override SWAPPER_TYPE = SwapperType.ASYNC;
 
   // solhint-disable-next-line var-name-mixedcase
-  address public immutable override WETH;
-  // solhint-disable-next-line var-name-mixedcase
   address public immutable override FACTORY;
   // solhint-disable-next-line var-name-mixedcase
   address public immutable override ROUTER;
@@ -33,11 +28,9 @@ contract UniswapV2Swapper is IUniswapV2Swapper, Swapper {
   constructor(
     address _governor,
     address _tradeFactory,
-    address _weth,
     address _uniswapFactory,
     address _uniswapRouter
   ) Swapper(_governor, _tradeFactory) {
-    WETH = _weth;
     FACTORY = _uniswapFactory;
     ROUTER = _uniswapRouter;
   }

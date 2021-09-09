@@ -15,14 +15,14 @@ const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnviro
   const asyncDeploy = await hre.deployments.deploy('AsyncSpookyswap', {
     contract: 'contracts/swappers/async/UniswapV2Swapper.sol:UniswapV2Swapper',
     from: deployer,
-    args: [governor, tradeFactory.address, WFTM, SPOOKYSWAP_FACTORY, SPOOKYSWAP_ROUTER],
+    args: [governor, tradeFactory.address, SPOOKYSWAP_FACTORY, SPOOKYSWAP_ROUTER],
     log: true,
   });
 
   if (await shouldVerifyContract(asyncDeploy)) {
     await hre.run('verify:verify', {
       address: asyncDeploy.address,
-      constructorArguments: [governor, tradeFactory.address, WFTM, SPOOKYSWAP_FACTORY, SPOOKYSWAP_ROUTER],
+      constructorArguments: [governor, tradeFactory.address, SPOOKYSWAP_FACTORY, SPOOKYSWAP_ROUTER],
     });
   }
 

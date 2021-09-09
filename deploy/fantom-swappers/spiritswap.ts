@@ -2,44 +2,44 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { shouldVerifyContract } from '../../utils/deploy';
 
-const SUSHISWAP_FACTORY = '0xc35DADB65012eC5796536bD9864eD8773aBc74C4';
-const SUSHISWAP_ROUTER = '0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506';
-const WMATIC = '0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270';
-const WETH = '0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619';
+const SPIRITSWAP_FACTORY = '0xef45d134b73241eda7703fa787148d9c9f4950b0';
+const SPIRITSWAP_ROUTER = '0x16327e3fbdaca3bcf7e38f5af2599d2ddc33ae52';
+const WETH = '0x74b23882a30290451A17c44f4F05243b6b58C76d';
+const WFTM = '0x21be370D5312f44cB42ce377BC9b8a0cEF1A4C83';
 
 const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployer, governor } = await hre.getNamedAccounts();
 
   const tradeFactory = await hre.deployments.get('TradeFactory');
 
-  const asyncDeploy = await hre.deployments.deploy('AsyncSushiswap', {
+  const asyncDeploy = await hre.deployments.deploy('AsyncSpiritswap', {
     contract: 'contracts/swappers/async/UniswapV2Swapper.sol:UniswapV2Swapper',
     from: deployer,
-    args: [governor, tradeFactory.address, SUSHISWAP_FACTORY, SUSHISWAP_ROUTER],
+    args: [governor, tradeFactory.address, SPIRITSWAP_FACTORY, SPIRITSWAP_ROUTER],
     log: true,
   });
 
   if (await shouldVerifyContract(asyncDeploy)) {
     await hre.run('verify:verify', {
       address: asyncDeploy.address,
-      constructorArguments: [governor, tradeFactory.address, SUSHISWAP_FACTORY, SUSHISWAP_ROUTER],
+      constructorArguments: [governor, tradeFactory.address, SPIRITSWAP_FACTORY, SPIRITSWAP_ROUTER],
     });
   }
 
-  const syncDeploy = await hre.deployments.deploy('SyncSushiswap', {
+  const syncDeploy = await hre.deployments.deploy('SyncSpiritswap', {
     contract: 'contracts/swappers/sync/UniswapV2AnchorSwapper.sol:UniswapV2AnchorSwapper',
     from: deployer,
-    args: [governor, tradeFactory.address, WETH, WMATIC, SUSHISWAP_FACTORY, SUSHISWAP_ROUTER],
+    args: [governor, tradeFactory.address, WETH, WFTM, SPIRITSWAP_FACTORY, SPIRITSWAP_ROUTER],
     log: true,
   });
 
   if (await shouldVerifyContract(syncDeploy)) {
     await hre.run('verify:verify', {
       address: syncDeploy.address,
-      constructorArguments: [governor, tradeFactory.address, WETH, WMATIC, SUSHISWAP_FACTORY, SUSHISWAP_ROUTER],
+      constructorArguments: [governor, tradeFactory.address, WETH, WFTM, SPIRITSWAP_FACTORY, SPIRITSWAP_ROUTER],
     });
   }
 };
 deployFunction.dependencies = ['TradeFactory'];
-deployFunction.tags = ['Sushiswap', 'Polygon'];
+deployFunction.tags = ['Spiritswap', 'Fantom'];
 export default deployFunction;

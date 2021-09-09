@@ -74,7 +74,7 @@ export const swap = async (chainId: number, swapParams: SwapParams): Promise<Swa
         swapParams.gasLimit
       }&protocols=${protocols.join(',')}`
     );
-  } catch (err) {
+  } catch (err: any) {
     throw new Error(`Status code: ${err.response.data.statusCode}. Message: ${err.response.data.message}`);
   }
   return rawAxiosResponse.data as SwapResponse;

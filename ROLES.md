@@ -4,11 +4,14 @@
   - Can add SWAPPER SETTERS
   - Can add STRATEGY ADDERS
   - Can add STRATEGY HANDLERS
+  - Can add TRADES MODIFIER
   - Can sets mechanics registry
   - Can set OTC Pool
 
 - SWAPPER ADDER
-  - Can async and sync swappers
+
+  - Can add async and sync swappers
+
 - SWAPPER SETTER
 
   - Can set async swapper to a strategy
@@ -32,7 +35,7 @@
 - TRADES SETTLER
 
   - Can execute async trades against each other
-  - Can execute async trades against EOA
 
 - yMechanic
   - Execute async trade
+  - Execute async OTC trade against OTC pool

@@ -137,7 +137,7 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPos
       Trade storage _trade = pendingTradesById[_ids[i]];
       if (i > 0 && (_trade._tokenIn != _tokenIn || _trade._tokenOut != _tokenOut)) revert InvalidTrade();
       if (block.timestamp > _trade._deadline) revert ExpiredTrade();
-      if (uint8(strategyPermissions[_trade._strategy][_OTC_PERMISSION_INDEX]) != 1) revert CommonErrors.NotAuthorized();
+      if ((strategyPermissions[_trade._strategy] & _OTC_MASK) != _OTC_MASK) revert CommonErrors.NotAuthorized();
       uint256 _consumedOut = (_trade._amountIn * _rateTokenInToOut) / _magnitudeIn;
       IERC20(_trade._tokenIn).safeTransferFrom(_trade._strategy, IOTCPool(otcPool).governor(), _trade._amountIn);
       IOTCPool(otcPool).take(_trade._tokenOut, _consumedOut, _trade._strategy);
@@ -157,8 +157,8 @@ abstract contract TradeFactoryExecutor is ITradeFactoryExecutor, TradeFactoryPos
     if (_firstTrade._tokenIn != _secondTrade._tokenOut || _firstTrade._tokenOut != _secondTrade._tokenIn) revert InvalidTrade();
     if (block.timestamp > _firstTrade._deadline || block.timestamp > _secondTrade._deadline) revert ExpiredTrade();
     if (
-      uint8(strategyPermissions[_firstTrade._strategy][_COW_PERMISSION_INDEX]) != 1 ||
-      uint8(strategyPermissions[_secondTrade._strategy][_COW_PERMISSION_INDEX]) != 1
+      (strategyPermissions[_firstTrade._strategy] & _COW_MASK) != _COW_MASK ||
+      (strategyPermissions[_secondTrade._strategy] & _COW_MASK) != _COW_MASK
     ) revert CommonErrors.NotAuthorized();
 
     IERC20(_firstTrade._tokenIn).safeTransferFrom(_firstTrade._strategy, _secondTrade._strategy, _consumedFirstTrade);

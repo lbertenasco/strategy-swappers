@@ -18,6 +18,7 @@ contract('TradeFactory', () => {
   let swapperSetter: SignerWithAddress;
   let strategyAdder: SignerWithAddress;
   let tradeModifier: SignerWithAddress;
+  let tradeSettler: SignerWithAddress;
   let otcPoolGovernor: SignerWithAddress;
 
   let uniswapV2AsyncSwapper: Contract;
@@ -44,6 +45,7 @@ contract('TradeFactory', () => {
       swapperSetter,
       strategyAdder,
       tradeModifier,
+      tradeSettler,
       mechanic,
       strategy,
       strategy2,
@@ -62,6 +64,7 @@ contract('TradeFactory', () => {
       swapperSetter.address,
       strategyAdder.address,
       tradeModifier.address,
+      tradeSettler.address,
       mechanicsRegistry.address,
       otcPoolGovernor.address
     ));

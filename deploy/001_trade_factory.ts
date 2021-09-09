@@ -61,6 +61,8 @@ export const TRADE_SETTLER: { [chainId: string]: string } = {
   '1': '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266', // TODO: Change and put the real address
   // Polygon
   '137': '0x31ABE8B1A645ac2d81201869d6eC77CF192e7d7F',
+  // Fantom
+  '250': '0x31ABE8B1A645ac2d81201869d6eC77CF192e7d7F', // TODO: Change and put real address
 };
 
 const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {

@@ -8,7 +8,7 @@ export const MECHANICS_REGISTRY: { [chainId: string]: string } = {
   // Polygon
   '137': '0x7a99923aa2efa71178bb11294349ec1f6b23a814',
   // Fantom
-  '250': '0x7a99923aa2efa71178bb11294349ec1f6b23a814', // TODO: Change and put real address
+  '250': '0x7f462B92F92114A2D57A03e5Ae2DB5DA28b77d73',
 };
 
 export const MASTER_ADMIN: { [chainId: string]: string } = {
@@ -17,7 +17,7 @@ export const MASTER_ADMIN: { [chainId: string]: string } = {
   // Polygon
   '137': '0x31ABE8B1A645ac2d81201869d6eC77CF192e7d7F',
   // Fantom
-  '250': '0x31ABE8B1A645ac2d81201869d6eC77CF192e7d7F', // TODO: Change and put real address
+  '250': '0x9f2A061d6fEF20ad3A656e23fd9C814b75fd5803',
 };
 
 export const SWAPPER_ADDER: { [chainId: string]: string } = {
@@ -26,7 +26,7 @@ export const SWAPPER_ADDER: { [chainId: string]: string } = {
   // Polygon
   '137': '0x31ABE8B1A645ac2d81201869d6eC77CF192e7d7F',
   // Fantom
-  '250': '0x31ABE8B1A645ac2d81201869d6eC77CF192e7d7F', // TODO: Change and put real address
+  '250': '0x9f2A061d6fEF20ad3A656e23fd9C814b75fd5803',
 };
 
 export const SWAPPER_SETTER: { [chainId: string]: string } = {
@@ -35,7 +35,7 @@ export const SWAPPER_SETTER: { [chainId: string]: string } = {
   // Polygon
   '137': '0x31ABE8B1A645ac2d81201869d6eC77CF192e7d7F',
   // Fantom
-  '250': '0x31ABE8B1A645ac2d81201869d6eC77CF192e7d7F', // TODO: Change and put real address
+  '250': '0x9f2A061d6fEF20ad3A656e23fd9C814b75fd5803',
 };
 
 export const STRATEGY_ADDER: { [chainId: string]: string } = {
@@ -44,7 +44,7 @@ export const STRATEGY_ADDER: { [chainId: string]: string } = {
   // Polygon
   '137': '0x31ABE8B1A645ac2d81201869d6eC77CF192e7d7F',
   // Fantom
-  '250': '0x31ABE8B1A645ac2d81201869d6eC77CF192e7d7F', // TODO: Change and put real address
+  '250': '0x9f2A061d6fEF20ad3A656e23fd9C814b75fd5803',
 };
 
 export const TRADE_MODIFIER: { [chainId: string]: string } = {
@@ -53,7 +53,7 @@ export const TRADE_MODIFIER: { [chainId: string]: string } = {
   // Polygon
   '137': '0x31ABE8B1A645ac2d81201869d6eC77CF192e7d7F',
   // Fantom
-  '250': '0x31ABE8B1A645ac2d81201869d6eC77CF192e7d7F', // TODO: Change and put real address
+  '250': '0x9f2A061d6fEF20ad3A656e23fd9C814b75fd5803',
 };
 
 export const TRADE_SETTLER: { [chainId: string]: string } = {
@@ -62,7 +62,7 @@ export const TRADE_SETTLER: { [chainId: string]: string } = {
   // Polygon
   '137': '0x31ABE8B1A645ac2d81201869d6eC77CF192e7d7F',
   // Fantom
-  '250': '0x31ABE8B1A645ac2d81201869d6eC77CF192e7d7F', // TODO: Change and put real address
+  '250': '0x9f2A061d6fEF20ad3A656e23fd9C814b75fd5803',
 };
 
 const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {

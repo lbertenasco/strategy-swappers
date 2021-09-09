@@ -49,7 +49,11 @@ const config: HardhatUserConfig = {
   defaultNetwork: 'hardhat',
   namedAccounts: {
     deployer: 0, // yMECH Alejo
-    governor: 0,
+    governor: {
+      default: 0, // yMECH Alejo
+      1: '0xfeb4acf3df3cdea7399794d0869ef76a6efaff52', // ychad
+      250: '0x9f2A061d6fEF20ad3A656e23fd9C814b75fd5803', // ymechs msig
+    },
     yMech: '0xB82193725471dC7bfaAB1a3AB93c7b42963F3265', // yMECH Alejo
   },
   networks,
@@ -60,7 +64,7 @@ const config: HardhatUserConfig = {
         settings: {
           optimizer: {
             enabled: true,
-            runs: 200,
+            runs: 9999,
           },
         },
       },
@@ -69,7 +73,7 @@ const config: HardhatUserConfig = {
         settings: {
           optimizer: {
             enabled: true,
-            runs: 200,
+            runs: 9999,
           },
         },
       },

@@ -40,6 +40,7 @@ contract ZRXSwapper is IZRXSwapper, Swapper {
     uint256 _initialBalanceOfTokenOut = IERC20(_tokenOut).balanceOf(address(this));
     IERC20(_tokenIn).approve(ZRX, 0);
     IERC20(_tokenIn).approve(ZRX, _amountIn);
+    // solhint-disable-next-line avoid-low-level-calls
     (bool success, ) = ZRX.call{value: 0}(_data);
     if (!success) revert TradeReverted();
     // Check that token in & amount in was correct

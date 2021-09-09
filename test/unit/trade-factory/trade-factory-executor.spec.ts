@@ -10,7 +10,7 @@ import { ethers } from 'hardhat';
 import { contract, given, then, when } from '../../utils/bdd';
 import { smockit, smoddit, MockContract, ModifiableContractFactory, ModifiableContract } from '@eth-optimism/smock';
 import { constants, erc20, evm, wallet, contracts } from '../../utils';
-import { BigNumber, utils } from 'ethers';
+import { BigNumber, utils, Wallet } from 'ethers';
 import moment from 'moment';
 
 contract('TradeFactoryExecutor', () => {
@@ -20,6 +20,7 @@ contract('TradeFactoryExecutor', () => {
   let swapperSetter: SignerWithAddress;
   let strategyAdder: SignerWithAddress;
   let tradeModifier: SignerWithAddress;
+  let tradeSettler: SignerWithAddress;
   let mechanic: SignerWithAddress;
   let machinery: MockContract;
   let asyncSwapper: MockContract;
@@ -31,7 +32,7 @@ contract('TradeFactoryExecutor', () => {
   let token: Contract;
 
   before(async () => {
-    [masterAdmin, swapperAdder, swapperSetter, strategyAdder, tradeModifier, strategy, mechanic] = await ethers.getSigners();
+    [masterAdmin, swapperAdder, swapperSetter, strategyAdder, tradeModifier, tradeSettler, strategy, mechanic] = await ethers.getSigners();
     executorFactory = await smoddit('contracts/mock/TradeFactory/TradeFactoryExecutor.sol:TradeFactoryExecutorMock', mechanic);
   });
 
@@ -47,6 +48,7 @@ contract('TradeFactoryExecutor', () => {
       swapperSetter.address,
       strategyAdder.address,
       tradeModifier.address,
+      tradeSettler.address,
       machinery.address
     );
     executor = modifiableExecutor.connect(mechanic);
@@ -172,11 +174,12 @@ contract('TradeFactoryExecutor', () => {
         await expect(executor['execute(uint256,bytes)'](tradeId, data)).to.be.revertedWith('ExpiredTrade()');
       });
     });
-    // FIX: We need to have the ability to only change one pending trade swapper ID
-    // it doesnt make sense to change ALL pending trades of a strategy if only one swapper
-    // was deprecated. Plus we need that granularity
-    when.skip('executing a trade where swapper has been removed', () => {
+    when('executing a trade where swapper has been removed', () => {
       given(async () => {
+        const otherAsyncSwapper = await smockit(swapperABI);
+        await executor.connect(swapperAdder).addSwappers([otherAsyncSwapper.address, syncSwapper.address]);
+        otherAsyncSwapper.smocked.SWAPPER_TYPE.will.return.with(0);
+        await executor.connect(swapperSetter).setStrategyAsyncSwapper(strategy.address, otherAsyncSwapper.address);
         await executor.connect(swapperAdder).removeSwappers([asyncSwapper.address]);
       });
       then('tx is reverted with reason', async () => {
@@ -207,7 +210,9 @@ contract('TradeFactoryExecutor', () => {
         expect(asyncSwapper.smocked.swap.calls[0]).to.be.eql([strategy.address, token.address, tokenOut, amountIn, maxSlippage, data]);
       });
       then('removes trades from trades', async () => {
-        expect((await executor.pendingTradesById(tradeId))._id).to.equal(0);
+        expect(await executor.pendingTradesById(tradeId))
+          .to.haveOwnProperty('_id')
+          .to.equal(0);
       });
       then("removes trades from pending strategy's trade", async () => {
         expect(await executor['pendingTradesIds(address)'](strategy.address)).to.be.empty;
@@ -254,7 +259,9 @@ contract('TradeFactoryExecutor', () => {
         expect(await token.allowance(strategy.address, executor.address)).to.be.equal(0);
       });
       then('removes trades from trades', async () => {
-        expect((await executor.pendingTradesById(tradeId))._id).to.equal(0);
+        expect(await executor.pendingTradesById(tradeId))
+          .to.haveOwnProperty('_id')
+          .to.equal(0);
       });
       then("removes trades from pending strategy's trade", async () => {
         expect(await executor['pendingTradesIds(address)'](strategy.address)).to.be.empty;
@@ -266,6 +273,200 @@ contract('TradeFactoryExecutor', () => {
         await expect(expireTx).to.emit(executor, 'AsyncTradeExpired').withArgs(tradeId);
       });
     });
+  });
+
+  describe('execute async trade against trade', () => {
+    let otherStrat: Wallet;
+    let tokenOut: Contract;
+    let firstTrade: any;
+    let secondTrade: any;
+    given(async () => {
+      otherStrat = await wallet.generateRandom();
+      tokenOut = await erc20.deploy({
+        symbol: 'TKO',
+        name: 'Token out',
+        initialAccount: otherStrat.address,
+        initialAmount: utils.parseEther('10000'),
+      });
+      await executor.connect(strategyAdder).grantRole(await executor.STRATEGY(), otherStrat.address);
+      await executor.connect(swapperSetter).setStrategyAsyncSwapper(otherStrat.address, asyncSwapper.address);
+      // Enable COW for both strategies
+      await executor.connect(swapperSetter).setStrategyPermissions(strategy.address, 2);
+      await executor.connect(swapperSetter).setStrategyPermissions(otherStrat.address, 2);
+      firstTrade = {
+        amountIn: utils.parseEther('100'),
+        tokenIn: token.address,
+        tokenOut: tokenOut.address,
+        deadline: moment().add('30', 'minutes').unix(),
+        maxSlippage: BigNumber.from('1000'),
+      };
+      secondTrade = {
+        amountIn: utils.parseEther('100'),
+        tokenIn: tokenOut.address,
+        tokenOut: token.address,
+        deadline: moment().add('30', 'minutes').unix(),
+        maxSlippage: BigNumber.from('1000'),
+      };
+      // ID: 1
+      await token.connect(strategy).approve(executor.address, firstTrade.amountIn);
+      await executor
+        .connect(strategy)
+        .create(firstTrade.tokenIn, firstTrade.tokenOut, firstTrade.amountIn, firstTrade.maxSlippage, firstTrade.deadline);
+      // ID: 2
+      await tokenOut.connect(otherStrat).approve(executor.address, secondTrade.amountIn);
+      await executor
+        .connect(otherStrat)
+        .create(secondTrade.tokenIn, secondTrade.tokenOut, secondTrade.amountIn, secondTrade.maxSlippage, secondTrade.deadline);
+    });
+    when('trades have different token in than token out', () => {
+      given(async () => {
+        await executor
+          .connect(otherStrat)
+          .create(wallet.generateRandomAddress(), firstTrade.tokenOut, firstTrade.amountIn, firstTrade.maxSlippage, firstTrade.deadline);
+      });
+      then('tx is reverted with reason', async () => {
+        await expect(executor.connect(tradeSettler)['execute(uint256,uint256,uint256,uint256)'](3, 2, 0, 0)).to.be.revertedWith(
+          'InvalidTrade()'
+        );
+      });
+    });
+    when('trades have different token out than token in', () => {
+      given(async () => {
+        await executor
+          .connect(otherStrat)
+          .create(firstTrade.tokenIn, wallet.generateRandomAddress(), firstTrade.amountIn, firstTrade.maxSlippage, firstTrade.deadline);
+      });
+      then('tx is reverted with reason', async () => {
+        await expect(executor.connect(tradeSettler)['execute(uint256,uint256,uint256,uint256)'](3, 2, 0, 0)).to.be.revertedWith(
+          'InvalidTrade()'
+        );
+      });
+    });
+    when('first trade has expired', () => {
+      given(async () => {
+        await executor
+          .connect(otherStrat)
+          .create(firstTrade.tokenIn, firstTrade.tokenOut, firstTrade.amountIn, firstTrade.maxSlippage, moment().add('1', 'minutes').unix());
+        await evm.advanceToTimeAndBlock(moment().add('2', 'minutes').unix());
+      });
+      then('tx is reverted with reason', async () => {
+        await expect(executor.connect(tradeSettler)['execute(uint256,uint256,uint256,uint256)'](3, 2, 0, 0)).to.be.revertedWith(
+          'ExpiredTrade()'
+        );
+      });
+    });
+    when('against trade has expired', () => {
+      given(async () => {
+        await executor
+          .connect(otherStrat)
+          .create(secondTrade.tokenIn, secondTrade.tokenOut, secondTrade.amountIn, secondTrade.maxSlippage, moment().add('1', 'minutes').unix());
+        await evm.advanceToTimeAndBlock(moment().add('2', 'minutes').unix());
+      });
+      then('tx is reverted with reason', async () => {
+        await expect(executor.connect(tradeSettler)['execute(uint256,uint256,uint256,uint256)'](1, 3, 0, 0)).to.be.revertedWith(
+          'ExpiredTrade()'
+        );
+      });
+    });
+    when(`first trade's strategy doesnt have COW enabled`, () => {
+      given(async () => {
+        await executor.connect(swapperSetter).setStrategyPermissions(strategy.address, 1);
+      });
+      then('tx is reverted with reason', async () => {
+        await expect(executor.connect(tradeSettler)['execute(uint256,uint256,uint256,uint256)'](1, 2, 0, 0)).to.be.revertedWith(
+          'NotAuthorized()'
+        );
+      });
+    });
+    when(`second trade's strategy doesnt have COW enabled`, () => {
+      given(async () => {
+        await executor.connect(swapperSetter).setStrategyPermissions(otherStrat.address, 1);
+      });
+      then('tx is reverted with reason', async () => {
+        await expect(executor.connect(tradeSettler)['execute(uint256,uint256,uint256,uint256)'](1, 2, 0, 0)).to.be.revertedWith(
+          'NotAuthorized()'
+        );
+      });
+    });
+    // when('anchor trade cant cover for all against trade', () => {
+    //   let tradeTx: TransactionResponse;
+    //   const rate = utils.parseEther('0.9');
+    //   given(async () => {
+    //     tradeTx = await executor.connect(tradeSettler)['execute(uint256,uint256,uint256,uint256)'](1, 2, rate);
+    //   });
+    //   then('strategy that owns anchor trade gets correct amount of tokens airdropped', async () => {
+    //     expect(await tokenOut.balanceOf(strategy.address)).to.equal(utils.parseEther('90'));
+    //   });
+    //   then('strategy that owns against trade gets correct amount of tokens airdropped', async () => {
+    //     expect(await token.balanceOf(otherStrat.address)).to.equal(anchorTrade.amountIn);
+    //   });
+    //   then('amount in of against trade gets reduced accodingly', async () => {
+    //     expect(await executor.pendingTradesById(2))
+    //       .to.haveOwnProperty('_amountIn')
+    //       .to.equal(utils.parseEther('10'));
+    //   });
+    //   then('anchor trade gets removed', async () => {
+    //     expect(await executor.pendingTradesById(1))
+    //       .to.haveOwnProperty('_id')
+    //       .to.equal(0);
+    //   });
+    //   then('emits event with correct information', async () => {
+    //     await expect(tradeTx)
+    //       .to.emit(executor, 'AsyncTradesMatched')
+    //       .withArgs(1, 2, anchorTrade.amountIn, utils.parseEther('90'), utils.parseEther('90'), anchorTrade.amountIn);
+    //   });
+    // });
+    // when('against trade cant fullfil for all anchor trade', () => {
+    //   let tradeTx: TransactionResponse;
+    //   const rate = utils.parseEther('2');
+    //   given(async () => {
+    //     tradeTx = await executor.connect(tradeSettler)['execute(uint256,uint256,uint256,uint256)'](1, 2, rate);
+    //   });
+    //   then('strategy that owns anchor trade gets correct amount of tokens airdropped', async () => {
+    //     expect(await tokenOut.balanceOf(strategy.address)).to.equal(utils.parseEther('100'));
+    //   });
+    //   then('strategy that owns against trade gets correct amount of tokens airdropped', async () => {
+    //     expect(await token.balanceOf(otherStrat.address)).to.equal(utils.parseEther('50'));
+    //   });
+    //   then('amount in of anchor trade gets reduced accodingly', async () => {
+    //     expect(await executor.pendingTradesById(1))
+    //       .to.haveOwnProperty('_amountIn')
+    //       .to.equal(utils.parseEther('50'));
+    //   });
+    //   then('against trade gets removed', async () => {
+    //     expect(await executor.pendingTradesById(2))
+    //       .to.haveOwnProperty('_id')
+    //       .to.equal(0);
+    //   });
+    //   then('emits event with correct information', async () => {
+    //     await expect(tradeTx)
+    //       .to.emit(executor, 'AsyncTradesMatched')
+    //       .withArgs(1, 2, utils.parseEther('50'), utils.parseEther('100'), utils.parseEther('100'), utils.parseEther('50'));
+    //   });
+    // });
+    // when('there is a coincidence of wants', () => {
+    //   let tradeTx: TransactionResponse;
+    //   const rate = utils.parseEther('1');
+    //   given(async () => {
+    //     tradeTx = await executor.connect(tradeSettler)['execute(uint256,uint256,uint256,uint256)'](1, 2, rate);
+    //   });
+    //   then('strategy that owns anchor trade gets correct amount of tokens airdropped', async () => {
+    //     expect(await tokenOut.balanceOf(strategy.address)).to.equal(utils.parseEther('100'));
+    //   });
+    //   then('strategy that owns against trade gets correct amount of tokens airdropped', async () => {
+    //     expect(await token.balanceOf(otherStrat.address)).to.equal(utils.parseEther('100'));
+    //   });
+    //   then('anchor trade gets removed', async () => {
+    //     expect(await executor.pendingTradesById(1))
+    //       .to.haveOwnProperty('_id')
+    //       .to.equal(0);
+    //   });
+    //   then('against trade gets removed', async () => {
+    //     await expect(tradeTx)
+    //       .to.emit(executor, 'AsyncTradesMatched')
+    //       .withArgs(1, 2, utils.parseEther('100'), utils.parseEther('100'), utils.parseEther('100'), utils.parseEther('100'));
+    //   });
+    // });
   });
 
   describe('execute otc', () => {

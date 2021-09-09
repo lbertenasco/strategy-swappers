@@ -53,8 +53,8 @@ abstract contract TradeFactorySwapperHandler is ITradeFactorySwapperHandler, Tra
   bytes32 public constant SWAPPER_ADDER = keccak256('SWAPPER_ADDER');
   bytes32 public constant SWAPPER_SETTER = keccak256('SWAPPER_SETTER');
 
-  uint8 internal constant _OTC_PERMISSION_INDEX = 0;
-  uint8 internal constant _COW_PERMISSION_INDEX = 1;
+  bytes1 internal constant _OTC_MASK = 0x01;
+  bytes1 internal constant _COW_MASK = 0x02;
 
   // OTC Handler
   address public otcPool;

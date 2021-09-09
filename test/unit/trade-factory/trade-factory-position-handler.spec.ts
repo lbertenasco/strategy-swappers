@@ -25,6 +25,7 @@ contract('TradeFactoryPositionsHandler', () => {
   const MASTER_ADMIN_ROLE: string = new Web3().utils.soliditySha3('MASTER_ADMIN') as string;
   const STRATEGY_ROLE: string = new Web3().utils.soliditySha3('STRATEGY') as string;
   const STRATEGY_ADDER_ROLE: string = new Web3().utils.soliditySha3('STRATEGY_ADDER') as string;
+  const TRADES_MODIFIER_ROLE: string = new Web3().utils.soliditySha3('TRADES_MODIFIER') as string;
 
   before(async () => {
     [deployer, masterAdmin, swapperAdder, swapperSetter, strategyAdder, tradesModifier, strategy] = await ethers.getSigners();
@@ -65,7 +66,9 @@ contract('TradeFactoryPositionsHandler', () => {
       then('admin role of strategy admin is master admin', async () => {
         expect(await positionsHandler.getRoleAdmin(STRATEGY_ADDER_ROLE)).to.equal(MASTER_ADMIN_ROLE);
       });
-      then('admin role of trades modifier is master admin');
+      then('admin role of trades modifier is master admin', async () => {
+        expect(await positionsHandler.getRoleAdmin(TRADES_MODIFIER_ROLE)).to.equal(MASTER_ADMIN_ROLE);
+      });
     });
   });
 

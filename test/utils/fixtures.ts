@@ -42,6 +42,7 @@ export const tradeFactoryFixture = async (
   swapperSetter: string,
   strategyAdder: string,
   tradeModifier: string,
+  tradeSettler: string,
   mechanicsRegistry: string
 ): Promise<TradeFactoryFixture> => {
   const tradeFactoryFactory = await ethers.getContractFactory('contracts/TradeFactory/TradeFactory.sol:TradeFactory');
@@ -51,6 +52,7 @@ export const tradeFactoryFixture = async (
     swapperSetter,
     strategyAdder,
     tradeModifier,
+    tradeSettler,
     mechanicsRegistry
   );
   return {
@@ -68,10 +70,19 @@ export const otcPoolFixture = async (
   swapperSetter: string,
   strategyAdder: string,
   tradeModifier: string,
+  tradeSettler: string,
   mechanicsRegistry: string,
   otcPoolGovernor: string
 ): Promise<OTCPoolFixture> => {
-  const { tradeFactory } = await tradeFactoryFixture(masterAdmin, swapperAdder, swapperSetter, strategyAdder, tradeModifier, mechanicsRegistry);
+  const { tradeFactory } = await tradeFactoryFixture(
+    masterAdmin,
+    swapperAdder,
+    swapperSetter,
+    strategyAdder,
+    tradeModifier,
+    tradeSettler,
+    mechanicsRegistry
+  );
   const otcPoolFactory = await ethers.getContractFactory('contracts/OTCPool.sol:OTCPool');
   const masterAdminSigner = await wallet.impersonate(masterAdmin);
   const otcPool = await otcPoolFactory.deploy(otcPoolGovernor, tradeFactory.address);
@@ -96,6 +107,7 @@ export const uniswapV2SwapperFixture = async (
   swapperSetter: string,
   strategyAdder: string,
   tradeModifier: string,
+  tradeSettler: string,
   mechanicsRegistry: string,
   otcPoolGovernor: string
 ): Promise<UniswapV2SwapperFixture> => {
@@ -105,6 +117,7 @@ export const uniswapV2SwapperFixture = async (
     swapperSetter,
     strategyAdder,
     tradeModifier,
+    tradeSettler,
     mechanicsRegistry,
     otcPoolGovernor
   );

@@ -40,7 +40,6 @@ const networks: NetworksUserConfig = process.env.TEST
       fantom: {
         url: getNodeUrl('fantom'),
         accounts: [(process.env.FANTOM_PRIVATE_KEY as string) || DEFAULT_ACCOUNT],
-        gasPrice: utils.parseUnits('40', 'gwei').toNumber(),
         tags: ['production'],
       },
     };

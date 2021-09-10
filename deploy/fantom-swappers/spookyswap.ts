@@ -2,10 +2,10 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { shouldVerifyContract } from '../../utils/deploy';
 
-const SPOOKYSWAP_FACTORY = '0x152eE697f2E276fA89E96742e9bB9aB1F2E61bE3';
-const SPOOKYSWAP_ROUTER = '0xF491e7B69E4244ad4002BC14e878a34207E38c29';
-const WETH = '0x74b23882a30290451A17c44f4F05243b6b58C76d';
-const WFTM = '0x21be370D5312f44cB42ce377BC9b8a0cEF1A4C83';
+export const SPOOKYSWAP_FACTORY = '0x152eE697f2E276fA89E96742e9bB9aB1F2E61bE3';
+export const SPOOKYSWAP_ROUTER = '0xF491e7B69E4244ad4002BC14e878a34207E38c29';
+export const WETH = '0x74b23882a30290451A17c44f4F05243b6b58C76d';
+export const WFTM = '0x21be370D5312f44cB42ce377BC9b8a0cEF1A4C83';
 
 const deployFunction: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployer, governor } = await hre.getNamedAccounts();

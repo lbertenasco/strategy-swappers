@@ -3,6 +3,7 @@ import zrx from './libraries/zrx';
 import { TransactionResponse } from '@ethersproject/abstract-provider';
 import oneinch from './libraries/oneinch';
 import wallet from '../test/utils/wallet';
+import moment from 'moment';
 
 async function main() {
   const chainId = await getChainId();
@@ -16,20 +17,26 @@ async function main() {
     pendingTrades.push(await tradeFactory['pendingTradesById(uint256)'](id));
   }
   for (const pendingTrade of pendingTrades) {
-    console.log('Executing through 0x the following pending trade:', pendingTrade._id.toString());
     let data;
+    if (pendingTrade._deadline.lt(moment().unix())) {
+      console.log(`Expiring trade ${pendingTrade._id.toString()}`);
+      await tradeFactory.expire(pendingTrade._id);
+      continue;
+    }
+    console.log(`There are ${pendingTrades.length} pending trades`);
     if (compareAddresses(pendingTrade._swapper, ZRXSwapper.address)) {
-      console.log('Executing through ZRX');
+      console.log(`Executing ${pendingTrade._id.toString()} through ZRX`);
       const zrxAPIResponse = await zrx.quote({
         chainId: Number(chainId),
         sellToken: pendingTrade._tokenIn,
         buyToken: pendingTrade._tokenOut,
         sellAmount: pendingTrade._amountIn,
-        sippagePercentage: 0.05,
+        sippagePercentage: 0.01,
+        skipValidation: true,
       });
       data = zrxAPIResponse.data;
     } else if (compareAddresses(pendingTrade._swapper, oneInchAggregatorSwapper.address)) {
-      console.log('Executing through ONE INCH');
+      console.log(`Executing ${pendingTrade._id.toString()} through ONE INCH`);
       const oneInchApiResponse = await oneinch.swap(Number(chainId), {
         tokenIn: pendingTrade._tokenIn,
         tokenOut: pendingTrade._tokenOut,
@@ -40,11 +47,11 @@ async function main() {
         allowPartialFill: false,
         disableEstimate: true,
         fee: 0,
-        gasLimit: 5_000_000,
+        gasLimit: 8_000_000,
       });
       data = oneInchApiResponse.tx.data;
     }
-    await tradeFactory['execute(uint256,bytes)'](pendingTrade._id, data, { gasPrice: 5_000_000 });
+    await tradeFactory['execute(uint256,bytes)'](pendingTrade._id, data, { gasLimit: 8_000_000 });
   }
 }
 

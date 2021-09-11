@@ -37,11 +37,11 @@ export const getBestPathEncoded = async (swapParams: SwapParams): Promise<string
       (await factory.getPair(swapParams.hopTokensToTest[i], swapParams.tokenOut)) != constants.ZERO_ADDRESS
     ) {
       const hopPath = [swapParams.tokenIn, swapParams.hopTokensToTest[i], swapParams.tokenOut];
-      const hopOut: BigNumber = await router.getAmountsOut(swapParams.amountIn, hopPath);
+      const amountsOut = await router.getAmountsOut(swapParams.amountIn, hopPath);
+      const hopOut = amountsOut[amountsOut.length - 1];
       if (hopOut.gt(maxOut)) maxPath = hopPath;
     }
   }
-
   return ethers.utils.defaultAbiCoder.encode(['address[]'], [maxPath]);
 };
 

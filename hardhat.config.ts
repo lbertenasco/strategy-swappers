@@ -16,7 +16,7 @@ const networks: NetworksUserConfig = process.env.TEST
       hardhat: {
         forking: {
           enabled: process.env.FORK ? true : false,
-          url: getNodeUrl('mainnet'),
+          url: getNodeUrl('fantom'),
         },
       },
       localhost: {

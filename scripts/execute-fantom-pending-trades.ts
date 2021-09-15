@@ -15,7 +15,7 @@ async function main() {
   console.log('Chain ID:', chainId);
   const tradeFactory = await ethers.getContract('TradeFactory');
   const spookyswapSwapper = await ethers.getContract('AsyncSpookyswap');
-  const spiritswapSwapper = await ethers.getContract('AsyncSpookyswap');
+  const spiritswapSwapper = await ethers.getContract('AsyncSpiritswap');
   const pendingTradesIds = await tradeFactory['pendingTradesIds()']();
   const pendingTrades: any = [];
   for (const id of pendingTradesIds) {
@@ -39,7 +39,7 @@ async function main() {
         uniswapV2Factory: SPOOKYSWAP_FACTORY,
         hopTokensToTest: [SPOOKY_TOKEN, WFTM, WETH],
       });
-    } else if (compareAddresses(pendingTrade._swapper, spookyswapSwapper.address)) {
+    } else if (compareAddresses(pendingTrade._swapper, spiritswapSwapper.address)) {
       console.log(`Executing ${pendingTrade._id.toString()} through Spiritswap`);
       data = await uniswap.getBestPathEncoded({
         tokenIn: pendingTrade._tokenIn,

@@ -16,6 +16,7 @@ async function main() {
   for (const id of pendingTradesIds) {
     pendingTrades.push(await tradeFactory['pendingTradesById(uint256)'](id));
   }
+  console.log(`There are ${pendingTrades.length} pending trades`);
   for (const pendingTrade of pendingTrades) {
     let data;
     if (pendingTrade._deadline.lt(moment().unix())) {
@@ -23,7 +24,6 @@ async function main() {
       await tradeFactory.expire(pendingTrade._id);
       continue;
     }
-    console.log(`There are ${pendingTrades.length} pending trades`);
     if (compareAddresses(pendingTrade._swapper, ZRXSwapper.address)) {
       console.log(`Executing ${pendingTrade._id.toString()} through ZRX`);
       const zrxAPIResponse = await zrx.quote({

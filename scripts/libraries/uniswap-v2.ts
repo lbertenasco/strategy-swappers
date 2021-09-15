@@ -17,7 +17,13 @@ export type SwapParams = {
   hopTokensToTest?: string[];
 };
 
-export const getBestPathEncoded = async (swapParams: SwapParams): Promise<string> => {
+export type SwapResponse = {
+  data: string;
+  amountOut: BigNumber;
+  path: string[];
+};
+
+export const getBestPathEncoded = async (swapParams: SwapParams): Promise<SwapResponse> => {
   swapParams.hopTokensToTest = swapParams.hopTokensToTest ?? [];
 
   const factory = await ethers.getContractAt(IUniswapV2Factory, swapParams.uniswapV2Factory);
@@ -39,10 +45,17 @@ export const getBestPathEncoded = async (swapParams: SwapParams): Promise<string
       const hopPath = [swapParams.tokenIn, swapParams.hopTokensToTest[i], swapParams.tokenOut];
       const amountsOut = await router.getAmountsOut(swapParams.amountIn, hopPath);
       const hopOut = amountsOut[amountsOut.length - 1];
-      if (hopOut.gt(maxOut)) maxPath = hopPath;
+      if (hopOut.gt(maxOut)) {
+        maxOut = hopOut;
+        maxPath = hopPath;
+      }
     }
   }
-  return ethers.utils.defaultAbiCoder.encode(['address[]'], [maxPath]);
+  return {
+    data: ethers.utils.defaultAbiCoder.encode(['address[]'], [maxPath]),
+    amountOut: maxOut,
+    path: maxPath,
+  };
 };
 
 export default {

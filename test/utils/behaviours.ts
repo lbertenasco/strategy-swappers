@@ -1,17 +1,25 @@
 import { expect } from 'chai';
 import chaiAsPromised from 'chai-as-promised';
 import chai from 'chai';
-import { Contract, ContractFactory, ContractInterface, Signer, Wallet } from 'ethers';
+import { constants, Contract, ContractFactory, ContractInterface, Signer, Wallet } from 'ethers';
 import { TransactionResponse } from '@ethersproject/abstract-provider';
+import { Provider } from '@ethersproject/providers';
 import { getStatic } from 'ethers/lib/utils';
-import { given, then, when } from './bdd';
-import { constants, wallet } from '.';
+import { wallet } from '.';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signers';
-import { ethers } from 'hardhat';
+import { when, given, then } from './bdd';
 
 chai.use(chaiAsPromised);
 
-const checkTxRevertedWithMessage = async ({ tx, message }: { tx: Promise<TransactionResponse>; message: RegExp | string }): Promise<void> => {
+type Impersonator = Signer | Provider | string;
+
+export const checkTxRevertedWithMessage = async ({
+  tx,
+  message,
+}: {
+  tx: Promise<TransactionResponse>;
+  message: RegExp | string;
+}): Promise<void> => {
   await expect(tx).to.be.reverted;
   if (message instanceof RegExp) {
     await expect(tx).eventually.rejected.have.property('message').match(message);
@@ -20,20 +28,20 @@ const checkTxRevertedWithMessage = async ({ tx, message }: { tx: Promise<Transac
   }
 };
 
-const checkTxRevertedWithZeroAddress = async (tx: Promise<TransactionResponse>): Promise<void> => {
+export const checkTxRevertedWithZeroAddress = async (tx: Promise<TransactionResponse>): Promise<void> => {
   await checkTxRevertedWithMessage({
     tx,
-    message: 'ZeroAddress()',
+    message: /ZeroAddress/,
   });
 };
 
-const deployShouldRevertWithZeroAddress = async ({ contract, args }: { contract: ContractFactory; args: any[] }): Promise<void> => {
+export const deployShouldRevertWithZeroAddress = async ({ contract, args }: { contract: ContractFactory; args: any[] }): Promise<void> => {
   const deployContractTx = await contract.getDeployTransaction(...args);
   const tx = contract.signer.sendTransaction(deployContractTx);
   await checkTxRevertedWithZeroAddress(tx);
 };
 
-const deployShouldRevertWithMessage = async ({
+export const deployShouldRevertWithMessage = async ({
   contract,
   args,
   message,
@@ -47,7 +55,7 @@ const deployShouldRevertWithMessage = async ({
   await checkTxRevertedWithMessage({ tx, message });
 };
 
-const txShouldRevertWithZeroAddress = async ({
+export const txShouldRevertWithZeroAddress = async ({
   contract,
   func,
   args,
@@ -57,11 +65,11 @@ const txShouldRevertWithZeroAddress = async ({
   args: any[];
   tx?: Promise<TransactionResponse>;
 }): Promise<void> => {
-  const tx = contract[func].apply(this, args);
+  const tx = contract[func](...args);
   await checkTxRevertedWithZeroAddress(tx);
 };
 
-const txShouldRevertWithMessage = async ({
+export const txShouldRevertWithMessage = async ({
   contract,
   func,
   args,
@@ -72,11 +80,11 @@ const txShouldRevertWithMessage = async ({
   args: any[];
   message: string;
 }): Promise<void> => {
-  const tx = contract[func].apply(this, args);
+  const tx = contract[func](...args);
   await checkTxRevertedWithMessage({ tx, message });
 };
 
-const checkTxEmittedEvents = async ({
+export const checkTxEmittedEvents = async ({
   contract,
   tx,
   events,
@@ -92,7 +100,7 @@ const checkTxEmittedEvents = async ({
   }
 };
 
-const deployShouldSetVariablesAndEmitEvents = async ({
+export const deployShouldSetVariablesAndEmitEvents = async ({
   contract,
   args,
   settersGettersVariablesAndEvents,
@@ -119,7 +127,7 @@ const deployShouldSetVariablesAndEmitEvents = async ({
   });
 };
 
-const txShouldHaveSetVariablesAndEmitEvents = async ({
+export const txShouldHaveSetVariablesAndEmitEvents = async ({
   contract,
   tx,
   settersGettersVariablesAndEvents,
@@ -143,11 +151,11 @@ const txShouldHaveSetVariablesAndEmitEvents = async ({
         },
       ],
     });
-    expect(await contract[settersGettersVariablesAndEvents[i].getterFunc].apply(this)).to.eq(settersGettersVariablesAndEvents[i].variable);
+    expect(await contract[settersGettersVariablesAndEvents[i].getterFunc]()).to.eq(settersGettersVariablesAndEvents[i].variable);
   }
 };
 
-const txShouldSetVariableAndEmitEvent = async ({
+export const txShouldSetVariableAndEmitEvent = async ({
   contract,
   setterFunc,
   getterFunc,
@@ -160,8 +168,8 @@ const txShouldSetVariableAndEmitEvent = async ({
   variable: any;
   eventEmitted: string;
 }): Promise<void> => {
-  expect(await contract[getterFunc].apply(this)).to.not.eq(variable);
-  const tx = contract[setterFunc].apply(this, [variable]);
+  expect(await contract[getterFunc]()).to.not.eq(variable);
+  const tx = contract[setterFunc](variable);
   await txShouldHaveSetVariablesAndEmitEvents({
     contract,
     tx,
@@ -175,13 +183,28 @@ const txShouldSetVariableAndEmitEvent = async ({
   });
 };
 
-const waitForTxAndNotThrow = (tx: Promise<TransactionResponse>): Promise<any> => {
-  return new Promise((resolve) => {
-    tx.then(resolve).catch(resolve);
+export const fnShouldOnlyBeCallableByGovernance = (
+  delayedContract: () => Contract,
+  fnName: string,
+  governance: Impersonator,
+  args: unknown[] | (() => unknown[])
+): void => {
+  it('should be callable by governance', () => {
+    return expect(callFunction(governance)).not.to.be.revertedWith('OnlyGovernance()');
   });
+
+  it('should not be callable by any address', async () => {
+    return expect(callFunction(await wallet.generateRandom())).to.be.revertedWith('OnlyGovernance()');
+  });
+
+  function callFunction(impersonator: Impersonator) {
+    const argsArray: unknown[] = typeof args === 'function' ? args() : args;
+    const fn = delayedContract().connect(impersonator)[fnName] as (...args: unknown[]) => unknown;
+    return fn(...argsArray, { gasPrice: 0 });
+  }
 };
 
-const shouldBeExecutableOnlyByTradeFactory = ({
+export const shouldBeExecutableOnlyByTradeFactory = ({
   contract,
   funcAndSignature,
   params,
@@ -218,11 +241,11 @@ const shouldBeExecutableOnlyByTradeFactory = ({
   });
 };
 
-const shouldBeCheckPreAssetSwap = ({ contract, func, withData }: { contract: () => Contract; func: string; withData: boolean }) => {
+export const shouldBeCheckPreAssetSwap = ({ contract, func, withData }: { contract: () => Contract; func: string; withData: boolean }) => {
   when('receiver is zero address', () => {
     let tx: Promise<TransactionResponse>;
     given(async () => {
-      const args = [constants.ZERO_ADDRESS, constants.NOT_ZERO_ADDRESS, constants.NOT_ZERO_ADDRESS, constants.ONE, constants.ONE];
+      const args = [constants.AddressZero, wallet.generateRandomAddress(), wallet.generateRandomAddress(), constants.One, constants.One];
       if (withData) args.push('0x');
       tx = contract()[func](...args);
     });
@@ -233,7 +256,7 @@ const shouldBeCheckPreAssetSwap = ({ contract, func, withData }: { contract: () 
   when('token in is zero address', () => {
     let tx: Promise<TransactionResponse>;
     given(async () => {
-      const args = [constants.NOT_ZERO_ADDRESS, constants.ZERO_ADDRESS, constants.NOT_ZERO_ADDRESS, constants.ONE, constants.ONE];
+      const args = [wallet.generateRandomAddress(), constants.AddressZero, wallet.generateRandomAddress(), constants.One, constants.One];
       if (withData) args.push('0x');
       tx = contract()[func](...args);
     });
@@ -244,7 +267,7 @@ const shouldBeCheckPreAssetSwap = ({ contract, func, withData }: { contract: () 
   when('token out is zero address', () => {
     let tx: Promise<TransactionResponse>;
     given(async () => {
-      const args = [constants.NOT_ZERO_ADDRESS, constants.NOT_ZERO_ADDRESS, constants.ZERO_ADDRESS, constants.ONE, constants.ONE];
+      const args = [wallet.generateRandomAddress(), wallet.generateRandomAddress(), constants.AddressZero, constants.One, constants.One];
       if (withData) args.push('0x');
       tx = contract()[func](...args);
     });
@@ -255,7 +278,13 @@ const shouldBeCheckPreAssetSwap = ({ contract, func, withData }: { contract: () 
   when('amount is zero', () => {
     let tx: Promise<TransactionResponse>;
     given(async () => {
-      const args = [constants.NOT_ZERO_ADDRESS, constants.NOT_ZERO_ADDRESS, constants.NOT_ZERO_ADDRESS, constants.ZERO, constants.ONE];
+      const args = [
+        wallet.generateRandomAddress(),
+        wallet.generateRandomAddress(),
+        wallet.generateRandomAddress(),
+        constants.Zero,
+        constants.One,
+      ];
       if (withData) args.push('0x');
       tx = contract()[func](...args);
     });
@@ -266,7 +295,13 @@ const shouldBeCheckPreAssetSwap = ({ contract, func, withData }: { contract: () 
   when('max slippage is zero', () => {
     let tx: Promise<TransactionResponse>;
     given(async () => {
-      const args = [constants.NOT_ZERO_ADDRESS, constants.NOT_ZERO_ADDRESS, constants.NOT_ZERO_ADDRESS, constants.ONE, constants.ZERO];
+      const args = [
+        wallet.generateRandomAddress(),
+        wallet.generateRandomAddress(),
+        wallet.generateRandomAddress(),
+        constants.One,
+        constants.Zero,
+      ];
       if (withData) args.push('0x');
       tx = contract()[func](...args);
     });
@@ -274,18 +309,4 @@ const shouldBeCheckPreAssetSwap = ({ contract, func, withData }: { contract: () 
       await expect(tx).to.be.revertedWith('ZeroSlippage()');
     });
   });
-};
-
-export default {
-  deployShouldRevertWithMessage,
-  deployShouldRevertWithZeroAddress,
-  txShouldRevertWithZeroAddress,
-  txShouldRevertWithMessage,
-  deployShouldSetVariablesAndEmitEvents,
-  txShouldHaveSetVariablesAndEmitEvents,
-  txShouldSetVariableAndEmitEvent,
-  checkTxRevertedWithMessage,
-  waitForTxAndNotThrow,
-  shouldBeExecutableOnlyByTradeFactory,
-  shouldBeCheckPreAssetSwap,
 };

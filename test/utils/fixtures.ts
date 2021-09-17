@@ -6,11 +6,10 @@ import {
   abi as MACHINERY_ABI,
   bytecode as MACHINERY_BYTECODE,
 } from '@lbertenasco/contract-utils/artifacts/contracts/utils/Machinery.sol/Machinery.json';
+import { uniswap, wallet } from '@test-utils';
 import { deployContract } from 'ethereum-waffle';
 import { Contract, utils } from 'ethers';
 import { ethers } from 'hardhat';
-import uniswap from './uniswap';
-import wallet from './wallet';
 interface MechanicsRegistryFixture {
   mechanicsRegistry: Contract;
 }

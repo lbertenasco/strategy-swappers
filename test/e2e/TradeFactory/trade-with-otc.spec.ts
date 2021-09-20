@@ -1,12 +1,10 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signers';
-import { TransactionResponse } from '@ethersproject/abstract-provider';
-import { BigNumber, constants, Contract, utils, Wallet } from 'ethers';
+import { constants, Contract, utils } from 'ethers';
 import { ethers } from 'hardhat';
 import moment from 'moment';
-import { contracts, erc20, evm, fixtures, uniswap } from '../../utils';
+import { erc20, fixtures } from '../../utils';
 import { contract, given, then, when } from '../../utils/bdd';
 import { expect } from 'chai';
-import uniswapLibrary from '../../../scripts/libraries/uniswap-v2';
 
 contract('TradeFactory', () => {
   let masterAdmin: SignerWithAddress;

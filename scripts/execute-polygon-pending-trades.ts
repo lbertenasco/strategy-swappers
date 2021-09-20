@@ -31,7 +31,7 @@ async function main() {
         sellToken: pendingTrade._tokenIn,
         buyToken: pendingTrade._tokenOut,
         sellAmount: pendingTrade._amountIn,
-        sippagePercentage: 0.01,
+        sippagePercentage: 0.05,
         skipValidation: true,
       });
       data = zrxAPIResponse.data;

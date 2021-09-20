@@ -129,7 +129,7 @@ contract('TradeFactory', () => {
       await tradeFactory
         .connect(strategy)
         .create(tokenIn.address, tokenOut.address, amountIn, maxSlippage, moment().add('30', 'minutes').unix());
-      const data = await uniswapLibrary.getBestPathEncoded({
+      const bestPath = await uniswapLibrary.getBestPathEncoded({
         tokenIn: tokenIn.address,
         tokenOut: tokenOut.address,
         amountIn: amountIn,
@@ -138,7 +138,7 @@ contract('TradeFactory', () => {
       });
       // We can do this since ratio is 1 = 1
       minAmountOut = amountIn.sub(amountIn.mul(maxSlippage).div(10000 / 100));
-      await tradeFactory.connect(mechanic)['execute(uint256,bytes)'](1, data);
+      await tradeFactory.connect(mechanic)['execute(uint256,bytes)'](1, bestPath.data);
     });
     then('tokens in gets taken from strategy', async () => {
       expect(await tokenIn.balanceOf(strategy.address)).to.equal(0);

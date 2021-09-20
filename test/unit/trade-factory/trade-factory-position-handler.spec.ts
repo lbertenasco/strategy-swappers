@@ -4,11 +4,12 @@ import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { contract, given, then, when } from '../../utils/bdd';
 import { abi as swapperABI } from '../../../artifacts/contracts/Swapper.sol/ISwapper.json';
-import { smockit, smoddit, MockContract, ModifiableContractFactory, ModifiableContract } from '@eth-optimism/smock';
-import { constants, evm, wallet } from '../../utils';
-import { BigNumber, utils, Wallet } from 'ethers';
+import { FakeContract, MockContract, MockContractFactory, smock } from '@defi-wonderland/smock';
+import { evm, wallet } from '../../utils';
+import { BigNumber, constants, utils, Wallet } from 'ethers';
 import Web3 from 'web3';
 import moment from 'moment';
+import { ISwapper, TradeFactoryPositionsHandlerMock, TradeFactoryPositionsHandlerMock__factory } from '@typechained';
 
 contract('TradeFactoryPositionsHandler', () => {
   let deployer: SignerWithAddress;
@@ -18,9 +19,10 @@ contract('TradeFactoryPositionsHandler', () => {
   let swapperSetter: SignerWithAddress;
   let strategyAdder: SignerWithAddress;
   let tradesModifier: SignerWithAddress;
-  let positionsHandlerFactory: ModifiableContractFactory;
-  let positionsHandler: ModifiableContract;
-  let asyncSwapper: MockContract;
+  let positionsHandlerFactory: MockContractFactory<TradeFactoryPositionsHandlerMock__factory>;
+  let positionsHandler: MockContract<TradeFactoryPositionsHandlerMock>;
+  let asyncSwapper: FakeContract<ISwapper>;
+  let snapshotId: string;
 
   const MASTER_ADMIN_ROLE: string = new Web3().utils.soliditySha3('MASTER_ADMIN') as string;
   const STRATEGY_ROLE: string = new Web3().utils.soliditySha3('STRATEGY') as string;
@@ -29,14 +31,10 @@ contract('TradeFactoryPositionsHandler', () => {
 
   before(async () => {
     [deployer, masterAdmin, swapperAdder, swapperSetter, strategyAdder, tradesModifier, strategy] = await ethers.getSigners();
-    positionsHandlerFactory = await smoddit(
+    positionsHandlerFactory = await smock.mock<TradeFactoryPositionsHandlerMock__factory>(
       'contracts/mock/TradeFactory/TradeFactoryPositionsHandler.sol:TradeFactoryPositionsHandlerMock',
       strategy
     );
-  });
-
-  beforeEach(async () => {
-    await evm.reset();
     positionsHandler = await positionsHandlerFactory.deploy(
       masterAdmin.address,
       swapperAdder.address,
@@ -44,10 +42,15 @@ contract('TradeFactoryPositionsHandler', () => {
       strategyAdder.address,
       tradesModifier.address
     );
-    asyncSwapper = await smockit(swapperABI);
+    asyncSwapper = await smock.fake<ISwapper>(swapperABI);
     await positionsHandler.connect(swapperAdder).addSwappers([asyncSwapper.address]);
     await positionsHandler.connect(swapperSetter).setStrategyAsyncSwapper(strategy.address, asyncSwapper.address);
     await positionsHandler.connect(strategyAdder).grantRole(STRATEGY_ROLE, strategy.address);
+    snapshotId = await evm.snapshot.take();
+  });
+
+  beforeEach(async () => {
+    await evm.snapshot.revert(snapshotId);
   });
 
   describe('constructor', () => {
@@ -121,14 +124,14 @@ contract('TradeFactoryPositionsHandler', () => {
   });
 
   describe('create', () => {
-    let swapper: MockContract;
+    let swapper: FakeContract<ISwapper>;
     const tokenIn = wallet.generateRandomAddress();
     const tokenOut = wallet.generateRandomAddress();
     const amountIn = utils.parseEther('100');
     const maxSlippage = 1000;
     const deadline = moment().add('30', 'minutes').unix();
     given(async () => {
-      swapper = await smockit(swapperABI);
+      swapper = await smock.fake<ISwapper>(swapperABI);
       await positionsHandler.connect(swapperAdder).addSwappers([swapper.address]);
       await positionsHandler.connect(swapperSetter).setStrategyAsyncSwapper(strategy.address, swapper.address);
     });
@@ -153,31 +156,31 @@ contract('TradeFactoryPositionsHandler', () => {
     });
     when('token in is zero address', () => {
       then('tx is reverted with reason', async () => {
-        await expect(positionsHandler.create(constants.ZERO_ADDRESS, tokenOut, amountIn, maxSlippage, deadline)).to.be.revertedWith(
+        await expect(positionsHandler.create(constants.AddressZero, tokenOut, amountIn, maxSlippage, deadline)).to.be.revertedWith(
           'ZeroAddress()'
         );
       });
     });
     when('token out is zero address', () => {
       then('tx is reverted with reason', async () => {
-        await expect(positionsHandler.create(tokenIn, constants.ZERO_ADDRESS, amountIn, maxSlippage, deadline)).to.be.revertedWith(
+        await expect(positionsHandler.create(tokenIn, constants.AddressZero, amountIn, maxSlippage, deadline)).to.be.revertedWith(
           'ZeroAddress()'
         );
       });
     });
     when('amount in is zero', () => {
       then('tx is reverted with reason', async () => {
-        await expect(positionsHandler.create(tokenIn, tokenOut, constants.ZERO, maxSlippage, deadline)).to.be.revertedWith('ZeroAmount()');
+        await expect(positionsHandler.create(tokenIn, tokenOut, constants.Zero, maxSlippage, deadline)).to.be.revertedWith('ZeroAmount()');
       });
     });
     when('max slippage is set to zero', () => {
       then('tx is reverted with reason', async () => {
-        await expect(positionsHandler.create(tokenIn, tokenOut, amountIn, constants.ZERO, deadline)).to.be.revertedWith('ZeroSlippage()');
+        await expect(positionsHandler.create(tokenIn, tokenOut, amountIn, constants.Zero, deadline)).to.be.revertedWith('ZeroSlippage()');
       });
     });
     when('deadline is equal or less than current timestamp', () => {
       then('tx is reverted with reason', async () => {
-        await expect(positionsHandler.create(tokenIn, tokenOut, amountIn, maxSlippage, constants.ZERO_ADDRESS)).to.be.revertedWith(
+        await expect(positionsHandler.create(tokenIn, tokenOut, amountIn, maxSlippage, constants.AddressZero)).to.be.revertedWith(
           'InvalidDeadline()'
         );
       });
@@ -283,10 +286,10 @@ contract('TradeFactoryPositionsHandler', () => {
     });
     // ONLY TRADE MODIFIER
     when('setting sync swapper', () => {
-      let syncSwapper: MockContract;
+      let syncSwapper: FakeContract<ISwapper>;
       given(async () => {
-        syncSwapper = await smockit(swapperABI);
-        syncSwapper.smocked.SWAPPER_TYPE.will.return.with(1);
+        syncSwapper = await smock.fake<ISwapper>(swapperABI);
+        syncSwapper.SWAPPER_TYPE.returns(1);
       });
       then('tx is reverted with reason', async () => {
         await expect(positionsHandler.connect(tradesModifier).changePendingTradesSwapper([1], syncSwapper.address)).to.be.revertedWith(
@@ -295,10 +298,10 @@ contract('TradeFactoryPositionsHandler', () => {
       });
     });
     when('swapper is not added', () => {
-      let randomAsyncSwapper: MockContract;
+      let randomAsyncSwapper: FakeContract<ISwapper>;
       given(async () => {
-        randomAsyncSwapper = await smockit(swapperABI);
-        randomAsyncSwapper.smocked.SWAPPER_TYPE.will.return.with(0);
+        randomAsyncSwapper = await smock.fake<ISwapper>(swapperABI);
+        randomAsyncSwapper.SWAPPER_TYPE.returns(0);
       });
       then('tx is reverted with reason', async () => {
         await expect(positionsHandler.connect(tradesModifier).changePendingTradesSwapper([1], randomAsyncSwapper.address)).to.be.revertedWith(
@@ -314,11 +317,11 @@ contract('TradeFactoryPositionsHandler', () => {
       });
     });
     when('arguments are valid', () => {
-      let randomAsyncSwapper: MockContract;
+      let randomAsyncSwapper: FakeContract<ISwapper>;
       let changeTx: TransactionResponse;
       given(async () => {
-        randomAsyncSwapper = await smockit(swapperABI);
-        randomAsyncSwapper.smocked.SWAPPER_TYPE.will.return.with(0);
+        randomAsyncSwapper = await smock.fake<ISwapper>(swapperABI);
+        randomAsyncSwapper.SWAPPER_TYPE.returns(0);
         await positionsHandler.connect(swapperAdder).addSwappers([randomAsyncSwapper.address]);
         await create({
           tokenIn: wallet.generateRandomAddress(),
@@ -411,7 +414,7 @@ contract('TradeFactoryPositionsHandler', () => {
         expect(await positionsHandler['pendingTradesIds(address)'](strategy.address)).to.not.include([2, 3]);
       });
       then('all merged trades are removed from pending trades by id', async () => {
-        expect((await positionsHandler['pendingTradesById(uint256)'](2))._swapper).to.equal(constants.ZERO_ADDRESS);
+        expect((await positionsHandler.pendingTradesById(2))._swapper).to.equal(constants.AddressZero);
       });
       then('all merged trades are removed from pending trades array', async () => {
         expect(await positionsHandler['pendingTradesIds()']()).to.not.include([2, 3]);

@@ -4,7 +4,7 @@ import axiosRetry from 'axios-retry';
 import { abi as IUniswapV2Factory } from '@uniswap/v2-core/build/IUniswapV2Factory.json';
 import { abi as IUniswapV2Router02 } from '@uniswap/v2-periphery/build/IUniswapV2Router02.json';
 import { ethers } from 'hardhat';
-import constants from '../../test/utils/constants';
+import { constants } from 'ethers';
 
 axiosRetry(axios, { retries: 3, retryDelay: axiosRetry.exponentialDelay });
 
@@ -32,15 +32,15 @@ export const getBestPathEncoded = async (swapParams: SwapParams): Promise<SwapRe
   let maxPath: string[] = [];
   let maxOut: BigNumber = BigNumber.from('0');
 
-  if ((await factory.getPair(swapParams.tokenIn, swapParams.tokenOut)) != constants.ZERO_ADDRESS) {
+  if ((await factory.getPair(swapParams.tokenIn, swapParams.tokenOut)) != constants.AddressZero) {
     maxPath = [swapParams.tokenIn, swapParams.tokenOut];
     [, maxOut] = await router.getAmountsOut(swapParams.amountIn, maxPath);
   }
 
   for (let i = 0; i < swapParams.hopTokensToTest.length; i++) {
     if (
-      (await factory.getPair(swapParams.tokenIn, swapParams.hopTokensToTest[i])) != constants.ZERO_ADDRESS &&
-      (await factory.getPair(swapParams.hopTokensToTest[i], swapParams.tokenOut)) != constants.ZERO_ADDRESS
+      (await factory.getPair(swapParams.tokenIn, swapParams.hopTokensToTest[i])) != constants.AddressZero &&
+      (await factory.getPair(swapParams.hopTokensToTest[i], swapParams.tokenOut)) != constants.AddressZero
     ) {
       const hopPath = [swapParams.tokenIn, swapParams.hopTokensToTest[i], swapParams.tokenOut];
       const amountsOut = await router.getAmountsOut(swapParams.amountIn, hopPath);

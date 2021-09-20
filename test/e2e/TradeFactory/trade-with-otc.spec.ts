@@ -28,6 +28,8 @@ contract('TradeFactory', () => {
   let tradeFactory: Contract;
   let otcPool: Contract;
 
+  let snapshotId: string;
+
   const firstTradeAmountIn = utils.parseEther('10');
   const secondTradeAmountIn = utils.parseEther('6.9');
 
@@ -51,9 +53,6 @@ contract('TradeFactory', () => {
       swapperSetter,
       otcPoolGovernor,
     ] = await ethers.getSigners();
-  });
-
-  beforeEach(async () => {
     ({ mechanicsRegistry } = await fixtures.machineryFixture(mechanic.address));
 
     ({ tradeFactory, otcPool, uniswapV2AsyncSwapper } = await fixtures.uniswapV2SwapperFixture(
@@ -107,6 +106,12 @@ contract('TradeFactory', () => {
     await tokenOut.connect(hodler).transfer(otcPoolGovernor.address, offeredByOTC);
     await tokenOut.connect(otcPoolGovernor).approve(otcPool.address, offeredByOTC);
     await otcPool.connect(otcPoolGovernor).create(tokenOut.address, offeredByOTC);
+
+    snapshotId = await evm.snapshot.take();
+  });
+
+  beforeEach(async () => {
+    await evm.snapshot.revert(snapshotId);
   });
 
   describe('execute otc', () => {

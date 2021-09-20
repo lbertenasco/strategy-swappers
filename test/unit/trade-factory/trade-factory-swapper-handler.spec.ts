@@ -3,8 +3,9 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signers';
 import { TransactionResponse } from '@ethersproject/abstract-provider';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
-import { constants, wallet } from '../../utils';
+import { evm, wallet } from '../../utils';
 import { contract, given, then, when } from '../../utils/bdd';
+import { constants } from 'ethers';
 
 contract('TradeFactorySwapperHandler', () => {
   let masterAdmin: SignerWithAddress;
@@ -14,15 +15,19 @@ contract('TradeFactorySwapperHandler', () => {
   let tradeFactoryFactory: ContractFactory;
   let tradeFactory: Contract;
 
+  let snapshotId: string;
+
   before(async () => {
     [masterAdmin, swapperAdder, swapperSetter] = await ethers.getSigners();
     tradeFactoryFactory = await ethers.getContractFactory(
       'contracts/mock/TradeFactory/TradeFactorySwapperHandler.sol:TradeFactorySwapperHandlerMock'
     );
+    tradeFactory = await tradeFactoryFactory.deploy(masterAdmin.address, swapperAdder.address, swapperSetter.address);
+    snapshotId = await evm.snapshot.take();
   });
 
   beforeEach(async () => {
-    tradeFactory = await tradeFactoryFactory.deploy(masterAdmin.address, swapperAdder.address, swapperSetter.address);
+    await evm.snapshot.revert(snapshotId);
   });
 
   describe('constructor', () => {
@@ -184,7 +189,7 @@ contract('TradeFactorySwapperHandler', () => {
     when('adding swappers with zero address', () => {
       let addSwappersTx: Promise<TransactionResponse>;
       given(async () => {
-        addSwappersTx = tradeFactory.connect(swapperAdder).addSwappers([constants.ZERO_ADDRESS]);
+        addSwappersTx = tradeFactory.connect(swapperAdder).addSwappers([constants.AddressZero]);
       });
       then('tx is reverted with reason', async () => {
         await expect(addSwappersTx).to.be.revertedWith('ZeroAddress()');

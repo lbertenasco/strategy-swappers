@@ -3,12 +3,12 @@ import { TransactionResponse } from '@ethersproject/abstract-provider';
 import { BigNumber, constants, Contract, utils, Wallet } from 'ethers';
 import { ethers } from 'hardhat';
 import moment from 'moment';
-import { contracts, erc20, evm, fixtures, uniswap } from '../../utils';
-import { contract, given, then, when } from '../../utils/bdd';
+import { contracts, erc20, evm, fixtures, uniswap } from '@test-utils';
+import { contract, given, then, when } from '@test-utils/bdd';
 import { expect } from 'chai';
 import uniswapLibrary from '../../../scripts/libraries/uniswap-v2';
 
-contract('TradeFactory', () => {
+contract.only('TradeFactory', () => {
   let masterAdmin: SignerWithAddress;
   let mechanic: SignerWithAddress;
   let strategy: SignerWithAddress;
@@ -33,6 +33,8 @@ contract('TradeFactory', () => {
   let uniswapV2SyncSwapper: Contract;
   let uniswapPairAddress: string;
 
+  let snapshotId: string;
+
   const amountIn = utils.parseEther('10');
   const maxSlippage = 10_000; // 1%
   const INITIAL_LIQUIDITY = utils.parseEther('100000');
@@ -51,9 +53,7 @@ contract('TradeFactory', () => {
       swapperSetter,
       otcPoolGovernor,
     ] = await ethers.getSigners();
-  });
 
-  beforeEach(async () => {
     ({ mechanicsRegistry, machinery } = await fixtures.machineryFixture(mechanic.address));
 
     ({ tradeFactory, uniswapV2AsyncSwapper, uniswapV2SyncSwapper, uniswapV2Factory, uniswapV2Router02 } = await fixtures.uniswapV2SwapperFixture(
@@ -88,7 +88,7 @@ contract('TradeFactory', () => {
     });
 
     await uniswap.addLiquidity({
-      liquidityProvider: hodler,
+      owner: hodler,
       token0: tokenIn,
       amountA: INITIAL_LIQUIDITY,
       token1: tokenOut,
@@ -99,6 +99,12 @@ contract('TradeFactory', () => {
 
     await tokenIn.connect(hodler).transfer(strategy.address, amountIn);
     await tokenIn.connect(strategy).approve(tradeFactory.address, amountIn);
+
+    snapshotId = await evm.snapshot.take();
+  });
+
+  beforeEach(async () => {
+    await evm.snapshot.revert(snapshotId);
   });
 
   describe('sync trade executed', () => {

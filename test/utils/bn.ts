@@ -1,7 +1,7 @@
-import { BigNumber } from 'ethers';
+import { BigNumber, utils } from 'ethers';
 import { expect } from 'chai';
 
-const expectToEqualWithThreshold = ({
+export const expectToEqualWithThreshold = ({
   value,
   to,
   threshold,
@@ -19,16 +19,10 @@ const expectToEqualWithThreshold = ({
   ).to.be.true;
 };
 
-const toBN = (value: string | number | BigNumber): BigNumber => {
+export const toBN = (value: string | number | BigNumber): BigNumber => {
   return BigNumber.isBigNumber(value) ? value : BigNumber.from(value);
 };
 
-const random = (min: number, max: number): BigNumber => {
-  return BigNumber.from(`${Math.floor(Math.random() * (max - min + 1)) + min}`);
-};
-
-export default {
-  expectToEqualWithThreshold,
-  toBN,
-  random,
+export const toUnit = (value: number): BigNumber => {
+  return utils.parseUnits(value.toString());
 };

@@ -1,14 +1,16 @@
 import 'dotenv/config';
-import '@nomiclabs/hardhat-ethers';
 import '@nomiclabs/hardhat-waffle';
+import '@nomiclabs/hardhat-ethers';
 import '@nomiclabs/hardhat-etherscan';
+import '@typechain/hardhat';
+import '@typechain/hardhat/dist/type-extensions';
 import { removeConsoleLog } from 'hardhat-preprocessor';
 import 'hardhat-gas-reporter';
-import 'solidity-coverage';
 import 'hardhat-deploy';
+import 'solidity-coverage';
 import { HardhatUserConfig, MultiSolcUserConfig, NetworksUserConfig } from 'hardhat/types';
 import { DEFAULT_ACCOUNT, getNodeUrl } from './utils/network';
-import { utils } from 'ethers';
+import 'tsconfig-paths/register';
 
 const networks: NetworksUserConfig = process.env.TEST
   ? {}
@@ -34,7 +36,6 @@ const networks: NetworksUserConfig = process.env.TEST
       polygon: {
         url: getNodeUrl('polygon'),
         accounts: [(process.env.POLYGON_PRIVATE_KEY as string) || DEFAULT_ACCOUNT],
-        gasPrice: utils.parseUnits('40', 'gwei').toNumber(),
         tags: ['production'],
       },
       fantom: {
@@ -54,6 +55,9 @@ const config: HardhatUserConfig = {
       250: '0x9f2A061d6fEF20ad3A656e23fd9C814b75fd5803', // ymechs msig
     },
     yMech: '0xB82193725471dC7bfaAB1a3AB93c7b42963F3265', // yMECH Alejo
+  },
+  mocha: {
+    timeout: process.env.MOCHA_TIMEOUT || 300000,
   },
   networks,
   solidity: {
@@ -89,13 +93,16 @@ const config: HardhatUserConfig = {
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY,
   },
+  typechain: {
+    outDir: 'typechained',
+    target: 'ethers-v5',
+  },
 };
 
 if (process.env.TEST) {
-  const solidity = config.solidity as MultiSolcUserConfig;
-  solidity.compilers.forEach((_, i) => {
-    solidity.compilers[i].settings! = {
-      ...solidity.compilers[i].settings!,
+  (config.solidity as MultiSolcUserConfig).compilers = (config.solidity as MultiSolcUserConfig).compilers.map((compiler) => {
+    return {
+      ...compiler,
       outputSelection: {
         '*': {
           '*': ['storageLayout'],
@@ -103,7 +110,6 @@ if (process.env.TEST) {
       },
     };
   });
-  config.solidity = solidity;
 }
 
 export default config;
